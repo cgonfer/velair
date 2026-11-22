@@ -1241,7 +1241,7 @@ describe("climate card view", () => {
       climate_temperature: 19.5, hvac_mode: "heat", weekday: "monday",
     } };
     render(renderClimateCard(cardHost, "climate.office"), container);
-    expect(container.querySelector(".sensor-temperature-scale")).not.toBeNull();
+    expect(container.querySelector("velair-room-assist-graph")).not.toBeNull();
     expect(container.querySelector(".climate-card-feature-description")).not.toBeNull();
     expect(container.querySelector(".climate-card-feature-status")?.textContent).toContain("climateCardRoomAssistAssisting");
     expect(container.querySelector(".climate-card-feature-chip")).toBeNull();
@@ -1275,7 +1275,7 @@ describe("climate card view", () => {
     expect(panel?.querySelector(".climate-card-feature-description")).toBeNull();
     expect(panel?.querySelector(".climate-card-feature-body")?.getAttribute("aria-hidden")).toBe("true");
     expect(panel?.querySelector(".climate-card-feature-body")?.hasAttribute("inert")).toBe(true);
-    expect(panel?.querySelector(".sensor-temperature-scale")).not.toBeNull();
+    expect(panel?.querySelector("velair-room-assist-graph")).not.toBeNull();
     const heading = panel?.querySelector<HTMLButtonElement>(".climate-card-feature-heading");
     expect(heading?.getAttribute("aria-labelledby")).toBe("climate-card-room-assist-climate-office-title climate-card-room-assist-climate-office-status");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
@@ -1312,7 +1312,7 @@ describe("climate card view", () => {
     expect(textContainer.querySelector(".climate-card-feature-heading button")).toBeNull();
     expect(textContainer.querySelector(".climate-card-feature-chevron")).toBeNull();
     expect(textContainer.querySelector(".climate-card-room-assist-metrics")).toBeNull();
-    expect(textContainer.querySelector(".sensor-temperature-scale")).toBeNull();
+    expect(textContainer.querySelector("velair-room-assist-graph")).toBeNull();
 
     const unchangedContainer = document.createElement("div");
     cardHost._data.room_sensor_assist["climate.office"].applied_temperature = 21;
@@ -1326,13 +1326,13 @@ describe("climate card view", () => {
     expect(chartContainer.querySelector(".climate-card-feature-chip")).toBeNull();
     expect(chartContainer.querySelector(".climate-card-feature-description")).toBeNull();
     expect(chartContainer.querySelector(".climate-card-feature-status")?.textContent).toContain("climateCardRoomAssistAssisting");
-    expect(chartContainer.querySelector(".sensor-temperature-scale")).not.toBeNull();
+    expect(chartContainer.querySelector("velair-room-assist-graph")).not.toBeNull();
 
     const bothContainer = document.createElement("div");
     cardHost._config.climate_room_assist_display = "both";
     render(renderClimateCard(cardHost, "climate.office"), bothContainer);
     expect(bothContainer.querySelector(".climate-card-feature-description")).not.toBeNull();
-    expect(bothContainer.querySelector(".sensor-temperature-scale")).not.toBeNull();
+    expect(bothContainer.querySelector("velair-room-assist-graph")).not.toBeNull();
     expect(bothContainer.querySelector(".climate-card-feature-heading")?.getAttribute("aria-describedby"))
       .toBe("climate-card-room-assist-climate-office-description");
   });
@@ -1353,7 +1353,7 @@ describe("climate card view", () => {
     expect(container.querySelector(".climate-card-feature-status")?.textContent).toContain("climateCardRoomAssistIdle");
     expect(container.querySelector(".climate-card-feature-heading.static")).not.toBeNull();
     expect(container.querySelector(".climate-card-feature-description")).toBeNull();
-    expect(container.querySelector(".sensor-temperature-scale")).toBeNull();
+    expect(container.querySelector("velair-room-assist-graph")).toBeNull();
   });
 
   it.each(["heat", "cool"])("shows each time once in the expanded %s preconditioning window", (direction) => {

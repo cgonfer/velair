@@ -62,6 +62,8 @@ export function preconditioningSettings(
   const settings: PreconditioningSettings = {
     master_entity_id: value?.master_entity_id ?? null,
     enabled: Boolean(value?.enabled),
+    heating_setpoint_offset: Number(value?.heating_setpoint_offset ?? 0),
+    cooling_setpoint_offset: Number(value?.cooling_setpoint_offset ?? 0),
     max_lead_minutes: Number(value?.max_lead_minutes ?? 1440),
     minimum_delta_temperature: Number(value?.minimum_delta_temperature ?? defaultMinimumDelta(temperatureUnit)),
     learning_history_size: Number(value?.learning_history_size ?? 120),
@@ -109,4 +111,10 @@ function numericStateLabel(value: string | undefined, unit: string) {
     return "";
   }
   return `${value}${unit ? ` ${unit}` : ""}`;
+}
+
+/** Offsets use a zero-anchored delta grid, independently of the absolute target minimum. */
+export function preconditioningOffsetBounds(step: number, maximum: number): { step: number; maximum: number } {
+  const effectiveStep = Number.isFinite(step) && step > 0 ? step : 1;
+  return { step: effectiveStep, maximum: Number((Math.floor((maximum + 1e-9) / effectiveStep) * effectiveStep).toFixed(8)) };
 }

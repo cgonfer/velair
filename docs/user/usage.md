@@ -1245,9 +1245,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v27 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v27 exports; use a version that supports
-v27 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v28 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v28 exports; use a version that supports
+v28 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -1264,7 +1264,37 @@ no longer compatible so it can be edited before relying on that schedule.
 The complete upgrade, migration, backup, and recovery behavior is documented in
 [Temperature Units and Migration](temperature-units.md).
 
-When Room Sensor Assist is enabled, the Room Assist tab shows a compact live temperature scale while a managed temperature block is active. For one target it marks the scheduled target, room sensor, climate target, and thermostat reading. A neutral striped band marks the lower and upper deadband limits. With fixed `heat` or `cool`, the status also shows whether control is moving towards the lower or upper limit; with scalar automatic modes, the band remains a neutral margin. For a native `heat_cool` range it extends from the scheduled low minus the deadband to the scheduled high plus the deadband. For a configured fixed Heat or Cool range, it instead marks the selected reference setpoint minus and plus the deadband; separate brackets still show the complete scheduled and applied bands, with one connector between their centers showing the signed movement of the whole range. The room sensor and climate readings remain individual markers. The complete translated legend stays centered on the represented deadband range, including when that range is narrower than the label; a zero deadband removes the surface and is stated explicitly. Hiding `show_room_assist_deadband` hides its setting, band, and legend together. These values are derived from Home Assistant state and Velair runtime state; they are not persisted as a new history. If no managed temperature block is active, the tab shows a waiting state instead of placeholder values. If a sensor is selected but Assist is off, the tab shows that the sensor is saved but not operational.
+When Room Sensor Assist is enabled, its live graph separates **Room**, **Target**,
+**Equipment** and **Setpoint** in compact chips connected vertically to their
+temperature positions. Expand a chip for details. **Normal** shows the current
+request, next effective threshold and any preparation extra; **Detailed** adds
+the room gap, total adjustment and extra already included in that total. Labels
+sit on their measurement lines when space permits and below otherwise. A solid
+arrow represents demand, while a dashed arrow points to resumption during
+waiting; neither represents a measured sensor trend or physical HVAC activity.
+
+A thin hatched strip above the axis shows the nominal control band with its
+legend below. Effective braking thresholds remain separate. A native `heat_cool`
+range hatches only the outer Room Assist margins. For a fixed Heat or Cool range,
+the strip surrounds the selected reference setpoint instead. Separate brackets
+show the complete nominal and applied bands; **Detailed** measures their signed
+common shift when non-zero. A zero deadband draws no hatched area and the legend
+shows zero. Hiding `show_room_assist_deadband` hides the setting, strip and legend.
+
+The graph shows the request once in its status badge and the stop or restart
+threshold beside the arrow. **Explanation** opens concise context below the graph
+without repeating those labels or the temperature readings; **Technical data** groups
+equipment setpoints, control limits, and source/timing in the same
+area. Only one detail is open at a time. Select its button again or press Escape
+to close it; these presentation controls do not change the request.
+Matching calculation/request/application stages share a single value with all
+stage labels preserved; changed values, range reference evidence and preparation
+limits remain distinct. Readings stay in the graph, and preparation extra or
+protection groups appear only when relevant.
+Unknown demand remains unknown. Values come from Home Assistant and Velair
+runtime state, with no new history. Without an active managed temperature block,
+the tab shows a waiting state. A selected sensor with Assist off remains saved
+and is shown as inactive.
 
 Room Sensor Assist is event-driven. Velair does not poll temperatures. It listens only to the configured room sensor and climate entity while assistance is active, debounces changes using the per-climate Refresh delay setting, aligns temporary targets to the effective published, last-reported, or configured temperature step, ignores movements smaller than that step, and restores the real scheduled target when the scheduler is paused, a zone is paused, a boost starts, the block turns off, the sensor becomes unusable, or the feature is disabled. Clearing that runtime state also clears any fixed-mode hysteresis phase. If Adaptive Preconditioning has already started a future block early, Room Sensor Assist follows that future target until the scheduled comfort time instead of falling back to the previous time block.
 
@@ -1527,7 +1557,7 @@ The file can contain:
 - climate profile definitions.
 - mode definitions.
 
-Current model 27 exports preserve both template link types, preset references,
+Current model 28 exports preserve both template link types, preset references,
 Preconditioning master relationships, target-format and reference policies,
 room-group ownership and shared configuration. Zone settings also retain optional
 Room Assist sensor schedules and the selected braking level, independently of
@@ -1539,7 +1569,7 @@ data is involved, required room groups, schedules and Profiles are also included
 even when starting from a learning export. Imports validate the combined configuration, including existing
 consumers of replaced shared resources. Presets merge by stable key: matching keys
 are replaced, while local presets absent from the file remain. Existing backups
-remain importable; older Velair versions cannot import model 27 files. Keep a
+remain importable; older Velair versions cannot import model 28 files. Keep a
 backup from the previous version if you might need to downgrade. See
 [the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 

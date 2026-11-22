@@ -71,6 +71,25 @@ English remains the canonical source. Synchronization and linguistic review are 
 
 Literal control names follow the interface even when a locale still displays an English label. Narrative wording may use a natural localized term and explain that label. Blueprint form labels remain English unless the blueprint itself provides a translation.
 
+## Room Assist graph controls
+
+The shared graph uses **Normal** and **Detailed** for its presentation modes.
+**Explanation** and **Technical data** open alternate views in the same inline
+detail area. Use these maintained panel labels for literal control references;
+an explanation of a request does not confirm physical equipment operation.
+
+| Language | Normal | Detailed | Explanation | Technical data |
+| --- | --- | --- | --- | --- |
+| Spanish | Normal | Detallado | Explicación | Datos técnicos |
+| French | Normal | Détaillé | Explication | Données techniques |
+| German | Normal | Detailliert | Erklärung | Technische Daten |
+| Italian | Normale | Dettagliato | Spiegazione | Dati tecnici |
+| Dutch | Normaal | Gedetailleerd | Uitleg | Technische gegevens |
+| Polish | Normalny | Szczegółowy | Wyjaśnienie | Dane techniczne |
+| Portuguese (Brazil) | Normal | Detalhado | Explicação | Dados técnicos |
+| Portuguese (Portugal) | Normal | Detalhado | Explicação | Dados técnicos |
+| Russian | Обычный | Подробный | Объяснение | Технические данные |
+
 ## Supply control terminology
 
 The panel tab is **Supply control**; **Shared climate supply** is the full feature

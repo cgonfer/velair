@@ -714,6 +714,8 @@ def _convert_scheduler_temperatures(
             if isinstance(pre, dict):
                 for key in (
                     "minimum_delta_temperature",
+                    "heating_setpoint_offset",
+                    "cooling_setpoint_offset",
                     "room_sensor_assist_deadband",
                     "room_sensor_assist_max_delta",
                 ):
@@ -802,6 +804,12 @@ def _convert_scheduler_temperatures(
             for history in directions.values():
                 if not isinstance(history, dict):
                     continue
+                # Portable model 28 tags describe the control rule, not an
+                # absolute target. Internal learning has no such metadata.
+                if isinstance(history.get("setpoint_offset"), (int, float)):
+                    history["setpoint_offset"] = round(
+                        temperature_delta(history["setpoint_offset"], source, target), 6
+                    )
                 for observation in history.get("observations", []):
                     if not isinstance(observation, dict):
                         continue

@@ -1,5 +1,111 @@
 # Manual Testing
 
+## Temporary preparation offsets
+
+1. Configure independent heat/cool deltas, including zero, `0.2–0.3 °C` where
+   the climate step permits them, and the largest compatible step up to `5 °C`
+   / `9 °F`. Reject off-grid edits and verify a later step change preserves the
+   saved request while reducing only the effective extra.
+2. Prepare scalar heat/cool and native `heat_cool` bands, plus fixed-mode pairs
+   using each selectable reference. Compare the nominal target, Room Assist
+   base and final accepted command. Exercise partial and zero physical capacity;
+   preserve band width. Change Room Assist correction during the same session.
+3. Reach the nominal arrival threshold before the block, including a session
+   shorter than three minutes and a failed observation save. Remove the learning
+   session independently, then reach the threshold or scheduled start. Extra and
+   temporary direction priority must end. Check preset preservation and existing
+   temperature-last service ordering. Report delays must not show an old applied
+   target or allow retired work to return.
+4. With each braking level, inherit a non-driving phase before preparation and
+   verify Room Assist retains that ordinary phase while confirming effective
+   preparation demand alongside its target. Shared Climate Supply must consume
+   that accepted intent through its existing path, including opposite fixed-range
+   references, with no independent preparation calculation. After arrival, ordinary
+   demand and braking resume; native ranges keep their existing support limits.
+   Fail or supersede delivery and fail restoration: never expose a new unaccepted
+   request or a retired temporary request. Repeated monitor/status reads must not
+   recalculate control, read history, send commands or schedule extra work.
+   Without Room Assist, verify supply uses the reported temporary target and then
+   the resulting target after withdrawal, with its existing hysteresis and timing.
+5. Change one offset during preparation: clear that direction's learning, preserve
+   the opposite direction, and reconcile current physical intent. Hold/fail/cancel
+   persistence while a sample completes or an import waits. A rollback restores
+   the old rule; no incompatible sample may survive a successful rule change.
+6. Round-trip portable model v28, including zones-only, learning-only, combined
+   imports and groups. Require matching converted direction tags, treat old or
+   absent tags as zero, preserve compatible supplied history and clear only
+   changed retained directions. Unit migration must preserve the physical delta.
+7. Compare graph, Overview, card, diagnostics and entity attributes. Scheduled
+   targets remain nominal; applied markers and badge details describe the final
+   accepted target, including saturated zero. Verify touch/keyboard help and
+   narrow phone/tablet layouts. Restart and unavailable/reconnect cases must use
+   existing startup/delivery policy with the offset when applicable.
+
+## Completed preparation continuity
+
+1. Use a current heat block at `20 °C` and a future block at `21 °C`, with
+   Minimum temperature delta `0.1 °C`. Confirm early delivery, then reach
+   `20.9 °C` before the future block. With Room Assist disabled, Overview must
+   retain nominal **Target** `21 °C` after the observation closes. Actual
+   `21 °C` hides duplicate **Applied**; the room reading remains `20.9 °C`.
+   Repeat with offset zero and positive `2 °C`, retiring `23 °C` to `21 °C`.
+2. Mirror cooling: current `25 °C`, future `24 °C`, arrival `24.1 °C`, extra
+   `2 °C`. Retire temporary `22 °C`, retain nominal `24 °C`. Repeat scalar,
+   native range and each supported fixed-mode range reference, with Room Assist
+   on/off. Restore nominal band width/options and ordinary Room Assist policy.
+3. Finish before the three-minute learning minimum, discard the observation
+   independently and fail its save in separate runs. Completion must not depend
+   on a usable sample. Fail the continuity save: withdrawal and in-memory nominal
+   target still proceed, with bounded missing-durability evidence. Do not claim
+   recovery from a completion write that never committed.
+4. Restart **after arrival**, before block time, with **Apply active schedule
+   after startup** enabled. Verify actual services resolve the completed nominal
+   `21 °C`, never previous `20 °C` or temporary `23 °C`. Repeat offset zero and
+   positive offsets, heating/cooling, ranges and Planned Return. Do not replace
+   this case with restart during a still-pending preparation.
+5. Repeat with startup application disabled and a differing live setpoint.
+   Recover nominal **Target** `21 °C` and display actual **Applied** separately.
+   Check the service log: checkpoint hydration sends no target, HVAC mode or
+   block options. Stronger persisted Manual/pause/external authority still wins
+   with either checkbox state. Do not infer who changed a setpoint while offline.
+6. Let the room drift away from arrival while HA is offline. Restore completed
+   nominal intent without a new observation, preparation extra or preparation
+   demand. A missing live room reading does not erase verified completion;
+   ordinary Room Assist availability handling still applies.
+7. Restart with device/capabilities or authoritative prepared context initially
+   unavailable, then restore readiness. Pending validation must not consume
+   startup permission, prematurely send the old block, or accept a stale payload.
+   Repeat missing/corrupt completion fields, unknown ownership, mismatched
+   occurrence/reference/profile/Mode/episode and expired timestamps.
+   The completion group requires `completed_at`, `weekday`, `start` and a valid
+   lowercase 64-character hexadecimal `completion_context`. Remove or corrupt
+   each field: strip only completion opt-in, retaining valid legacy dependency
+   `context` and accepted-start evidence. A reference, topology or active Mode
+   identity change must reject own continuity without changing the legacy source
+   context algorithm or invalidating old accepted-start evidence merely on upgrade.
+8. Pause, take Manual control, apply an override, replace the effective schedule
+   or selection, disable preparation, and change ownership in separate runs.
+   Persist/restart, then expire the override or return to the original selection:
+   superseded completion must not return. Fail a mutation save and verify the
+   existing rollback preserves the previously authoritative state.
+9. Let dependency-source `expires_at` precede its own completed `target_when`,
+   and reverse that ordering. Pruning must preserve each still-valid role without
+   prolonging source eligibility. Legacy master anchors without completion fields
+   still release valid dependents but never recover an invented own arrival.
+   Exceed the existing anchor cap: live own completion takes priority over later
+   live sources, and live sources take priority over expired completed records.
+   Retained entries preserve their original order within the existing bound.
+10. Import/reset learning only and verify control continuity remains. Configuration
+    import, full reset and unit migration follow their existing authority/context
+    invalidation. Export contains no transient completion evidence. Check nominal
+    takeover at/after the target instant, midnight and DST overlap; never reuse
+    the same wall-clock block in another weekly occurrence.
+11. Repeat UI/current-intent/monitor reads and inspect writes, services and timers:
+    readers must produce none. Keep a negative comparison with preconditioning
+    disabled, and enabled without confirmed early delivery: legitimate **Target**
+    `20 °C` / **Applied** `21 °C` remains unchanged. Record real HA state/service
+    evidence for both startup checkbox values before accepting restart recovery.
+
 ## Event-driven recovery and bounded work
 
 1. Hold a schedule save for the affected zone across a due weekly early start.
@@ -53,7 +159,7 @@ Home Assistant installation before treating physical-device recovery as verified
    no silent change to a different room.
 6. Verify advance preparation does not cross a source boundary and is recalculated
    afterward. Learning readiness and samples must match the effective source.
-7. Export/import portable model v27, including a saved disabled schedule. Reject
+7. Export/import portable model v28, including a saved disabled schedule. Reject
    overlapping periods without replacing configuration. Verify native group
    references and preserve the fixed sensor when disabling the schedule.
 8. Switch between **Fixed sensor** and **By schedule**, edit both setups, and
@@ -83,7 +189,7 @@ Home Assistant installation before treating physical-device recovery as verified
    Default before saving band zero. Fail a settings write and confirm the saved
    level and phase remain authoritative. Level changes reset phase; H-only
    changes reset Moderate/High while Default retains its established phase
-   behavior. Reload and round-trip portable model v27, including missing-level
+   behavior. Reload and round-trip portable model v28, including missing-level
    older data that defaults to Default and opposite-unit imports.
 4. Compare the panel, narrow Room Assist card, shared graph and Supply live
    demand. Nominal band limits remain centered on T; High's effective stop and
@@ -127,7 +233,7 @@ Home Assistant installation before treating physical-device recovery as verified
    the entire room is targeted once. Reject unmanaged climates. Remove members
    and dissolve the group; check inherited schedules/Profiles and cleared
    temporary actions. Options must reject removal of a still-grouped climate.
-7. Export/import portable model v27, including empty groups, the same group graph,
+7. Export/import portable model v28, including empty groups, the same group graph,
    imported learning, changed Profiles and active selection reconciliation. Test
    restart/reload, temperature conversion and per-member boost restoration.
 8. Reorder groups and members; reload and check Settings, scheduling selectors

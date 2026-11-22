@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { preconditioningMasterCandidates, preconditioningSettings } from "../../src/velair/domain/preconditioning";
+import { preconditioningMasterCandidates, preconditioningSettings, preconditioningOffsetBounds } from "../../src/velair/domain/preconditioning";
 import type { ScheduleResponse } from "../../src/velair/types";
 
 describe("preconditioning settings", () => {
@@ -38,5 +38,18 @@ describe("preconditioning settings", () => {
       },
       "°C",
     ).room_sensor_assist_deadband).toBe(0);
+  });
+});
+
+describe("preconditioning offset grid", () => {
+  it("defaults independently to zero and retains stored requests when a device step changes", () => {
+    expect(preconditioningSettings().heating_setpoint_offset).toBe(0);
+    expect(preconditioningSettings().cooling_setpoint_offset).toBe(0);
+    expect(preconditioningSettings({ heating_setpoint_offset: 0.3 }).heating_setpoint_offset).toBe(0.3);
+  });
+  it("floors the maximum to the device delta grid without an absolute temperature anchor", () => {
+    expect(preconditioningOffsetBounds(0.3, 5)).toEqual({ step: 0.3, maximum: 4.8 });
+    expect(preconditioningOffsetBounds(2, 9)).toEqual({ step: 2, maximum: 8 });
+    expect(preconditioningOffsetBounds(10, 5)).toEqual({ step: 10, maximum: 0 });
   });
 });

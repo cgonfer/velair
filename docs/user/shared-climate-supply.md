@@ -204,16 +204,35 @@ ambiguous target cannot request supply.
 A blue information panel at the top of **Demand and hysteresis**, before the mode
 selector, explains Room Assist's priority and when the supply hysteresis applies.
 
-When Room Assist owns a room's active target, shared supply follows its committed
-control intent. For fixed heating, Room Assist's `towards_upper` phase requests
-heat; for fixed cooling, `towards_lower` requests cooling. Its existing switching
-limits remain authoritative, so the supply's hysteresis and room override are not
-applied a second time. Native range control follows its committed direction.
-An invalid or pending assisted target is unknown until a valid commit is available.
+When Room Assist owns a room's active target, shared supply follows its confirmed
+effective demand. During ordinary regulation, fixed heating's `towards_upper`
+phase requests heat and fixed cooling's `towards_lower` phase requests cooling.
+Native range control follows its committed direction. Room Assist's switching
+limits remain authoritative; supply hysteresis and room overrides are not applied
+a second time.
+
+During advance preparation with a positive configured setpoint offset, Room Assist
+also includes that preparation's temporary heating or cooling request in its
+effective demand. Its ordinary hysteresis phase is retained separately. For
+example, a heating objective of `21 °C` with preparation margin `0.1 °C` can request
+heat until `20.9 °C`, even if the ordinary phase was resting. Cooling toward `24 °C`
+mirrors this at `24.1 °C`. The device's temporary setpoint is not a new room objective.
+When the extra ends, Room Assist resumes its ordinary demand; this may stop or
+continue the request. Supply still applies its existing delays, minimum times and
+aggregation across rooms, without a separate preparation rule.
+
+Only confirmed, current control intent is used. An invalid or pending assisted
+target is unknown until a valid commit is available. Retiring preparation also
+invalidates its old temporary request if restoring the normal target fails.
 
 The corrected thermostat target is not compared against an external room sensor.
 Room Assist can stop requesting supply even while the thermostat still reports
 the same adjusted target.
+
+Without Room Assist, supply keeps using the thermostat's reported target and its
+normal supply hysteresis. A preparation offset can change that reported target;
+removing it lets supply evaluate the resulting target normally. No preparation
+priority or special demand retention is added to this path.
 
 ## Timing and manual control
 

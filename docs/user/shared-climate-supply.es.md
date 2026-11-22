@@ -8,8 +8,8 @@ Traducciones: [Original en inglés](shared-climate-supply.md) · [Español](shar
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Versión de referencia | 1.9.3-dev.20261120233407 |
+| Última sincronización | 2026-11-21 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -90,9 +90,15 @@ Se usan los objetivos actuales, incluidos los cambios manuales y los de Preacond
 
 Un panel informativo azul al principio de **Demanda e histéresis**, antes del selector, explica la prioridad de Room Assist y cuándo se aplica la histéresis del suministro.
 
-Cuando Room Assist controla la consigna activa de una habitación, el suministro sigue su intención de control ya confirmada. En calefacción fija, la fase `towards_upper` solicita calor; en refrigeración fija, `towards_lower` solicita frío. Sus límites de conmutación siguen siendo los que mandan: la histéresis del suministro y la excepción de habitación no se aplican por segunda vez. El control de intervalo nativo sigue su dirección confirmada. Un objetivo asistido no válido o pendiente es desconocido hasta disponer de una confirmación válida.
+Cuando Room Assist controla el objetivo activo de una habitación, el suministro compartido sigue su demanda efectiva confirmada. Durante la regulación ordinaria, la fase `towards_upper` en calefacción fija solicita calor y `towards_lower` en refrigeración fija solicita frío. El control de intervalo nativo sigue su dirección confirmada. Los límites de conmutación de Room Assist siguen siendo los que mandan; la histéresis del suministro y las excepciones de habitación no se aplican por segunda vez.
 
-No se compara la consigna corregida del termostato con un sensor externo de habitación. Room Assist puede dejar de solicitar suministro aunque el termostato siga mostrando la misma consigna ajustada.
+Durante la preparación anticipada con una compensación de consigna positiva configurada, Room Assist también incluye la solicitud temporal de calefacción o refrigeración de esa preparación en su demanda efectiva. Su fase ordinaria de histéresis se conserva por separado. Por ejemplo, un objetivo de calefacción de `21 °C` con margen de preparación `0.1 °C` puede solicitar calor hasta `20.9 °C`, aunque la fase ordinaria estuviera en reposo. En refrigeración hacia `24 °C` sucede lo equivalente en `24.1 °C`. La consigna temporal del equipo no es un nuevo objetivo de habitación. Cuando termina el extra, Room Assist retoma su demanda ordinaria, que puede detener o continuar la solicitud. El suministro sigue aplicando sus retardos, tiempos mínimos y agregación entre habitaciones existentes, sin una regla de preparación independiente.
+
+Solo se utiliza la intención de control actual confirmada. Un objetivo asistido no válido o pendiente es desconocido hasta disponer de una confirmación válida. Retirar la preparación también invalida su antigua solicitud temporal si falla la restauración del objetivo normal.
+
+El objetivo corregido del termostato no se compara con un sensor externo de habitación. Room Assist puede dejar de solicitar suministro aunque el termostato siga comunicando el mismo objetivo ajustado.
+
+Sin Room Assist, el suministro sigue usando el objetivo comunicado por el termostato y su histéresis normal. Una compensación de preparación puede cambiar ese objetivo comunicado; al retirarla, el suministro evalúa el objetivo resultante de forma normal. Esta vía no añade prioridad de preparación ni retención especial de demanda.
 
 <a id="timing-and-manual-control"></a>
 ## Temporización y control manual

@@ -8,8 +8,8 @@ Traductions: [Original en anglais](manual-control.md) · [Español](manual-contr
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.9 |
-| Dernière synchronisation | 2026-11-02 |
+| Version de référence | 1.9.3-beta.3 |
+| Dernière synchronisation | 2026-11-22 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -91,6 +91,8 @@ Lorsque l’entité change, Velair rapproche chaque champ modifié des valeurs a
 Certains appareils signalent plusieurs valeurs pendant le traitement d’une commande : ancienne consigne rétablie brièvement, valeur intermédiaire, mode et température signalés dans un autre ordre. Velair conserve une courte période de stabilisation limitée aux champs qu’il a modifiés pour éviter de créer à tort un réglage manuel. Cette période ne redémarre pas à chaque retour d’état ; elle est fixée définitivement à la fin de la séquence complète de services Home Assistant. Une modification clairement issue d’un utilisateur ou d’un autre script ou d’une automatisation identifiable reste externe. Les changements après stabilisation sont traités normalement.
 
 Si une mise à jour anonyme pendant la stabilisation ne peut pas être distinguée avec fiabilité de la réponse progressive de l’appareil, Velair conserve prudemment le contrôle automatique. Une commande refusée ou retardée ne devient donc pas un faux réglage manuel. Cet état existe uniquement pendant l’exécution et est effacé au redémarrage.
+
+Pendant une commande récente d’arrêt de Velair, la réinitialisation d’une consigne unique au minimum explicitement indiqué par l’appareil est également reconnue comme un effet facultatif de l’arrêt. Ce minimum peut être signalé avant, en même temps ou après l’état `off`, y compris pendant l’exécution de la commande. Cette exception exige des limites minimale et maximale valides et que l’intention actuelle de Velair reste l’arrêt ; elle ne masque pas les actions identifiables d’utilisateurs ou d’automatisations. Elle utilise la même période de stabilisation limitée, et une nouvelle commande de température ou de mode HVAC invalide les éléments antérieurs. Le minimum n’est ni commandé ni obligatoire : un thermostat qui conserve sa consigne précédente peut toujours confirmer normalement l’arrêt. Le seul signalement du minimum ne confirme pas que le thermostat s’est arrêté.
 
 Si l’appareil diffère encore de la valeur demandée en fin de stabilisation, Velair conserve le contrôle automatique et enregistre un avertissement de stabilisation pour l’exécution actuelle. Le prochain instantané à jour du Diagnostic l’expose ; son rapport comprend les valeurs attendues et observées. Velair ne réessaie pas aveuglément la commande et ne transforme pas l’écart en réglage manuel différé.
 

@@ -1,6 +1,23 @@
 import { css } from "lit";
 
 export const preconditioningStyles = css`
+.preconditioning-offset-badge {
+  align-items: center;
+  background: var(--secondary-background-color);
+  border: 1px solid var(--divider-color);
+  border-radius: 12px;
+  color: var(--primary-text-color);
+  display: inline-flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 8px;
+  vertical-align: middle;
+}
+.preconditioning-offset-badge > ha-icon { --mdc-icon-size: 16px; }
+.preconditioning-offset-badge > span { overflow-wrap: anywhere; }
+
 .preconditioning-learning-activity { display: flex; align-items: flex-start; gap: 0 12px; flex-wrap: wrap; min-width: 0; }
 .preconditioning-learning-activity > span { flex: 1 1 240px; min-width: 0; padding-block: 12px; line-height: 20px; overflow-wrap: anywhere; color: var(--secondary-text-color); font-size: 13px; }
 .learning-diagnostics-link { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 1 auto; box-sizing: border-box; min-height: 44px; min-width: 44px; border: 0; padding: 12px 8px; margin-inline-start: auto; background: transparent; color: var(--primary-color); cursor: pointer; font: inherit; line-height: 20px; max-width: 100%; }

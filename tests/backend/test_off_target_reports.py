@@ -1,4 +1,4 @@
-"""Device off placeholders must not become persisted Manual adjustments."""
+"""Device off placeholders and minimum resets must not become Manual adjustments."""
 
 from __future__ import annotations
 
@@ -329,3 +329,225 @@ class OffTargetReportsTest(unittest.IsolatedAsyncioTestCase):
                 f = SimpleNamespace(hass=hass, data=data, manager=manager, scheduler=scheduler, monitor=monitor)
                 await self.report(f, self.state(entity=peer, target=0, min_temp=peer_minimum))
                 self.assertEqual(self.control_mode(f, group), expected)
+
+    async def test_minimum_reset_all_orders_keep_every_policy_automatic(self):
+        for mode in ("heat", "cool"):
+            for order in ("minimum_first", "off_first", "combined"):
+                for policy in ("keep_automatic", "until_next_block", "for_duration", "until_resumed"):
+                    with self.subTest(mode=mode, order=order, policy=policy):
+                        f = self.fixture(policy=policy, initial=self.state(mode, 19.5, min_temp=7, max_temp=35))
+                        context = SimpleNamespace(id="device-report", user_id=None, parent_id=None)
+                        with patch("custom_components.velair.climate_manager.monotonic", return_value=100):
+                            await f.manager.async_turn_off(ENTITY)
+                        reports = {
+                            "minimum_first": [(mode, 7), ("off", 7)],
+                            "off_first": [("off", 19.5), ("off", 7)],
+                            "combined": [("off", 7)],
+                        }[order]
+                        with patch("custom_components.velair.climate_manager.monotonic", return_value=109):
+                            for reported_mode, target in reports:
+                                await self.report(f, self.state(reported_mode, target,
+                                    min_temp=7, max_temp=35, context=context))
+                        self.assertEqual(self.control_mode(f), "automatic")
+                        self.assertEqual(f.data["zones"][ENTITY]["pauses"], [])
+                        self.assertEqual(self.external_events(f), [])
+
+    async def test_minimum_reset_pending_preview_does_not_cancel_delivery(self):
+        for order in ("minimum_first", "off_first", "combined"):
+            with self.subTest(order=order):
+                f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                committed = []
+
+                async def apply():
+                    await f.manager.async_turn_off(ENTITY)
+                    reports = {
+                        "minimum_first": [("heat", 7), ("off", 7)],
+                        "off_first": [("off", 19.5), ("off", 7)],
+                        "combined": [("off", 7)],
+                    }[order]
+                    for mode, target in reports:
+                        new = self.state(mode, target, min_temp=7, max_temp=35)
+                        old = f.hass.states[ENTITY]
+                        f.hass.states[ENTITY] = new
+                        authority = deepcopy(f.data)
+                        generation = f.scheduler._schedule_projection.generation
+                        with patch.object(f.scheduler, "_resolve_authoritative_delivery_event",
+                                side_effect=AssertionError("Pending preview must stay read-only")):
+                            for _ in range(2):
+                                self.assertEqual(f.monitor.pending_external_fields(ENTITY), set())
+                        self.assertEqual(f.data, authority)
+                        self.assertEqual(f.scheduler._schedule_projection.generation, generation)
+                        f.monitor._handle_state_change(SimpleNamespace(data={
+                            "entity_id": ENTITY, "old_state": old, "new_state": new}))
+                        await asyncio.sleep(0)
+
+                async def commit(_is_current):
+                    committed.append(True)
+
+                self.assertTrue(await f.scheduler._climate_delivery.async_deliver(ENTITY,
+                    lambda: Delivery(apply, commit=commit,
+                        is_current=lambda: not f.scheduler._pending_external_change_blocks_delivery(ENTITY))))
+                self.assertEqual(committed, [True])
+                self.assertEqual(self.control_mode(f), "automatic")
+                self.assertEqual(self.external_events(f), [])
+
+    async def test_minimum_registration_precedes_service_and_budget_starts_at_delivery(self):
+        f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+        clock = [100]
+
+        async def call(*_args, **_kwargs):
+            await self.report(f, self.state("heat", 7, min_temp=7, max_temp=35))
+            self.assertEqual(self.external_events(f), [])
+            clock[0] = 200
+
+        with patch("custom_components.velair.climate_manager.monotonic", side_effect=lambda: clock[0]), \
+             patch.object(f.hass.services, "async_call", side_effect=call):
+            await f.manager.async_turn_off(ENTITY)
+        with patch("custom_components.velair.climate_manager.monotonic", return_value=209):
+            await self.report(f, self.state("off", 7, min_temp=7, max_temp=35))
+        self.assertEqual(self.control_mode(f), "automatic")
+        self.assertEqual(self.external_events(f), [])
+
+    async def test_minimum_requires_recent_off_and_expires_at_settling_boundary(self):
+        for delay in (None, 45, 60):
+            with self.subTest(delay=delay):
+                f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                with patch("custom_components.velair.climate_manager.monotonic", return_value=100):
+                    if delay is not None:
+                        await f.manager.async_turn_off(ENTITY)
+                    f.hass.states[ENTITY] = self.state("off", 19.5, min_temp=7, max_temp=35)
+                    f.monitor._last_states[ENTITY] = f.hass.states[ENTITY]
+                with patch("custom_components.velair.climate_manager.monotonic", return_value=100 + (delay or 0)):
+                    await self.report(f, self.state("off", 7, min_temp=7, max_temp=35))
+                self.assertEqual(self.control_mode(f), "manual")
+                self.assertEqual(self.external_events(f)[0]["changed_fields"], ["temperature"])
+
+    async def test_recent_off_keeps_other_valid_targets_external(self):
+        for target in (7.1, 7.5, 22, 35):
+            with self.subTest(target=target):
+                f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                await f.manager.async_turn_off(ENTITY)
+                await self.report(f, self.state("off", 19.5, min_temp=7, max_temp=35))
+                await self.report(f, self.state("off", target, min_temp=7, max_temp=35))
+                self.assertEqual(self.control_mode(f), "manual")
+                self.assertEqual(self.external_events(f)[0]["changed_fields"], ["temperature"])
+
+    async def test_minimum_reset_preserves_explicit_state_and_event_contexts(self):
+        contexts = [SimpleNamespace(id="user", user_id="person", parent_id=None),
+                    SimpleNamespace(id="automation", user_id=None, parent_id="other")]
+        for event_only in (False, True):
+            for context in contexts:
+                with self.subTest(event_only=event_only, context=context):
+                    f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                    await f.manager.async_turn_off(ENTITY)
+                    await self.report(f, self.state("off", 19.5, min_temp=7, max_temp=35))
+                    await self.report(f, self.state("off", 7, min_temp=7, max_temp=35,
+                        context=None if event_only else context),
+                        event_context=context if event_only else None)
+                    self.assertEqual(self.control_mode(f), "manual")
+                    self.assertEqual(self.external_events(f)[0]["changed_fields"], ["temperature"])
+
+    async def test_minimum_reset_requires_effective_off_authority(self):
+        for block in ({"start": "00:00", "temperature": 21, "hvac_mode": "heat"},
+                      {"start": "00:00", "temperature": 24, "hvac_mode": "cool"},
+                      {"start": "00:00", "temperature": 21, "temperature_only": True}):
+            with self.subTest(block=block):
+                f = self.fixture(schedule=[block], initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                await f.manager.async_turn_off(ENTITY)
+                await self.report(f, self.state("off", 19.5, min_temp=7, max_temp=35))
+                await self.report(f, self.state("off", 7, min_temp=7, max_temp=35))
+                self.assertEqual(self.control_mode(f), "manual")
+                self.assertEqual(self.external_events(f)[0]["changed_fields"], ["temperature"])
+
+    async def test_new_commands_retire_off_minimum_recognition(self):
+        for command in ("hvac", "temperature", "failed_temperature"):
+            with self.subTest(command=command):
+                f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                await f.manager.async_turn_off(ENTITY)
+                await self.report(f, self.state("off", 19.5, min_temp=7, max_temp=35))
+                if command == "hvac":
+                    await f.manager.async_set_hvac_mode(ENTITY, "heat")
+                elif command == "temperature":
+                    await f.manager.async_set_temperature(ENTITY, 21)
+                else:
+                    with patch.object(f.hass.services, "async_call", side_effect=RuntimeError("Rejected target")):
+                        with self.assertRaises(RuntimeError):
+                            await f.manager.async_set_temperature(ENTITY, 21)
+                old = self.state("off", 19.5, min_temp=7, max_temp=35)
+                new = self.state("off", 7, min_temp=7, max_temp=35)
+                self.assertFalse(f.manager.is_recent_off_minimum_report(ENTITY, old, new))
+
+    async def test_failed_or_cancelled_off_leaves_no_minimum_ownership(self):
+        for failure in (RuntimeError("Rejected off"), asyncio.CancelledError()):
+            with self.subTest(failure=type(failure).__name__):
+                f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                with patch.object(f.hass.services, "async_call", side_effect=failure):
+                    with self.assertRaises(type(failure)):
+                        await f.manager.async_turn_off(ENTITY)
+                await self.report(f, self.state("heat", 7, min_temp=7, max_temp=35))
+                self.assertEqual(self.control_mode(f), "manual")
+                self.assertEqual(self.external_events(f)[0]["changed_fields"], ["temperature"])
+
+    async def test_minimum_is_optional_and_never_confirms_off_by_itself(self):
+        from custom_components.velair.delivery_guard import capture_delivery_receipt
+        for target in (7, 19.5):
+            with self.subTest(target=target):
+                f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35))
+                with capture_delivery_receipt() as receipt:
+                    await f.manager.async_turn_off(ENTITY)
+                self.assertEqual(receipt, {ENTITY: {"hvac_mode": "off"}})
+                f.hass.states[ENTITY] = self.state("heat", 7, min_temp=7, max_temp=35)
+                self.assertFalse(f.manager.compare_receipt(receipt)["matches"])
+                f.hass.states[ENTITY] = self.state("off", target, min_temp=7, max_temp=35)
+                self.assertTrue(f.manager.compare_receipt(receipt)["matches"])
+                self.assertNotIn("temperature", f.manager.command_settling_diagnostics(ENTITY)["fields"])
+                self.assertEqual(f.manager.command_settling_diagnostics(ENTITY)["mismatches"], {})
+
+    async def test_next_heat_and_cool_blocks_apply_after_minimum_reset(self):
+        for mode, temperature in (("heat", 21), ("cool", 24)):
+            with self.subTest(mode=mode):
+                f = self.fixture(initial=self.state("heat", 19.5, min_temp=7, max_temp=35),
+                    schedule=[{"start": "00:00", "action": "turn_off"},
+                        {"start": "19:00", "temperature": temperature, "hvac_mode": mode}])
+                await f.manager.async_turn_off(ENTITY)
+                await self.report(f, self.state("off", 7, min_temp=7, max_temp=35))
+                f.hass.services.calls.clear()
+                with patch("custom_components.velair.scheduler.dt_util.now", return_value=NOW + timedelta(hours=1)):
+                    await f.scheduler.async_apply_current_schedule(ENTITY)
+                self.assertEqual(self.control_mode(f), "automatic")
+                self.assertTrue(any(service == "set_hvac_mode" and data["hvac_mode"] == mode
+                    for _, service, data, _ in f.hass.services.calls))
+                self.assertTrue(any(service == "set_temperature" and data.get("temperature") == temperature
+                    for _, service, data, _ in f.hass.services.calls))
+
+    async def test_group_minimum_reset_uses_reporting_members_native_limits(self):
+        peer, group = "climate.peer", "group.off_report"
+        for commanded, expected in ((True, "automatic"), (False, "manual")):
+            with self.subTest(commanded=commanded):
+                hass = FakeHass()
+                hass.config.units = SimpleNamespace(temperature_unit="°C")
+                hass.states[ENTITY] = self.state("heat", 20)
+                hass.states[peer] = self.state("heat", 68, entity=peer,
+                    min_temp=44.6, max_temp=95, temperature_unit="°F", target_temp_step=1)
+                data, _ = build_group_candidate(normalize_schedule_data(None, [ENTITY, peer]),
+                    [ENTITY, peer], {"id": group, "name": "Off group", "members": [ENTITY, peer],
+                        "temperature_entity_id": ENTITY, "delivery_mode": "selected",
+                        "delivery_entity_id": peer}, ENTITY)
+                data["zones"][group]["schedule"]["tuesday"] = [{"start": "00:00", "action": "turn_off"}]
+                data["zones"][group]["external_change_policy"]["action"] = "until_resumed"
+                manager = ClimateManager(hass)
+                scheduler = VelairScheduler(hass, data, manager, AsyncMock())
+                monitor = ClimateChangeMonitor(hass, [ENTITY, peer], manager, scheduler)
+                monitor.async_start()
+                self.addCleanup(monitor.async_stop)
+                self.addAsyncCleanup(scheduler.async_stop)
+                f = SimpleNamespace(hass=hass, data=data, manager=manager, scheduler=scheduler, monitor=monitor)
+                if commanded:
+                    await manager.async_turn_off(peer)
+                await self.report(f, self.state("heat", 44.6, entity=peer,
+                    min_temp=44.6, max_temp=95, temperature_unit="°F", target_temp_step=1))
+                if commanded:
+                    await self.report(f, self.state("off", 44.6, entity=peer,
+                        min_temp=44.6, max_temp=95, temperature_unit="°F", target_temp_step=1))
+                self.assertEqual(self.control_mode(f, group), expected)
+                self.assertEqual(len(self.external_events(f)), 0 if commanded else 1)

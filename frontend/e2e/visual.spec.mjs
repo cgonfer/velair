@@ -22,6 +22,8 @@ async function assertHorizontalTimeline(locator) {
 
 async function assertEventDetails(card, page) {
   for (const detail of await card.locator(".effective-event .event-target, .effective-event .event-mode, .effective-event .event-time").all()) {
+    // The compact event table keeps its columns accessible through native scrolling.
+    await detail.scrollIntoViewIfNeeded();
     await assertFitsViewport(detail, page);
   }
   for (const detail of await card.locator(".overview-zone-activity-detail").all()) {
@@ -32,6 +34,10 @@ async function assertEventDetails(card, page) {
 test("selected screens have explicit visual evidence in both themes", { annotation: [
   { type: "velair-action", description: "appearance.capture" }, { type: "velair-variant", description: "default" },
 ] }, async ({ page }, testInfo) => {
+  const baseline = process.env.VELAIR_QUALITY_BASELINE === "true";
+  if (baseline && process.env.VELAIR_QUALITY_VISUAL === "compare") {
+    throw new Error("Historical appearance must not use candidate visual references");
+  }
   const api = await connect();
   let fixture;
   try { fixture = visualFixture(await api.call({ type: "velair/get_schedule" }), readState().climate_entities); }
@@ -55,6 +61,7 @@ test("selected screens have explicit visual evidence in both themes", { annotati
       await page.setViewportSize(viewport);
     }
     await overview.locator(".overview-timeline-scroll").evaluateAll(elements => elements.forEach(element => { element.scrollLeft = 0; }));
+    await overview.locator(".effective-event-list").evaluateAll(elements => elements.forEach(element => { element.scrollLeft = 0; }));
     await screenshot(page, testInfo, `overview-${suffix}`);
     // Exercise native scrolling after the reference, so keyboard smooth-scroll
     // frames cannot alter the deliberately fixed screenshot position.
@@ -62,13 +69,37 @@ test("selected screens have explicit visual evidence in both themes", { annotati
     const card = await openSchedule(page, readState().climate_entities[0]);
     await expect(card.locator(".editable-block")).toHaveCount(6);
     await expect(card.locator('.editable-block input[type="time"]').first()).toHaveValue("00:00");
-    if (page.viewportSize().width <= 600) {
-      const input = card.locator('.editable-block input[type="time"]').first();
-      expect((await input.boundingBox()).width, "native time input has room for hours, minutes and AM/PM").toBeGreaterThanOrEqual(130);
+    for (const panel of await card.locator(".timeline-panel").all()) {
+      await assertFitsViewport(panel, page);
+    }
+    // Paired historical runs keep the same functional journeys and capture all
+    // surfaces, without requiring the editor design introduced by the candidate.
+    if (!baseline) {
+      const editorLayout = await card.locator(".editable-block").first().evaluate(element => {
+        const panel = element.closest(".card");
+        const style = getComputedStyle(panel);
+        return {
+          display: getComputedStyle(element).display,
+          panelWidth: panel.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+        };
+      });
+      expect(editorLayout.display, "only the narrowest editors stack their block fields")
+        .toBe(page.viewportSize().width <= 340 || editorLayout.panelWidth <= 340 ? "grid" : "contents");
+      for (const panel of await card.locator(".timeline-panel").all()) {
+        const fits = await panel.evaluate(element => {
+          const bounds = element.getBoundingClientRect();
+          return [element.querySelector(".timeline-track"), ...element.querySelectorAll(".timeline-hours > span")]
+            .every(child => {
+              const rect = child.getBoundingClientRect();
+              return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1;
+            }) && element.scrollWidth <= element.clientWidth + 1;
+        });
+        expect(fits, "the editor shows the full day in its available width").toBe(true);
+      }
+      await expect(card.locator(".timeline-panel .timeline-scroll-hint")).toHaveCount(0);
     }
     await card.locator(".timeline-scroll").evaluateAll(elements => elements.forEach(element => { element.scrollLeft = 0; }));
     await screenshot(page, testInfo, `editor-${suffix}`);
-    await assertHorizontalTimeline(card.locator(".timeline-scroll"));
     await card.locator(".documentation-help-button").first().click();
     const dialog = card.locator("dialog.documentation-dialog[open]");
     await expect(dialog).toBeVisible();

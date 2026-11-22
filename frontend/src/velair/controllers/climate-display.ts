@@ -1,4 +1,4 @@
-import { controlUnitState, controlUnitId, controlUnitName } from "../domain/control-units";
+import { controlUnitState, controlUnitId, controlUnitName, controlUnitZone } from "../domain/control-units";
 import {
   climateCapabilities,
   climateFanModeOptions,
@@ -98,7 +98,7 @@ export function entityTemperatureStepForHost(host: ClimateDisplayHost, entityId?
     host._temperatureUnit(entityId),
   );
   if (published !== undefined) return published;
-  const zone = entityId ? host._data?.zones?.[entityId] : undefined;
+  const zone = entityId ? controlUnitZone(host._data, entityId) : undefined;
   for (const fallback of [
     zone?.last_reported_target_temp_step,
     zone?.target_temp_step_override,

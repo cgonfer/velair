@@ -130,6 +130,7 @@ class LearningActivityTest(unittest.IsolatedAsyncioTestCase):
                 self.start()
                 session = self.scheduler._preconditioning_sessions[self.entity]
                 session = replace(session, start_temperature=initial)
+                self.scheduler._preconditioning_sessions[self.entity] = session
                 await self.scheduler._async_finish_preconditioning_session(session, NOW + timedelta(minutes=minutes), 21, quality=quality)
                 result = self.events("preconditioning_observation_recorded")[-1]
                 self.assertEqual(result["reason"], expected)

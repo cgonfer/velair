@@ -370,6 +370,8 @@ export type RoomAssistBrakingLevel = "default" | "moderate" | "high";
 export type PreconditioningSettings = {
   master_entity_id?: string | null;
   enabled: boolean;
+  heating_setpoint_offset?: number;
+  cooling_setpoint_offset?: number;
   max_lead_minutes: number;
   minimum_delta_temperature: number;
   learning_history_size: number;
@@ -649,7 +651,37 @@ export type PreconditioningLearningSummary = {
   cool: PreconditioningDirectionLearning;
 };
 
+export type PreconditioningOffsetStatus = {
+  direction: "heat" | "cool";
+  requested: number;
+  applied: number;
+  base_target: { temperature: number } | { target_temp_low: number; target_temp_high: number };
+  limited_by: "minimum" | "maximum" | "step" | null;
+};
+
 export type RoomSensorAssistStatus = {
+  reference_setpoint?: {
+    boundary: "low" | "high";
+    calculated_temperature: number;
+    requested_temperature: number;
+    applied_temperature: number;
+    scheduled_target_guard: "heating_ceiling" | "cooling_floor" | null;
+    pre_step_temperature: number | null;
+    target_temp_step: number | null;
+  };
+  control_intent?: {
+    active: boolean;
+    valid: boolean;
+    demand: boolean | null;
+    direction: "heat" | "cool" | null;
+    source?: "normal" | "preconditioning";
+    thresholds?: Partial<Record<"heat" | "cool", {
+      target: number;
+      start_temperature: number;
+      stop_temperature: number;
+    }>>;
+  };
+  preconditioning_offset?: PreconditioningOffsetStatus;
   braking?: {
     configured_level: RoomAssistBrakingLevel;
     effective_level: RoomAssistBrakingLevel;
@@ -828,6 +860,9 @@ export type PlannedReturnControl = {
 };
 
 export type ZoneRuntimeStatus = {
+  preconditioning_offset?: PreconditioningOffsetStatus;
+  applied_target_temp_low?: number | null;
+  applied_target_temp_high?: number | null;
   planned_return?: PlannedReturnControl | null;
   state: "stopped" | "paused" | "boost" | "preconditioning" | "scheduled" | "idle" | "externally_managed";
   room_temperature?: number | null;

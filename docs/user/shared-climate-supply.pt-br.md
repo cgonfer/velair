@@ -8,8 +8,8 @@ Traduções: [Original em inglês](shared-climate-supply.md) · [Español](share
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.6 |
-| Última sincronização | 2026-10-28 |
+| Versão de referência | 1.9.3-dev.20261120233407 |
+| Última sincronização | 2026-11-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -168,17 +168,15 @@ São usados os alvos atuais dos termostatos, incluindo alterações manuais e al
 Um painel informativo azul no início de **Demanda e histerese**, antes do seletor
 de modo, explica a prioridade do Room Assist e quando se aplica a histerese.
 
-Quando o Room Assist controla o alvo ativo de um cômodo, o fornecimento segue
-sua intenção de controle confirmada. Em aquecimento fixo, a fase `towards_upper`
-solicita calor; em resfriamento fixo, `towards_lower` solicita frio. Seus limites
-de comutação continuam a ser a referência: a histerese do fornecimento e a exceção
-do cômodo não são aplicadas novamente. O controle de intervalo nativo segue a
-direção confirmada. Um alvo assistido inválido ou pendente permanece desconhecido
-até existir uma confirmação válida.
+Quando o Room Assist controla o alvo ativo de um cômodo, o fornecimento compartilhado segue sua demanda efetiva confirmada. Na regulação normal, a fase `towards_upper` no aquecimento fixo solicita calor, e `towards_lower` no resfriamento fixo solicita resfriamento. O controle de faixa nativa segue sua direção confirmada. Os limites de comutação do Room Assist têm prioridade; a histerese do fornecimento e os ajustes por cômodo não são aplicados novamente.
 
-O alvo corrigido do termostato não é comparado com um sensor externo do cômodo.
-O Room Assist pode deixar de solicitar fornecimento mesmo que o termostato continue
-informando o mesmo alvo ajustado.
+Durante a preparação antecipada com deslocamento positivo configurado, o Room Assist também inclui a solicitação temporária de aquecimento ou resfriamento da preparação na demanda efetiva. Sua fase habitual de histerese é mantida separadamente. Por exemplo, um objetivo de aquecimento de `21 °C` com margem de preparação de `0.1 °C` pode solicitar calor até `20.9 °C`, mesmo que a fase habitual estivesse em repouso. O resfriamento para `24 °C` faz o equivalente em `24.1 °C`. O alvo temporário do dispositivo não é um novo objetivo do cômodo. Quando o extra termina, o Room Assist retoma a demanda habitual, que pode encerrar ou continuar a solicitação. O fornecimento mantém seus atrasos, tempos mínimos e agregação entre cômodos, sem uma regra separada de preparação.
+
+Só são usadas intenções de controle atuais e confirmadas. Um alvo assistido inválido ou pendente significa demanda desconhecida até haver confirmação válida. Encerrar a preparação também invalida sua solicitação temporária antiga se a restauração do alvo normal falhar.
+
+O alvo corrigido do termostato não é comparado com um sensor ambiente externo. O Room Assist pode parar de solicitar fornecimento mesmo quando o termostato ainda informa o mesmo alvo ajustado.
+
+Sem Room Assist, o fornecimento continua usando o alvo informado pelo termostato e sua histerese normal. Um deslocamento de preparação pode alterar esse alvo informado; removê-lo permite avaliar normalmente o alvo resultante. Esse caminho não ganha prioridade de preparação nem retenção especial de demanda.
 
 <a id="timing-and-manual-control"></a>
 ## Temporização e controle manual

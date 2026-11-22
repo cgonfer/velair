@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Referenzversion | 1.9.3-dev.20261120233407 |
+| Letzte Synchronisierung | 2026-11-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -46,6 +46,42 @@ Native `heat_cool`-Bereiche werden unterstützt. Liegt der Raum um mehr als die 
 Für zwei Sollwerte in festem `heat` oder `cool` wähle unter **Einstellungen → Klimageräte und Gruppen** den **Referenzsollwert** für Gerät und Modus: **Unterer Sollwert** oder **Oberer Sollwert**, je nachdem, welchen das Gerät tatsächlich nutzt. Room Assist teilt diese Einstellung. Heizvorbereitung und Lernen nutzen nur die gewählte Grenze als Heizsollwert, Kühlung als Kühlsollwert. Der Modus bestimmt die Richtung, auch bei oberer Heiz- oder unterer Kühlgrenze. Velair sendet das vollständige nominelle Paar frühzeitig, auch bei geplanter Rückkehr, niemals nur die Referenzgrenze.
 
 Bei **Nicht konfiguriert** behalten Festmoduspaarungen ihre geplante Zeit und erzeugen keine thermischen Lernproben. Geplante Rückkehr wendet sie ohne Vorlauf bei Ankunft an. `auto`-Bereiche behalten diese Einschränkung, da die Grenzwahl das Heiz-/Kühlverhalten nicht bestimmt. Natives `heat_cool` bleibt unverändert. Referenzänderungen verwerfen mit der alten Interpretation gestartete Lernbeobachtungen.
+
+<a id="temporary-setpoint-offset"></a>
+## Vorübergehender Sollwertversatz
+
+**Heizversatz** und **Kühlversatz** erhöhen bei Bedarf die Stellwirkung während der vorzeitigen Vorbereitung. Beide beginnen bei `0` und erhalten damit das bisherige Verhalten. Wähle jeden Wert im wirksamen Temperaturschritt des Klimageräts bis `5 °C` (`9 °F`). Der größte wählbare Wert ist der höchste kompatible Schritt innerhalb dieser Grenze. Dies sind Temperaturdifferenzen: Ein Heizversatz von `2 °C` addiert zwei Grad; ein Kühlversatz von `2 °C` zieht zwei Grad ab.
+
+Das geplante Raumziel und das Lernziel bleiben unverändert. Die Vorbereitung eines Heizblocks mit `21 °C` und Versatz `2 °C` sendet vorübergehend `23 °C`. Ein Kühlblock mit `24 °C` und Versatz `1.5 °C` sendet vorübergehend `22.5 °C`. Bei minimaler Temperaturdifferenz `0.1 °C` enden diese Vorbereitungen bei `20.9 °C` beziehungsweise `24.1 °C`. Der Versatz endet auch beim Blockbeginn. Danach gleicht Velair den aktuellen Zeitplan, Room Assist und andere aktive Steuerungen über das bestehende Übermittlungs- und Wiederherstellungsverhalten ab.
+
+Bei zwei Sollwerten verschieben sich beide Grenzen gleich weit. Ein Heizband `20–24 °C` mit angefordertem Versatz `3 °C` und physischem Maximum `25 °C` wird zu `21–25 °C`: Die Breite bleibt vier Grad und der wirksame Versatz sinkt auf `1 °C`. Kühlen verhält sich am physischen Minimum spiegelbildlich. Der wirksame Zusatz wird auf einen kompatiblen Differenzschritt abgerundet und überschreitet nie die Anforderung. Bleibt kein Spielraum, kann ein positiv konfigurierter Versatz `0 °C` bewirken; die Vorbereitungsrichtung bleibt dennoch bis zur ursprünglichen Raumschwelle aktiv.
+
+Ein geänderter Versatz setzt nur das Lernen dieser Richtung zurück. Vorhersage, Probenauswahl und Gültigkeitsregeln für Beobachtungen bleiben gleich. Sitzungen mit durch Gerätegrenzen oder Room Assist wechselndem wirksamem Versatz bleiben nach diesen Regeln zulässig. Wiederherstellen der Vorkonditionierungsstandards setzt beide Versätze auf null, setzt nur Richtungen mit geändertem Versatz zurück und erhält die separaten Room-Assist-Einstellungen einschließlich Bremsung.
+
+Meldet das Gerät später einen anderen Schritt, behält Velair die gespeicherte Anforderung und verringert nur den angewendeten Zusatz auf einen kompatiblen Schritt. Die Umrechnung der Temperatureinheit erhält die physische Differenz und setzt das Lernen nicht zurück. Das portable Modell `28` kennzeichnet exportierte Lerndaten mit dem konfigurierten Versatz ihrer Richtung; ein Lernimport erfordert eine passende resultierende Konfiguration. Ältere Lerndaten gelten als Versatz null. Ändert ein reiner Konfigurationsimport einen Versatz, wird das beibehaltene lokale Lernen dieser Richtung zurückgesetzt.
+
+Im Panel bleiben **Geplanter Sollwert** und der Velair zugeordnete Wert beim ursprünglichen Ziel. Die bestehende Markierung **Angewendeter Sollwert** zeigt den endgültigen Befehl. Ein aktives Versatzabzeichen zeigt den wirksamen Zusatz mit Vorzeichen, auch eine begrenzte Null. Seine Details erklären ursprüngliches Ziel, Room-Assist-Basis, angeforderten und wirksamen Zusatz, endgültigen Befehl und Gerätegrenzen.
+
+<a id="after-reaching-the-target"></a>
+## Nach Erreichen des Ziels
+
+Erreicht eine angenommene vorzeitige Vorbereitung ihre Ankunftsschwelle vor Blockbeginn, behält Velair das ursprüngliche Blockziel bis zur geplanten Zeit. Der vorübergehende Versatz endet beim Erreichen der Schwelle. Das funktioniert auch mit Versatz null, ohne Room Assist und bei einer für eine Lernprobe zu kurzen Beobachtung.
+
+Beispiel: Der aktuelle Block hat `20 °C`; die Vorbereitung eines zukünftigen `21 °C`-Blocks endet bei `20.9 °C`. Die Übersicht behält **Ziel** bei `21 °C`, statt nach Beobachtungsende zu `20 °C` zurückzukehren. Mit Heizversatz `2 °C` wird der vorübergehende Befehl `23 °C` zum nominalen `21 °C`. Ist **Angewendet** ebenfalls `21 °C`, wird der doppelte Wert wie üblich ausgeblendet. Kühlen verhält sich spiegelbildlich: Ein bei `24.1 °C` erreichtes zukünftiges Ziel `24 °C` behält nominal `24 °C`, nachdem der vorübergehende Befehl `22 °C` endet. Room Assist kann seine normale Korrektur oder Bremsung auf dieses nominale Ziel anwenden.
+
+Velair speichert diese abgeschlossene Vorbereitung lokal und prüft nach einem Neustart den passenden Zeitplan- und Regelkontext. **Aktiven Zeitplan nach dem Start anwenden** entscheidet weiterhin über eine Befehlsübermittlung:
+
+| Startoption | Gültige abgeschlossene Vorbereitung vor dem Block |
+| --- | --- |
+| Aktiviert | Wiederhergestelltes nominales Ziel wie `21 °C` normal übermitteln. Den Vorbereitungsversatz nicht wiederherstellen. |
+| Deaktiviert | Nominal `21 °C` für Panel und aktuelle Absicht wiederherstellen, ohne wegen dieser Wiederherstellung Sollwert, Modus oder andere Blockoptionen zu senden. Abweichenden tatsächlich angewendeten Sollwert separat anzeigen. |
+
+Die Wiederherstellung öffnet das Lernen nicht erneut und aktiviert den Zusatz nicht wieder, wenn die Raumtemperatur während der Offlinezeit von Home Assistant abweicht. Sie benötigt einen erfolgreich gespeicherten Abschluss; ein gemeldeter Sollwert allein belegt keinen Vorbereitungsabschluss. Ein fehlgeschlagener Speichervorgang kann keine Kontinuität nach einem weiteren Neustart garantieren. Pausen, manuelle Anpassungen, Übersteuerungen, deaktivierte Vorbereitung sowie ersetzte Zeitpläne oder Zuständigkeiten haben weiterhin Vorrang. Änderungen an Referenzsollwert, Raumgruppenmitgliedschaft oder aktivem Modus verwerfen einen gespeicherten Abschluss ebenfalls, wenn dessen Vorbereitungskontext nicht mehr passt. Zur nominalen Blockzeit übernimmt der normale Zeitplan.
+
+Ohne bestätigten Abschluss einer vorzeitigen Vorbereitung gilt die bestehende Unterscheidung weiter: **Ziel** `20 °C` und **Angewendet** `21 °C` können verschiedene Zeitplan- und Gerätewerte beschreiben. Allein das Aktivieren der Vorkonditionierung ändert das nicht.
+
+<a id="live-predictions"></a>
+## Aktuelle Vorhersagen
 
 Beim Aufklappen eines Klimageräts erscheint für jeden unterstützten Modus eine Karte mit der aktuellen Vorhersage. Sie verwendet dieselben Backend-Daten zum nächsten Ereignis wie die Übersicht. Pausen, temporäre Anpassungen, nicht unterstützte Modi und Blöcke, die nicht vorkonditioniert werden können, werden dadurch einheitlich berücksichtigt. Existiert ein passender zukünftiger Block, zeigt die Karte den berechneten Start, die Zielzeit, den Vorlauf, die geplante Temperatur und den Modus. Außerdem zeigt sie, ob Velair das Anfangsmodell oder ähnliche lokale Verlaufsdaten verwendet.
 
@@ -226,6 +262,8 @@ Ist der Außensensor beim Speichern eines Beispiels nicht verfügbar, speichert 
 Standardmäßig verwendet die adaptive Vorkonditionierung `current_temperature` der Klimaentität.
 
 Ist die Raumsensorunterstützung für das Klimagerät aktiviert und ein Raumsensor ausgewählt, verwendet die adaptive Vorkonditionierung dessen Messwert als wirksame Raumtemperatur für Entscheidungen und Lernen.
+
+Während der Vorbereitung berechnet Room Assist zuerst seinen normalen gültigen Basissollwert; danach wird der vorübergehende Versatz addiert. Nominales Heizziel `21 °C`, Room-Assist-Basis `22 °C` und Heizversatz `2 °C` senden beispielsweise `24 °C`, sofern das Gerät dies zulässt. Room Assist verwendet diesen vorübergehenden Befehl nie als Lernziel des Raums. Ein positiv konfigurierter Versatz hält die Vorbereitungsrichtung vorübergehend aktiv, auch wenn Room Assist eine nicht anfordernde Hysteresephase übernommen hat. Nach Erreichen der ursprünglichen Vorbereitungsschwelle gelten normale Hysterese und gewählte Bremsstufe wieder. Dieser Vorrang gilt auch, wenn physische Grenzen den wirksamen Zusatz auf null verringern; eine konfigurierte Null erhält das bisherige Verhalten.
 
 Das ist bei Heizkörperthermostaten oder Thermostaten hilfreich, deren eingebauter Sensor zu nahe an einem Heizkörper, Luftauslass oder einer anderen lokalen Wärmequelle sitzt. Die geräteseitige Wirkung ist unter [Room Assist](room-assist.de.md) beschrieben.
 

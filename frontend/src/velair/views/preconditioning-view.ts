@@ -1,7 +1,7 @@
 import { controlUnitState, controlUnitLabel } from "../domain/control-units";
 import { effectiveClimateHvacModeForEnsureOn } from "../domain/climate";
 import { html, nothing } from "lit";
-import { preconditioningMasterCandidates, preconditioningSettings, temperatureSensorOptions } from "../domain/preconditioning";
+import { preconditioningMasterCandidates, preconditioningSettings, preconditioningOffsetBounds, temperatureSensorOptions } from "../domain/preconditioning";
 import { dependencyReasonDetailKeys, renderPreconditioningDependency } from "./preconditioning-dependency";
 import { minutesPerDegreeBounds, temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
 import type { VelairViewHost } from "../host-types";
@@ -208,9 +208,15 @@ function renderAdaptivePreconditioningFields(
   const temperatureUnit = host._temperatureUnit?.(entityId) ?? "°C";
   const minutesPerDegreeRange = minutesPerDegreeBounds(temperatureUnit);
   const temperatureDeltaStep = 0.1;
+  const offsetBounds = preconditioningOffsetBounds(host._entityTemperatureStep?.(entityId) ?? 1, temperatureDeltaMaximum(temperatureUnit, 5));
   return html`
     <div class="preconditioning-config-sections">
       ${renderMasterSection(host, entityId, preconditioning)}
+      ${renderConfigurationSection(host, "preconditioningSetpointOffset", "mdi:thermometer-chevron-up", html`
+        ${renderPreconditioningNumber(host, entityId, "preconditioningHeatingOffset", preconditioning.heating_setpoint_offset ?? 0, "heating_setpoint_offset", 0, offsetBounds.maximum, offsetBounds.step, "", { labelUnit: temperatureUnit })}
+        ${renderPreconditioningNumber(host, entityId, "preconditioningCoolingOffset", preconditioning.cooling_setpoint_offset ?? 0, "cooling_setpoint_offset", 0, offsetBounds.maximum, offsetBounds.step, "", { labelUnit: temperatureUnit })}
+        <p class="muted">${host._t("preconditioningOffsetSettingsHelp")}</p>
+      `)}
       ${renderConfigurationSection(
         host,
         "preconditioningTiming",
@@ -805,6 +811,8 @@ function renderPreconditioningNumber(
   value: number,
   field: keyof Pick<
     PreconditioningSettings,
+    | "heating_setpoint_offset"
+    | "cooling_setpoint_offset"
     | "max_lead_minutes"
     | "minimum_delta_temperature"
     | "learning_history_size"
@@ -841,7 +849,10 @@ function renderPreconditioningNumber(
             max,
             Math.max(min, Number.isFinite(rawValue) ? rawValue : value),
           );
-          host._saveZonePreconditioning(entityId, { [field]: boundedValue });
+          const nextValue = field === "heating_setpoint_offset" || field === "cooling_setpoint_offset"
+            ? Number((Math.round(boundedValue / step) * step).toFixed(8))
+            : boundedValue;
+          host._saveZonePreconditioning(entityId, { [field]: Math.min(max, nextValue) });
         }}
       />${unit ? html`<span>${unit}</span>` : nothing}</span>
     </label>

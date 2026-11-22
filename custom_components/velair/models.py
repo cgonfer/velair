@@ -188,6 +188,8 @@ class PreconditioningData(TypedDict):
     master_entity_id: NotRequired[str | None]
     max_lead_minutes: int
     minimum_delta_temperature: float
+    heating_setpoint_offset: float
+    cooling_setpoint_offset: float
     learning_history_size: int
     similar_sample_count: int
     comfort_percentile: int
@@ -1859,7 +1861,7 @@ def _normalize_preconditioning_anchors(raw: Any, zone_count: int) -> dict[str, d
     if not isinstance(raw, dict):
         return {}
     result: dict[str, dict[str, Any]] = {}
-    for key, value in list(raw.items())[-max(32, zone_count * 16):]:
+    for key, value in raw.items():
         if not isinstance(key, str) or not isinstance(value, dict):
             continue
         try:
@@ -1869,8 +1871,50 @@ def _normalize_preconditioning_anchors(raw: Any, zone_count: int) -> dict[str, d
             continue
         if any(instant.tzinfo is None for instant in instants):
             continue
-        result[key] = deepcopy(value)
-    return result
+        anchor = deepcopy(value)
+        if any(field in anchor for field in ("completed_at", "weekday", "start", "completion_context")):
+            try:
+                completed = datetime.fromisoformat(anchor["completed_at"].replace("Z", "+00:00"))
+                weekday = anchor["weekday"]
+                start = normalize_start_time(anchor["start"])
+                entity = anchor["entity_id"]
+                expected = f"{entity}|{weekday}|{start}|{instants[1].astimezone(timezone.utc).isoformat()}"
+                valid = (completed.tzinfo is not None and weekday in WEEKDAYS
+                         and anchor.get("direction") in ("heat", "cool")
+                         and isinstance(anchor.get("completion_context"), str)
+                         and re.fullmatch(r"[0-9a-f]{64}", anchor["completion_context"]) is not None
+                         and instants[0].astimezone(timezone.utc) <= completed.astimezone(timezone.utc)
+                         < instants[1].astimezone(timezone.utc) and key == expected)
+            except (KeyError, TypeError, ValueError, AttributeError):
+                valid = False
+            if not valid:
+                # Corrupt completion opt-in must not erase legacy source-start
+                # evidence or manufacture a completed preparation.
+                for field in ("completed_at", "weekday", "start", "completion_context"):
+                    anchor.pop(field, None)
+        result[key] = anchor
+    limit = max(32, zone_count * 16)
+    # Give live own continuity priority without allowing old completed records
+    # to displace still-live dependency evidence at the load boundary.
+    now = datetime.now(timezone.utc)
+    completed, sources, expired = [], [], []
+    for key, anchor in result.items():
+        target = datetime.fromisoformat(anchor["target_when"].replace("Z", "+00:00"))
+        expiry = datetime.fromisoformat(anchor["expires_at"].replace("Z", "+00:00"))
+        completed_at = datetime.fromisoformat(anchor["completed_at"].replace("Z", "+00:00")) if "completed_at" in anchor else None
+        if completed_at is not None and completed_at <= now < target:
+            completed.append(key)
+        elif expiry > now:
+            sources.append(key)
+        else:
+            expired.append(key)
+    selected = completed[-limit:]
+    for entries in (sources, expired):
+        capacity = limit - len(selected)
+        if capacity:
+            selected.extend(entries[-capacity:])
+    retained = set(selected)
+    return {key: value for key, value in result.items() if key in retained}
 
 
 def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
@@ -1888,6 +1932,14 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         "max_lead_minutes": max_lead_minutes,
         "minimum_delta_temperature": _normalize_preconditioning_delta(
             data.get("minimum_delta_temperature")
+        ),
+        # Storage can contain either runtime unit. Unit-specific bounds and the
+        # current device step are enforced at explicit configuration writes.
+        "heating_setpoint_offset": _normalize_preconditioning_offset(
+            data.get("heating_setpoint_offset")
+        ),
+        "cooling_setpoint_offset": _normalize_preconditioning_offset(
+            data.get("cooling_setpoint_offset")
         ),
         "learning_history_size": _normalize_int(
             data.get("learning_history_size"),
@@ -2867,6 +2919,15 @@ def _normalize_float(
     except (TypeError, ValueError):
         return fallback
     return max(minimum, min(number, maximum))
+
+
+def _normalize_preconditioning_offset(value: Any) -> float:
+    """Preserve stored delta precision, repairing invalid offsets to disabled."""
+    try:
+        offset = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return offset if isfinite(offset) and 0 <= offset <= 9.0 else 0.0
 
 
 def _normalize_room_sensor_assist_deadband(value: Any) -> float:

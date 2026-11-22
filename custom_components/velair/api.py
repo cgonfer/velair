@@ -105,7 +105,7 @@ from .temperature_migration import (
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 _LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 27
+EXPORT_MODEL_VERSION = 28
 EXPORT_SECTIONS = (
     "member_comfort",
     "room_groups",
@@ -212,6 +212,12 @@ PRECONDITIONING_SCHEMA = vol.Schema(
         vol.Optional("minimum_delta_temperature"): vol.All(
             vol.Coerce(float),
             vol.Range(min=0, max=9),
+        ),
+        vol.Optional("heating_setpoint_offset"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=9),
+        ),
+        vol.Optional("cooling_setpoint_offset"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=9),
         ),
         vol.Optional("learning_history_size"): vol.All(
             vol.Coerce(int),
@@ -1954,7 +1960,7 @@ async def ws_import_data(
         if not blocked:
             await scheduler.async_start(apply_current_schedule=False)
     except Exception as err:
-        if persisted:
+        if persisted or getattr(err, "velair_import_persisted", False):
             _mark_operation_recovery(runtime, "portable_import", err)
             connection.send_error(
                 msg["id"],
@@ -2846,7 +2852,8 @@ def _build_import_data(
         import_data["preconditioning_learning"] = (
             _normalize_import_preconditioning_learning(
                 payload_sections["preconditioning_learning"],
-                current_zones,
+                import_data.get("zones", current_zones),
+                model_version=payload["model_version"],
             )
         )
     if "profiles" in sections:
@@ -3066,7 +3073,7 @@ def _export_preconditioning_learning(
         list(zones),
         history_sizes,
     )
-    return {
+    exported = {
         entity_id: learning
         for entity_id, learning in normalized.items()
         if any(
@@ -3074,11 +3081,19 @@ def _export_preconditioning_learning(
             for direction in ("heat", "cool")
         )
     }
+    for entity_id, learning in exported.items():
+        config = normalize_preconditioning_data(zones[entity_id].get("preconditioning"))
+        for direction, key in (("heat", "heating_setpoint_offset"),
+                               ("cool", "cooling_setpoint_offset")):
+            learning[direction]["setpoint_offset"] = config[key]
+    return exported
 
 
 def _normalize_import_preconditioning_learning(
     raw_learning: Any,
     current_zones: dict[str, Any],
+    *,
+    model_version: int = EXPORT_MODEL_VERSION,
 ) -> dict[str, Any]:
     """Normalize learning for matching managed climates and ignore the rest."""
     if not isinstance(raw_learning, dict):
@@ -3099,7 +3114,30 @@ def _normalize_import_preconditioning_learning(
         history_sizes,
     )
     for entity_id, learning in normalized.items():
+        config = normalize_preconditioning_data(current_zones[entity_id].get("preconditioning"))
         for direction in ("heat", "cool"):
+            if learning[direction]["observations"]:
+                raw_direction = raw_learning[entity_id].get(direction, {})
+                raw_offset = (
+                    raw_direction.get("setpoint_offset", 0.0)
+                    if model_version >= 28 and isinstance(raw_direction, dict)
+                    else 0.0
+                )
+                try:
+                    offset = float(raw_offset)
+                except (TypeError, ValueError) as err:
+                    raise ValueError("Preconditioning learning offset is not valid") from err
+                key = "heating_setpoint_offset" if direction == "heat" else "cooling_setpoint_offset"
+                if (not math.isfinite(offset) or offset < 0
+                        or not math.isclose(offset, config[key], rel_tol=0, abs_tol=0.000001)):
+                    raise ValueError(
+                        f"Preconditioning learning offset for {entity_id} ({direction}) "
+                        "does not match its configured offset"
+                    )
+                # Carry the rule through the unlocked preview. The scheduler
+                # revalidates it after acquiring its mutation lock, then removes
+                # this portable-only metadata before saving internal learning.
+                learning[direction]["setpoint_offset"] = offset
             for observation in learning[direction]["observations"]:
                 observation["entity_id"] = entity_id
     return {
@@ -3402,6 +3440,16 @@ def _validate_portable_zone_schedules(
                     f"Room Assist deadband for {entity_id} must be between 0 and {maximum:g}"
                 )
         if isinstance(preconditioning, dict):
+            maximum = 9.0 if temperature_unit == FAHRENHEIT else 5.0
+            for key in ("heating_setpoint_offset", "cooling_setpoint_offset"):
+                if key not in preconditioning:
+                    continue
+                try:
+                    offset = float(preconditioning[key])
+                except (TypeError, ValueError) as err:
+                    raise ValueError(f"{key} for {entity_id} is not valid") from err
+                if not math.isfinite(offset) or not 0 <= offset <= maximum:
+                    raise ValueError(f"{key} for {entity_id} must be between 0 and {maximum:g}")
             from .room_assist_braking import validate_braking_settings
             validate_braking_settings(preconditioning)
         comfort = zone.get("comfort")

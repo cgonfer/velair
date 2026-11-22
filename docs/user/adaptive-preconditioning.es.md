@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](adaptive-preconditioning.md) · [Español](a
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.6 |
-| Última sincronización | 2026-10-28 |
+| Versión de referencia | 1.9.3-dev.20261120233407 |
+| Última sincronización | 2026-11-21 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -47,6 +47,42 @@ Se admiten intervalos nativos `heat_cool`. Si la habitación está por debajo de
 Para dos consignas en `heat` o `cool` fijo, selecciona **Consigna de referencia** para ese equipo y modo en **Ajustes → Equipos y grupos**. Elige el límite que use realmente tu equipo: **Consigna inferior** o **Consigna superior**. Room Assist comparte esta selección. La preparación y el aprendizaje usan solo ese límite como objetivo de calefacción o refrigeración según el modo, incluso si eliges el superior para calentar o el inferior para refrigerar. Velair adelanta el par nominal completo, también en Regreso a casa; nunca envía solo el límite seleccionado.
 
 Con **Sin configurar**, los pares de modo fijo mantienen su hora y no producen muestras térmicas. Regreso a casa los aplica a la llegada sin anticipación. Los intervalos en `auto` conservan esta limitación porque elegir un límite no define cómo calienta o enfría el equipo. El comportamiento nativo `heat_cool` no cambia. Cambiar la referencia invalida las observaciones iniciadas con la interpretación anterior.
+
+<a id="temporary-setpoint-offset"></a>
+## Compensación temporal de consigna
+
+**Compensación de calefacción** y **Compensación de refrigeración** añaden esfuerzo opcional al actuador durante la preparación anticipada. Ambas empiezan en `0`, que conserva el comportamiento existente. Elige cada valor según el paso efectivo de temperatura del equipo, hasta `5 °C` (`9 °F`). El mayor valor seleccionable es el paso compatible más alto dentro de ese límite. Son diferencias de temperatura: una compensación de calefacción de `2 °C` suma dos grados; una de refrigeración de `2 °C` resta dos grados.
+
+El objetivo programado de la habitación y el objetivo de aprendizaje no cambian. Por ejemplo, preparar un bloque de calefacción de `21 °C` con compensación `2 °C` envía temporalmente `23 °C`. Preparar uno de refrigeración de `24 °C` con compensación `1.5 °C` envía temporalmente `22.5 °C`. Con Diferencia mínima de temperatura `0.1 °C`, esas preparaciones terminan en `20.9 °C` y `24.1 °C`, respectivamente. La compensación también se retira al comenzar el bloque. Velair concilia entonces el horario actual, Room Assist y los demás controles activos mediante su comportamiento existente de entrega y recuperación.
+
+Para un objetivo de dos consignas, ambos límites se desplazan la misma cantidad. Una banda de calefacción `20–24 °C` con compensación solicitada `3 °C` y máximo físico `25 °C` pasa a `21–25 °C`: mantiene cuatro grados de anchura y la compensación efectiva se reduce a `1 °C`. En refrigeración sucede lo equivalente en el mínimo físico. El extra efectivo se redondea hacia abajo a un paso de diferencia compatible y nunca supera lo solicitado. Si no queda margen, una compensación positiva configurada puede aplicar `0 °C`; la preparación conserva su dirección hasta alcanzar el umbral original de la habitación.
+
+Cambiar la compensación configurada de una dirección reinicia solo su aprendizaje. El predictor, la selección de muestras y las reglas de validez de observaciones no cambian. Las sesiones cuyo extra efectivo varía por los límites del equipo o por Room Assist siguen siendo aptas según esas reglas. Restaurar los valores predeterminados del preacondicionamiento pone ambas compensaciones a cero y reinicia solo las direcciones cuyo valor haya cambiado; conserva los ajustes independientes de Room Assist, incluido el frenado.
+
+Si el equipo comunica después un paso distinto, Velair conserva la solicitud guardada y reduce solo el extra aplicado a un paso compatible. Convertir la unidad de temperatura conserva la diferencia física y no reinicia el aprendizaje. El modelo portable `28` etiqueta el aprendizaje exportado con la compensación configurada para su dirección; importarlo exige una configuración resultante coincidente. El aprendizaje antiguo se considera de compensación cero. Una importación de solo configuración que cambia una compensación reinicia el aprendizaje local conservado de esa dirección.
+
+El panel mantiene **Objetivo programado** y el valor atribuido a Velair en el objetivo original. El marcador existente **Objetivo aplicado** muestra la orden final. Una insignia de compensación activa muestra el extra efectivo con signo, incluido un cero limitado; sus detalles explican el objetivo original, la base de Room Assist, el extra solicitado, el efectivo, la orden final y cualquier limitación del equipo.
+
+<a id="after-reaching-the-target"></a>
+## Después de alcanzar el objetivo
+
+Cuando una preparación anticipada aceptada alcanza su umbral de llegada antes de empezar el bloque, Velair mantiene el objetivo original de ese bloque hasta su hora programada. La compensación temporal termina al llegar. Esto también funciona con compensación cero, sin Room Assist y cuando la observación es demasiado corta para ser una muestra de aprendizaje.
+
+Por ejemplo, el bloque actual es de `20 °C` y la preparación de un bloque futuro de `21 °C` termina en `20.9 °C`. Resumen mantiene **Objetivo** en `21 °C`, en lugar de volver a `20 °C` al terminar la observación. Con compensación de calefacción de `2 °C`, la orden temporal de `23 °C` vuelve al valor nominal de `21 °C`. Si **Aplicada** también es `21 °C`, se oculta el valor duplicado como de costumbre. En refrigeración sucede lo equivalente: un objetivo futuro de `24 °C` alcanzado en `24.1 °C` conserva el nominal `24 °C` al terminar una orden temporal de `22 °C`. Room Assist puede aplicar su corrección o frenado ordinarios respecto a ese objetivo nominal.
+
+Velair guarda localmente esta preparación completada y valida el horario y contexto de control correspondientes después de reiniciar. **Aplicar la planificación activa al arrancar** sigue decidiendo si envía una orden:
+
+| Opción de inicio | Preparación completada válida antes del bloque |
+| --- | --- |
+| Activada | Aplica el objetivo nominal recuperado, por ejemplo `21 °C`, mediante la entrega normal. No restaura su compensación de preparación. |
+| Desactivada | Recupera el nominal `21 °C` para el panel y la intención actual sin enviar objetivo, modo ni otras opciones del bloque por esta recuperación. Muestra por separado el objetivo realmente aplicado si difiere. |
+
+La recuperación no reabre el aprendizaje ni reactiva el extra si la temperatura se desvía mientras Home Assistant está desconectado. Necesita una finalización guardada correctamente; una consigna comunicada por sí sola no demuestra que terminara la preparación. Un fallo al guardar no puede garantizar continuidad tras otro reinicio. Las pausas, el ajuste manual, las anulaciones, la preparación deshabilitada y los horarios o la titularidad del control sustituidos siguen teniendo prioridad. Cambiar la consigna de referencia, los miembros del grupo de habitación o el Modo activo también invalida una finalización guardada si su contexto preparado ya no coincide. A la hora nominal del bloque toma el relevo la programación ordinaria.
+
+Sin una preparación anticipada completada y confirmada, la distinción existente sigue siendo válida: **Objetivo** `20 °C` y **Aplicada** `21 °C` pueden describir valores programados y del equipo diferentes. Activar el preacondicionamiento por sí solo no cambia esto.
+
+<a id="live-predictions"></a>
+## Predicciones en directo
 
 Al expandir un equipo, cada modo compatible muestra una tarjeta de predicción actual. Utiliza los mismos datos del backend sobre el próximo evento que la pestaña Resumen, de modo que las pausas, refuerzos, modos incompatibles y bloques que no pueden adelantarse se tratan de forma coherente. Cuando existe un bloque futuro adecuado, la tarjeta muestra el inicio calculado, la hora objetivo, el adelanto, la temperatura y el modo programados, y si Velair utiliza el modelo inicial o un historial local de casos similares.
 
@@ -236,6 +272,8 @@ Si el sensor exterior no está disponible al guardar una muestra, Velair guarda 
 Por defecto, el Preacondicionamiento adaptativo utiliza `current_temperature` de la entidad de climatización.
 
 Si Room Sensor Assist está activado para ese equipo y hay un sensor de habitación seleccionado, el Preacondicionamiento adaptativo utiliza ese sensor como temperatura efectiva de la habitación para sus decisiones y aprendizaje.
+
+Durante la preparación, Room Assist calcula primero su objetivo base válido habitual; después se añade la compensación temporal. Por ejemplo, un objetivo nominal de calefacción de `21 °C`, una base de Room Assist de `22 °C` y una compensación de calefacción de `2 °C` envían `24 °C` si el equipo lo permite. Room Assist nunca usa esa orden temporal como objetivo de aprendizaje de la habitación. Una compensación positiva configurada mantiene temporalmente activa la dirección de preparación aunque Room Assist haya heredado una fase de histéresis sin demanda. Al alcanzar el umbral original de preparación, vuelven a aplicarse la histéresis normal y el nivel de frenado elegido. Esta prioridad también se mantiene cuando los límites físicos reducen el extra efectivo a cero; configurar cero conserva el comportamiento existente.
 
 Esto resulta útil para válvulas termostáticas o termostatos cuyo sensor integrado está demasiado cerca de un radiador, una salida de aire u otra fuente local de calor. Consulta [Room Assist](room-assist.es.md) para conocer cómo actúa sobre el equipo.
 

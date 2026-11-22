@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](adaptive-preconditioning.md) · [Español](adapt
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Referentieversie | 1.9.3-dev.20261120233407 |
+| Laatst gesynchroniseerd | 2026-11-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -46,6 +46,42 @@ Oorspronkelijke `heat_cool`-bereiken worden ondersteund. Als de kamertemperatuur
 Kies voor twee instelpunten in vaste `heat` of `cool` bij **Instellingen → Klimaatapparaten en groepen** het **Referentie-instelpunt** voor apparaat en modus: **Onderste instelpunt** of **Bovenste instelpunt**, afhankelijk van wat het apparaat werkelijk gebruikt. Room Assist deelt deze instelling. Voorbereiding en leren gebruiken alleen die grens als verwarmings- of koeldoel. De modus bepaalt de richting, ook bij bovenste grens voor verwarmen of onderste voor koelen. Velair start het volledige nominale paar vroeg, ook bij Geplande terugkeer, nooit alleen de referentiegrens.
 
 Bij **Niet ingesteld** behouden paren in vaste modi hun geplande tijd en produceren ze geen thermische leermonsters. Geplande terugkeer past ze zonder voorbereiding bij aankomst toe. `auto`-bereiken houden deze beperking: een grens kiezen bepaalt het verwarmings-/koelgedrag niet. Oorspronkelijk `heat_cool` blijft ongewijzigd. Referentiewijzigingen maken leerwaarnemingen met de oude interpretatie ongeldig.
+
+<a id="temporary-setpoint-offset"></a>
+## Tijdelijke instelpuntverschuiving
+
+**Verwarmingsverschuiving** en **Koelverschuiving** voegen optioneel extra aansturing toe tijdens vroege voorbereiding. Beide beginnen op `0`, zodat het bestaande gedrag behouden blijft. Kies elke waarde in de effectieve temperatuurstap van het apparaat, tot `5 °C` (`9 °F`). De hoogste keuze is de grootste passende stap binnen die grens. Dit zijn temperatuurverschillen: een verwarmingsverschuiving van `2 °C` telt twee graden op; een koelverschuiving van `2 °C` trekt twee graden af.
+
+Het geplande kamerdoel en leerdoel blijven gelijk. Voorbereiding voor een verwarmingsblok van `21 °C` met verschuiving `2 °C` verstuurt tijdelijk `23 °C`. Voorbereiding voor een koelblok van `24 °C` met verschuiving `1.5 °C` verstuurt tijdelijk `22.5 °C`. Bij minimaal temperatuurverschil `0.1 °C` eindigen deze voorbereidingen bij respectievelijk `20.9 °C` en `24.1 °C`. De verschuiving vervalt ook bij de blokstart. Velair stemt daarna het actuele schema, Room Assist en andere actieve regelingen af via het bestaande gedrag voor opdrachtuitvoering en herstel.
+
+Bij twee instelpunten verschuiven beide grenzen evenveel. Een verwarmingsband `20–24 °C` met gevraagde verschuiving `3 °C` en fysiek maximum `25 °C` wordt `21–25 °C`: de band blijft vier graden breed en de effectieve verschuiving daalt tot `1 °C`. Koelen werkt spiegelbeeldig bij het fysieke minimum. De effectieve extra wordt naar beneden afgerond op een passende verschil-stap en overschrijdt nooit de gevraagde waarde. Zonder resterende ruimte kan een positief ingestelde verschuiving `0 °C` toepassen; de voorbereidingsrichting blijft toch actief tot de oorspronkelijke kamerdrempel.
+
+Een gewijzigde verschuiving wist alleen de leergegevens voor die richting. Voorspeller, steekproefselectie en geldigheidsregels voor waarnemingen blijven gelijk. Sessies waarvan de effectieve verschuiving varieert door apparaatgrenzen of Room Assist blijven volgens die bestaande regels bruikbaar. Herstellen van de standaardinstellingen voor voorconditionering zet beide verschuivingen op nul, wist alleen richtingen waarvan de verschuiving veranderde en behoudt de aparte Room Assist-instellingen, inclusief afremming.
+
+Als het apparaat later een andere stap meldt, bewaart Velair de opgeslagen aanvraag en beperkt alleen de toegepaste extra tot een passende stap. Omrekenen van de temperatuureenheid behoudt het fysieke verschil en wist het leerproces niet. Draagbaar model `28` koppelt geëxporteerde leergegevens aan de ingestelde verschuiving van hun richting; leergegevens importeren vereist een overeenkomende resulterende configuratie. Oudere leergegevens gelden als verschuiving nul. Als een import van alleen configuratie een verschuiving verandert, wist dit de behouden lokale leergegevens voor die richting.
+
+Het paneel houdt **Gepland doel** en de aan Velair toegeschreven waarde op het oorspronkelijke doel. De bestaande markering **Toegepast doel** toont de uiteindelijke opdracht. Een actief verschuivingslabel toont de effectieve extra met teken, inclusief een beperkte nul; de details verklaren oorspronkelijk doel, Room Assist-basis, gevraagde extra, effectieve extra, uiteindelijke opdracht en apparaatbeperkingen.
+
+<a id="after-reaching-the-target"></a>
+## Na het bereiken van het doel
+
+Als een geaccepteerde vroege voorbereiding de aankomstdrempel vóór de blokstart bereikt, behoudt Velair het oorspronkelijke blokdoel tot het geplande tijdstip. De tijdelijke verschuiving eindigt bij aankomst. Dit werkt ook met verschuiving nul, zonder Room Assist en wanneer de waarneming te kort is om een leermeting te worden.
+
+Bijvoorbeeld: het huidige blok is `20 °C` en voorbereiding voor een toekomstig blok van `21 °C` eindigt bij `20.9 °C`. Overzicht houdt **Doel** op `21 °C`, in plaats van na de waarneming terug te gaan naar `20 °C`. Met verwarmingsverschuiving `2 °C` keert de tijdelijke opdracht `23 °C` terug naar nominaal `21 °C`. Als **Toegepast** ook `21 °C` is, wordt de dubbele waarde zoals gebruikelijk verborgen. Koelen werkt spiegelbeeldig: een toekomstig doel `24 °C` dat bij `24.1 °C` wordt bereikt, behoudt nominaal `24 °C` na afloop van de tijdelijke opdracht `22 °C`. Room Assist kan de gewone correctie of afremming toepassen op dat nominale doel.
+
+Velair bewaart de voltooide voorbereiding lokaal en controleert na herstart het bijbehorende schema en de regelcontext. **Actief schema toepassen na opstarten** blijft bepalen of er een opdracht wordt verstuurd:
+
+| Opstartoptie | Geldige voltooide voorbereiding vóór het blok |
+| --- | --- |
+| Ingeschakeld | Het herstelde nominale doel, bijvoorbeeld `21 °C`, normaal toepassen. De voorbereidingsverschuiving niet herstellen. |
+| Uitgeschakeld | Nominaal `21 °C` herstellen voor paneel en huidige intentie, zonder door dit herstel een doel, modus of andere blokopties te versturen. Het werkelijke toegepaste doel apart tonen als dit afwijkt. |
+
+Herstel opent het leerproces niet opnieuw en schakelt de extra niet opnieuw in als de kamertemperatuur verandert terwijl Home Assistant offline is. Een succesvol opgeslagen voltooiing is nodig; alleen een gemeld instelpunt bewijst niet dat voorbereiding voltooid is. Mislukt opslaan garandeert geen continuïteit na een volgende herstart. Pauzes, handmatige aanpassing, tijdelijke overrides, uitgeschakelde voorbereiding en vervangen schema's of eigenaarschap houden voorrang. Een gewijzigd referentie-instelpunt, groepslidmaatschap of actieve Modus maakt een opgeslagen voltooiing ook ongeldig als de voorbereide context niet meer overeenkomt. Op het nominale bloktijdstip neemt de gewone planning over.
+
+Zonder bevestigde voltooide vroege voorbereiding blijft het bestaande onderscheid geldig: **Doel** `20 °C` en **Toegepast** `21 °C` kunnen verschillende geplande en apparaatwaarden aangeven. Alleen voorconditionering inschakelen verandert dat niet.
+
+<a id="live-predictions"></a>
+## Actuele voorspellingen
 
 Wanneer je een klimaatapparaat uitvouwt, krijgt elke ondersteunde modus een kaart met een actuele voorspelling. Deze gebruikt dezelfde backendgegevens voor de volgende gebeurtenis als het tabblad Overzicht. Pauzes, tijdelijke aanpassingen, niet-ondersteunde modi en blokken zonder mogelijkheid voor voorconditionering worden daardoor op dezelfde manier afgehandeld. Als er een passend toekomstig blok bestaat, toont de kaart de berekende starttijd, de doeltijd, de voorbereidingstijd, de geplande temperatuur en modus en of Velair het beginmodel of vergelijkbare lokale geschiedenis gebruikt.
 
@@ -226,6 +262,8 @@ Als de buitensensor niet beschikbaar is wanneer een waarneming wordt opgeslagen,
 Standaard gebruikt adaptieve voorconditionering de `current_temperature` van de klimaatentiteit.
 
 Als Ondersteuning via kamersensor voor dat klimaatapparaat is ingeschakeld en een kamersensor is geselecteerd, gebruikt adaptieve voorconditionering die kamersensor als effectieve kamertemperatuur voor beslissingen en het leerproces.
+
+Tijdens voorbereiding berekent Room Assist eerst zijn gewone geldige basisdoel; daarna wordt de tijdelijke verschuiving toegevoegd. Een nominaal verwarmingsdoel `21 °C`, Room Assist-basis `22 °C` en verwarmingsverschuiving `2 °C` versturen bijvoorbeeld `24 °C` als het apparaat dat toestaat. Room Assist gebruikt die tijdelijke opdracht nooit als leerdoel voor de kamer. Een positief ingestelde verschuiving houdt de voorbereidingsrichting tijdelijk actief, ook als Room Assist een hysteresefase zonder vraag heeft overgenomen. Zodra de oorspronkelijke voorbereidingsdrempel wordt bereikt, gelden gewone hysterese en het gekozen afremniveau weer. Deze voorrang geldt ook wanneer fysieke grenzen de effectieve extra tot nul beperken; een ingestelde nul behoudt bestaand gedrag.
 
 Dit is nuttig voor thermostatische radiatorkranen en thermostaten waarvan de ingebouwde sensor te dicht bij een radiator, luchtuitlaat of andere plaatselijke warmtebron zit. Zie [Room Assist](room-assist.nl.md) voor de werking aan de apparaatkant.
 

@@ -80,6 +80,30 @@ describe("climate display controller", () => {
     expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(1);
   });
 
+  it("resolves group fallbacks for members while retaining published and last-known priority", () => {
+    const viewHost = host() as any;
+    viewHost._temperatureUnit = () => "°C";
+    viewHost._data.member_to_unit = { "climate.living_room": "group.family" };
+    viewHost._data.room_groups = { "group.family": { members: ["climate.living_room"] } };
+    viewHost._data.control_unit_states = { "group.family": { attributes: {} } };
+    viewHost._data.zones = {
+      "group.family": { target_temp_step_override: 0.5 },
+      "climate.living_room": { target_temp_step_override: 1 },
+    };
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(0.5);
+    expect(entityTemperatureStepForHost(viewHost, "group.family")).toBe(0.5);
+
+    viewHost._data.zones["group.family"].last_reported_target_temp_step = 0.25;
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(0.25);
+    viewHost._data.control_unit_states["group.family"].attributes.target_temp_step = 0.2;
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(0.2);
+
+    delete viewHost._data.control_unit_states["group.family"].attributes.target_temp_step;
+    delete viewHost._data.zones["group.family"].last_reported_target_temp_step;
+    delete viewHost._data.zones["group.family"].target_temp_step_override;
+    expect(entityTemperatureStepForHost(viewHost, "climate.living_room")).toBe(1);
+  });
+
   it("uses the effective Home Assistant unit for a stale published step", () => {
     const viewHost = host() as any;
     viewHost._temperatureUnit = () => "°F";

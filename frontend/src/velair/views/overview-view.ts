@@ -1,3 +1,4 @@
+import { renderPreconditioningOffset } from "./preconditioning-offset";
 import { controlUnitId, controlUnitZone, controlUnitNameContext } from "../domain/control-units";
 import { renderEntityNameContext } from "./entity-name";
 import { climateRequiresRangeTarget } from "../domain/climate";
@@ -284,6 +285,10 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
     ? formatOverviewRange(host, targetLow, targetHigh, entityId)
     : undefined;
   const appliedTemperature = numericTemperature(status.applied_temperature);
+  const appliedLow = numericTemperature(status.applied_target_temp_low);
+  const appliedHigh = numericTemperature(status.applied_target_temp_high);
+  const appliedRange = appliedLow !== undefined && appliedHigh !== undefined && (appliedLow !== targetLow || appliedHigh !== targetHigh)
+    ? formatOverviewRange(host, appliedLow, appliedHigh, entityId) : undefined;
   const manualDetail = displayStatus.control_mode === "manual"
     ? manualControlSessionDetail(host, displayStatus)
     : undefined;
@@ -305,6 +310,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
   const hasStandardDetails = roomTemperature !== undefined
     || targetTemperature !== undefined
     || targetRange !== undefined
+    || appliedRange !== undefined
     || (appliedTemperature !== undefined && targetTemperature !== undefined
       && Math.abs(appliedTemperature - targetTemperature) >= 0.05);
   return html`
@@ -328,6 +334,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
           zoneStatePresentation[activityStatus.state],
         )}
         <div class="overview-zone-signals">
+          ${externallyManaged ? nothing : renderPreconditioningOffset(host, entityId, status, "overview")}
           ${externallyManaged ? nothing : renderPlannedReturnZoneSignal(host, entityId)}
           ${renderOverviewZoneProfile(host, entityId)}
           ${externallyManaged && externalExecution
@@ -352,6 +359,7 @@ function renderOverviewRuntimeZone(host: OverviewViewHost, entityId: string) {
             : targetRange !== undefined
               ? renderOverviewTextMetric(host._t("overviewZoneTarget"), targetRange)
             : nothing}
+          ${appliedRange ? renderOverviewTextMetric(host._t("overviewZoneApplied"), appliedRange) : nothing}
           ${appliedTemperature !== undefined && targetTemperature !== undefined
             && Math.abs(appliedTemperature - targetTemperature) >= 0.05
             ? renderOverviewMetric(host._t("overviewZoneApplied"), appliedTemperature, host, entityId)
@@ -988,7 +996,6 @@ export function renderOverviewTimelines(host: OverviewViewHost, zoneIds: string[
           </div>
         </div>
       </div>
-      <span class="timeline-scroll-hint">${host._t("timelineScrollHint")}</span>
     </section>
   `;
 }

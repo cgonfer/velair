@@ -854,6 +854,7 @@ class ZoneRoomAssistStateSensor(_ZoneSensor):
                 "climate_target_temp_low",
                 "climate_target_temp_high",
                 "range_shift",
+                "preconditioning_offset",
                 "direction",
                 "hvac_mode",
                 "active_from",

@@ -1272,46 +1272,6 @@ ${plannedReturnDepartureStatusStyles}
   .next.effective-next .event-time-flow > span, .next.effective-next .event-target { white-space: nowrap; }
 }
 
-/* A phone needs complete event information, rather than a clipped table. */
-@container next-events (max-width: 600px) {
-  .next.effective-next .effective-event-list { overflow: visible; padding-bottom: 0; }
-  .effective-event-grid { grid-template-columns: minmax(0, 1fr); width: 100%; }
-  .next.effective-next .effective-event {
-    grid-template-columns: minmax(0, 1fr) auto 32px;
-    gap: 6px 8px;
-    padding-block: 10px;
-  }
-  .next.effective-next .effective-event-identity {
-    grid-column: 1 / 3;
-    grid-row: 1;
-    position: static;
-    box-shadow: none;
-    padding: 0;
-  }
-  .next.effective-next .effective-event-schedule { width: auto; max-width: 100%; min-height: 32px; }
-  .next.effective-next .effective-event-identity .overview-climate-name { width: auto; white-space: normal; }
-  .next.effective-next .effective-event-master { max-width: 100%; }
-  .next.effective-next .effective-event-help { grid-column: 3; grid-row: 1; }
-  .next.effective-next .effective-event-origin { grid-column: 1 / -1; grid-row: 2; padding: 0; }
-  .next.effective-next .effective-event-body {
-    display: block;
-    grid-column: 1 / -1;
-    grid-row: 3;
-    min-width: 0;
-  }
-  .next.effective-next .effective-event .event-details {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
-    width: 100%;
-  }
-  .next.effective-next .event-time { grid-column: 1 / -1; justify-content: start; justify-self: start; }
-  .next.effective-next .event-time-flow { flex-wrap: wrap; justify-content: start; white-space: normal; }
-  .next.effective-next .event-time-flow > span { white-space: normal; overflow-wrap: anywhere; }
-  .next.effective-next .event-target { grid-column: 1; justify-self: start; white-space: normal; overflow-wrap: anywhere; }
-  .next.effective-next .event-mode { grid-column: 2; white-space: normal; overflow-wrap: anywhere; }
-}
-
 .next .event-list {
   margin-top: 14px;
   padding-inline-start: 2px;

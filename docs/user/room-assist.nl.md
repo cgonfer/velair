@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.3-beta.2 |
-| Laatst gesynchroniseerd | 2026-11-15 |
+| Referentieversie | 1.9.3-beta.3 |
+| Laatst gesynchroniseerd | 2026-11-22 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -41,7 +41,7 @@ De klimaatentiteit blijft het uitvoerende apparaat. Velair maakt geen virtuele k
 
 Kies voor twee instelpunten in vaste `heat` of `cool` eerst het **Referentie-instelpunt** per apparaat en modus bij **Instellingen → Klimaatapparaten en groepen**: **Onderste instelpunt** of **Bovenste instelpunt**, volgens wat het apparaat werkelijk gebruikt. Velair leidt dit niet af uit bereikondersteuning. Adaptieve voorconditionering deelt deze keuze.
 
-Room Assist gebruikt de gekozen grens als vast verwarmings- of koeldoel, inclusief enkeldoelhysterese en bescherming van het geplande doel. Het verschuift beide grenzen evenveel en bewaart hun afstand. Beide moeten bij de doelstap en fysieke grenzen passen; de andere grens kan de correctie beperken. Bestaande beperkingsmeldingen blijven gelden.
+Room Assist gebruikt de gekozen grens als vast verwarmings- of koeldoel, inclusief enkeldoelhysterese en bescherming van het geplande doel. Het verschuift beide grenzen evenveel en bewaart hun afstand. Beide moeten bij de doelstap en fysieke grenzen passen; de andere grens kan de correctie beperken. Informatie over fysieke grenzen blijft beschikbaar in de grafiek en **Technische gegevens**.
 
 Bij **Niet ingesteld** worden vaste paren ongewijzigd zonder Room Assist-correctie verstuurd. `auto`-bereiken blijven ongeschikt voor ondersteuning; oorspronkelijke `heat_cool`-banden behouden hun gedrag. Opgeslagen instellingen blijven bewaard. Een referentie- of moduswijziging wist oude ondersteuning zonder een oud gecorrigeerd doel over de nieuwe intentie terug te zetten.
 
@@ -67,9 +67,7 @@ Vernieuwingsvertraging is de wachttijd om snelle wijzigingen na kamer- of appara
 
 De Room Assist-dode band staat los van het minimumverschil voor adaptieve voorconditionering. Standaard is deze `0.3 °C` of `1 °F`, `0` schakelt haar uit en instellen kan in stappen van `0.1` graad tot `5 °C` of `9 °F`. Opslaan tijdens actieve Room Assist ververst het gecorrigeerde doel onmiddellijk.
 
-De actuele temperatuurschaal toont de dode band als neutrale gestreepte zone. Bij een vast enkel doel met afremming Standaard of Gemiddeld zijn de randen hysteresegrenzen en noemt de status de actieve richting. Hoog behoudt deze nominale band en markeert het eerdere afremmen bij het geplande doel afzonderlijk. Bij afzonderlijke automatische doelen blijft het een neutrale marge. Voor een oorspronkelijk `heat_cool`-bereik loopt deze van ondergrens min dode band tot bovengrens plus dode band. De schaal vergroot om beide randen te tonen. De volledige vertaalde legenda blijft op het werkelijke bereik gecentreerd, ook als tekst breder is, zodat betekenis niet van grafiekbreedte afhangt. De uitleg blijft beschikbaar voor ondersteunende technologie en als aanwijstekst.
-
-Bij dode band `0` wordt geen vlak getekend en noemt de vaste legenda expliciet dat er geen dode band is. Grafiek en legenda volgen de opgeslagen backendwaarde; `show_room_assist_deadband` verbergen op een Lovelace-kaart verbergt instelling, band en legenda samen.
+De actuele grafiek tekent de nominale dode zone als dunne gearceerde strook direct boven de temperatuuras, met een bijpassende legenda eronder. Effectieve stop- en hervatdrempels komen uit de bevestigde regelstatus. **Hoog** kan de vraag dus bij het doel stoppen terwijl de volledige nominale strook zichtbaar blijft. Bij automatische modi met één doel stelt de strook de neutrale marge voor. Oorspronkelijke `heat_cool`-bereiken arceren alleen de buitenmarges naast de nominale band, met de legenda **Buitenmarge**. Bij een dode zone van nul is er geen arcering; de legenda toont de ingestelde nulmarge. Dit beschrijft ingestelde grenzen, geen sensorbeweging. Het verbergen van `show_room_assist_deadband` in een Lovelace Room Assist-kaart verbergt instelling, strook en legenda samen.
 
 Alleen de gekozen optie wordt getoond. Wanneer **Vaste sensor** al de opgeslagen werkwijze is, wordt een andere sensor direct opgeslagen. Wisselen tussen **Vaste sensor** en **Volgens schema** wijzigt een concept: **Opslaan** past de werkwijze en de instellingen toe, en **Annuleren** herstelt de opgeslagen configuratie. De vaste sensor en het opgeslagen schema blijven bij het wisselen bewaard; beide worden niet tegelijk ingeschakeld.
 
@@ -102,11 +100,11 @@ De actuele status toont de effectieve temperaturen voor afremmen en hervatten. D
 
 Kies **Standaard** voordat je de dode band op nul zet. Het opgeslagen niveau blijft bewaard als de huidige modus of temperatuurreferentie het niet kan gebruiken; de status legt uit waarom extra afremming niet actief is. Ongeldige opgeslagen combinaties onderbreken extra afremming in plaats van stilzwijgend de dode band te wijzigen.
 
-Fysieke minimum- en maximuminstelpunten kunnen de beschikbare afremming beperken. Bij twee instelpunten verschuift het volledige paar samen en kan elke grens de verschuiving beperken. Bestaande grenswaarschuwingen tonen het aangevraagde en toegepaste resultaat.
+Fysieke minimum- en maximuminstelpunten kunnen de beschikbare afremming beperken. Bij twee instelpunten verschuift het volledige paar samen en kan elke grens de verschuiving beperken. **Technische gegevens** onderscheidt het gevraagde en toegepaste resultaat en de grafiek markeert de bereikte grens.
 
 Afremming vermindert de gevraagde verwarming of koeling; het bevestigt niet dat klep, compressor of thermostaat gestopt is. Apparaatregeling, minimale looptijden en thermische traagheid kunnen nog steeds overschrijding veroorzaken. Deze instelling leert geen cycli en neemt de vraag niet vóór het geplande doel terug. Controleer haar met echte verwarmings- en koelcycli voordat je voor een bepaalde kamer op een niveau vertrouwt.
 
-Draagbare exports gebruiken model **27** om de afremming te bewaren. Bewaar een back-up uit de eerdere versie als je wilt kunnen teruggaan; oudere Velair-versies kunnen model 27 niet importeren.
+Draagbare exports gebruiken model **28** om afremming en voorbereidingsverschuivingen te bewaren. Bewaar een back-up uit de eerdere versie als je wilt kunnen teruggaan; oudere Velair-versies kunnen model 28 niet importeren.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -149,7 +147,7 @@ Room Assist meldt wat Velair nu per apparaat kan doen, zodat je dit niet uit het
 | **Geblokkeerd** | Pauze, tijdelijke aanpassing, handmatige status of andere plannerstatus heeft voorrang. |
 | **Niet beschikbaar** | Apparaat of benodigde doelmogelijkheid nu niet bruikbaar. Bekende redenen verschijnen in de interface. |
 
-Bij actieve Room Assist vat Overzicht dit zo nodig samen als **Naar de ondergrens**, **Naar de bovengrens**, **Actief**, **Vasthouden** of **Doeltemperatuur beschermd**, met geplande en toegepaste waarden. Een apparaatminimum/-maximum verschilt van geplande bescherming: Room Assist toont een waarschuwing met gevraagde, toegepaste en ondersteunde waarden; Home Assistant toont één blijvende melding totdat die fysieke begrenzing vervalt.
+Bij actieve Room Assist vat Overzicht dit zo nodig samen als **Naar de ondergrens**, **Naar de bovengrens**, **Actief**, **Vasthouden** of **Doeltemperatuur beschermd**, met geplande en toegepaste waarden. Een apparaatminimum/-maximum verschilt van geplande bescherming: de grafiek markeert de bereikte fysieke grens, **Technische gegevens** scheiden gevraagde en toegepaste waarden; Home Assistant toont één blijvende melding totdat die fysieke begrenzing vervalt.
 
 <a id="fixed-heating-hysteresis-example"></a>
 ## Voorbeeld van hysterese bij vaste verwarming
@@ -189,7 +187,7 @@ Het zichtbare schemadoel blijft `21 °C`. Het tijdelijke doel is alleen de verst
 
 De vaste-modusfase bestaat alleen tijdens runtime. Een nieuw blok, doel of HVAC-modus, het wissen van Room Assist of herladen van Velair begint een nieuwe cyclus. Een nieuwe `heat`-cyclus binnen de band begint naar de ondergrens om niet direct verwarming te vragen.
 
-Als beveiliging het resultaat verandert, legt de actuele status beide waarden uit: berekend doel en werkelijk behouden doel. Overzicht toont **Doeltemperatuur beschermd**. Dit is normale bescherming, geen thermostaatfout, en maakt geen blijvende melding. Fysieke limieten houden hun aparte waarschuwing en melding.
+Als beveiliging het resultaat verandert, legt de actuele status beide waarden uit: berekend doel en werkelijk behouden doel. Overzicht toont **Doeltemperatuur beschermd**. Dit is normale bescherming, geen thermostaatfout, en maakt geen blijvende melding. Fysieke limieten blijven zichtbaar in de grafiek en **Technische gegevens**, met hun aparte melding.
 
 Het apparaat blijft verantwoordelijk voor compressorbeveiliging, minimumlooptijden en fysieke reactie. De hysterese geeft een sterkere instelpuntstrategie, maar garandeert niet wanneer relais, klep of compressor precies omschakelt.
 
@@ -301,9 +299,9 @@ Deze instelling begrenst de proportionele correctie, niet het uiteindelijke inst
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Waarom het apparaatdoel kan afwijken van de berekening
 
-**Klimaatdoel** is het actuele gemelde instelpunt als Room Assist gereed of geblokkeerd is. Bij actief corrigeren of behouden van een toegepast enkel doel toont het juist het tijdelijke verstuurde instelpunt. Geen van beide is het geplande kamerdoel of de actieve hysteresegrens. Apparaten accepteren doelen op een eigen raster; Velair lijnt daarom zo nodig uit op de huidige gemelde, laatst gemelde, handmatige of standaardstap.
+**Instelpunt** is de actuele door de klimaatentiteit gemelde waarde als Room Assist gereed of geblokkeerd is. Bij actief corrigeren of behouden van een toegepast enkel doel toont het juist het tijdelijke verstuurde instelpunt. Geen van beide is het geplande kamerdoel of de actieve hysteresegrens. Apparaten accepteren doelen op een eigen raster; Velair lijnt daarom zo nodig uit op de effectieve huidige gemelde, laatst gemelde, handmatige of standaardstap.
 
-Room Assist kan bijvoorbeeld bij vaste koeling `23.9 °C` berekenen voor een apparaat met stappen `0.5 °C`. Velair past `24.0 °C` toe: naar boven afronden voorkomt sterker koelen dan berekend. Verwarming wordt naar beneden uitgelijnd; automatische enkeldoelmodi gebruiken de dichtstbijzijnde stap. De informatieknop naast **Klimaatdoel** past de uitleg aan de getoonde waarde aan. Bij werkelijk gewijzigde uitlijning toont deze berekening, effectieve stap en toegepaste waarde. Fysieke grenzen en geplande bescherming worden apart gemeld, niet als stapuitlijning.
+Room Assist kan bijvoorbeeld bij vaste koeling `23.9 °C` berekenen voor een apparaat met stappen `0.5 °C`. Velair past `24.0 °C` toe: naar boven afronden voorkomt sterker koelen dan berekend. Verwarming wordt naar beneden uitgelijnd; automatische enkeldoelmodi gebruiken de dichtstbijzijnde stap. Vouw de chip **Instelpunt** uit of open **Technische gegevens** om de getoonde waarde en beschikbare berekening, effectieve stap en toegepaste waarde te bekijken. Als uitlijning het bevestigde instelpunt veranderde, toont **Technische gegevens** ook de waarde vóór stapuitlijning. Fysieke minimum- en maximumgrenzen en bescherming van het geplande doel worden apart gemeld, niet als stapuitlijning.
 
 <a id="heatcool-range-example"></a>
 ## Voorbeeld van een verwarmings-/koelbereik
@@ -328,7 +326,7 @@ Het apparaat meet `22 °C`, onder de toegepaste ondergrens, en kan daardoor verw
 
 Het toegepaste bereik wordt altijd op de apparaatstap uitgelijnd en als geheel verschoven bij fysieke grenswaarden. Velair past Min en Max nooit apart aan.
 
-Als berekend enkel doel of bereik het apparaatminimum/-maximum overschrijdt, past Velair het dichtstbijzijnde geldige resultaat toe. De actuele status toont gevraagd doel, toegepast doel en bereikte grens vóór de grafiek. Home Assistant maakt ook één blijvende melding voor de actieve grens; herhaalde sensorupdates maken geen duplicaten en herstel verwijdert de melding.
+Als berekend enkel doel of bereik het apparaatminimum/-maximum overschrijdt, past Velair het dichtstbijzijnde geldige resultaat toe. De grafiek markeert de bereikte grens; **Technische gegevens** tonen het gevraagde en toegepaste enkele doel of bereik. Home Assistant maakt ook één blijvende melding voor de actieve grens; herhaalde sensorupdates maken geen duplicaten en herstel verwijdert de melding.
 
 <a id="when-velair-does-nothing"></a>
 ## Wanneer Velair niets doet
@@ -382,6 +380,12 @@ Wanneer adaptieve voorconditionering een toekomstig blok eerder start, volgt Roo
 De kloktijd kan nog bij een ouder blok horen. Velair behandelt het al gestarte voorconditioneringsblok als actief beheerd doel, zodat Room Assist niet vanuit het vorige blok herberekent.
 
 Bij ingeschakelde Ondersteuning via kamersensor gebruikt adaptieve voorconditionering ook de gekozen kamersensor voor beslissingen en leren.
+
+Optionele aparte verwarmings- en koelverschuivingen stel je in bij Voorconditionering. Room Assist berekent het basisdoel uit het oorspronkelijke kamerdoel; daarna past Velair de voorbereidingsextra toe. Apparaatgrenzen verminderen de extra; banden met twee instelpunten behouden hun breedte. Een positief ingestelde verschuiving houdt de voorbereidingsrichting tijdelijk vast tot de oorspronkelijke kamerdrempel, ook bij effectieve extra nul of een overgenomen fase zonder vraag. Na die drempel of de geplande start eindigt de extra en hervatten gewone hysterese en afremming. Oorspronkelijke `heat_cool`-bereiken behouden hun bestaande beperkingen voor afremming.
+
+Room Assist bevestigt de effectieve verwarmings- of koelvraag samen met het toegepaste doel. Tijdens voorbereiding omvat dit de tijdelijke vraag en blijft de gewone hysteresefase apart behouden. Gedeelde klimaattoevoer volgt die effectieve vraag via de bestaande Room Assist-integratie; er komt geen extra verschuiving, hysterese of voorbereidingsregel bij. Na de extra hervat gewone Room Assist-vraag. Een mislukte of achterhaalde opdracht bevestigt geen nieuwe vraag en mislukt herstel mag een vervallen voorbereiding niet onbeperkt toevoer laten vragen. Zie [Gedeelde klimaattoevoer](shared-climate-supply.nl.md#room-assist).
+
+De grafiek houdt het nominale doel apart van het uiteindelijke Room Assist- plus voorbereidingsinstelpunt. Het extralabel omvat een beperkte `0`; **Technische gegevens** scheiden de basis, gevraagde extra, effectieve extra en uiteindelijke opdracht. Tijdens voorbereiding heeft de drempel **Voorbereiding eindigt** een informatieknop die de ingestelde aankomstmarge uitlegt. Een doel `21 °C` met aankomstmarge `0.1 °C` beëindigt verwarmingsvoorbereiding bij `20.9 °C`; dit staat los van de Room Assist-regelband. Zie [Tijdelijke instelpuntverschuiving](adaptive-preconditioning.nl.md#temporary-setpoint-offset) voor voorbeelden van verwarming, koeling en fysieke grenzen.
 
 <a id="automation-events"></a>
 ## Gebeurtenissen voor automatiseringen
@@ -468,9 +472,15 @@ entities:
   - climate.living_room
 ```
 
-De actuele temperatuurschaal scheidt twee relaties. Bij één doel vergelijkt de bovenste lijn kamersensor en gepland doel, de onderste besturingslijn apparaatmeting en apparaatdoel. Bij vaste `heat`/`cool` toont de gestreepte band beide hysteresegrenzen en noemt de status de actieve grens. Bij automatische enkeldoelmodi blijft het een neutrale marge. Bij een oorspronkelijk bereik tonen rode en blauwe haakjes de volledige geplande en toegepaste banden, met beide grenzen. Eén verbinding **Bereikverschuiving** met teken loopt tussen de middelpunten en vertegenwoordigt de hele bandverschuiving, niet één grens. Dit beschrijft alleen het door Velair gestuurde instelpunt, geen bewijs dat thermostaat, klep of compressor actief verwarmt of koelt.
+Het zijpaneel en de kaarten gebruiken dezelfde actuele grafiek. Compacte chips **Kamer**, **Doel**, **Apparaat** en **Instelpunt** zijn loodrecht verbonden met hun temperatuurpositie. Wijs een chip aan, focus erop of druk erop voor details. **Normaal** toont de huidige vraag en volgende drempel; **Gedetailleerd** voegt het verschil tussen kamer en doel, de totale aanpassing en eventuele voorbereidingsextra die al in dat totaal zit toe. Meetlabels staan bij voldoende ruimte op hun lijnen en anders eronder.
 
-In smalle dashboardkolommen schuift de schaal horizontaal om markeringen leesbaar te houden.
+Een doorgetrokken pijl betekent gevraagde verwarming of koeling. Een gestreepte pijl betekent wachten en wijst naar de hervatdrempel. De pijlen beschrijven Room Assist-vraag, geen gemeten temperatuurtrend of bewijs dat een klep of compressor werkt. Wanneer bevestigde vraag ontbreekt, meldt de grafiek die onzekerheid in plaats van een aanvraag of wachtstatus te verzinnen.
+
+De gearceerde strook direct boven de as behoudt de nominale regelband en legenda. Een effectieve afremstop staat apart aangegeven; de strook betekent niet dat de vraag na die stop doorgaat. De instelpuntchip noemt afremming alleen wanneer de beveiliging de toegepaste opdracht werkelijk veranderde. Voor een oorspronkelijk `heat_cool`-bereik tonen aparte haakjes de volledige doel- en toegepaste banden, met arcering bij de buitenste Room Assist-marges. Fysieke grenzen zijn gelabeld.
+
+De grafiek toont de vraag in de statusbadge, de metingen in de temperatuurchips en de stop- of hervattingsdrempel naast de pijl. Als een ontbrekende kamermeting deze relatie niet laat tekenen, blijft de drempel in de statusbadge staan. **Uitleg** opent onder de grafiek korte context: hoe sensormetingen verschillen, waarom een cyclus na het bereiken van het comfortdoel doorgaat, of welke voorbereiding, afremming of apparaatgrens de aanpassing beïnvloedt. Dit voegt context toe zonder de getoonde temperaturen, vraag of hulp over de regelband te herhalen. De grafiek heeft geen aparte herhaalde samenvatting eronder.
+
+**Technische gegevens** groeperen de instelpuntstappen van het apparaat, regelgrenzen en bron/tijdgegevens in hetzelfde detailgebied. Metingen blijven in de grafiek en worden niet in een tweede tabel herhaald. Opeenvolgende berekende, gevraagde, vóór stapuitlijning bepaalde en toegepaste waarden delen één rij wanneer ze overeenkomen, terwijl elke fase benoemd blijft. Verschillende waarden blijven apart. Bereikopdrachten en bewijs voor hun afzonderlijke referentie-instelpunt blijven gescheiden. Stop- en hervattingswaarden worden niet herhaald als volgende drempel of identieke nominale grens; de cyclusrichting wordt zonder herhaling van de temperatuur getoond. Apparaatstap en relevante beveiligingen of fysieke grenzen blijven beschikbaar. Voorbereidingsextra heeft een eigen groep, inclusief gevraagde en toegepaste waarden als ze verschillen en een begrensde nul. Bron/tijdgegevens tonen de sensorentiteit en de blokstart met datum, met alleen de kloktijd als terugval. Groepen worden in smalle panelen en kaarten onder elkaar geplaatst. Er staat maar één detailweergave tegelijk open; selecteer de knop opnieuw of druk op Escape om deze te sluiten. De knoppen ondersteunen toetsenbord en aanraking; details blijven onder de grafiek zonder andere bediening te bedekken. Een detailweergave openen of sluiten verandert de besturingsvraag niet. De grafiek past zich aan smalle kolommen aan zonder de temperatuurschaal te veranderen of een meting van de werkelijke positie te verplaatsen.
 
 Je kunt onderdelen verbergen voor een compacte dashboardweergave:
 

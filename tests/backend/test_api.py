@@ -816,6 +816,44 @@ class ResetDataOrderingTest(unittest.IsolatedAsyncioTestCase):
         )
 
 
+class PortableImportRecoveryTest(unittest.IsolatedAsyncioTestCase):
+    """A committed import failure must not look like an atomic rejection."""
+
+    async def test_failure_after_commit_keeps_recovery_block_while_rejection_releases_it(self):
+        for committed in (False, True):
+            with self.subTest(committed=committed):
+                error = RuntimeError("profile completion unavailable")
+                if committed:
+                    error.velair_import_persisted = True
+                scheduler = SimpleNamespace(
+                    async_replace_portable_data=AsyncMock(side_effect=error),
+                    set_temperature_migration_blocked=Mock(),
+                    async_start=AsyncMock(),
+                )
+                runtime = {
+                    "scheduler": scheduler,
+                    "storage": SimpleNamespace(temperature_migration_required=False),
+                    "operation_active": None,
+                    "operation_recovery": None,
+                }
+                connection = SimpleNamespace(send_error=Mock(), send_result=Mock())
+                with patch.object(api_module, "_get_runtime", return_value=runtime), \
+                     patch.object(api_module, "_build_import_data", return_value={"profiles": []}):
+                    await api_module.ws_import_data(
+                        SimpleNamespace(), connection,
+                        {"id": 1, "payload": {}, "sections": ["profiles"]})
+                self.assertEqual(connection.send_error.call_args.args[1],
+                                 "operation_recovery_required" if committed else "invalid_import")
+                scheduler.set_temperature_migration_blocked.assert_called_with(committed)
+                scheduler.async_start.assert_not_awaited()
+                connection.send_result.assert_not_called()
+                self.assertIsNone(runtime["operation_active"])
+                if committed:
+                    self.assertTrue(runtime["operation_recovery"]["persisted"])
+                else:
+                    self.assertIsNone(runtime["operation_recovery"])
+
+
 class TemperatureMigrationFailureTest(unittest.IsolatedAsyncioTestCase):
     """Verify failed persistence always releases the exclusive operation guard."""
 

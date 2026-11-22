@@ -388,6 +388,7 @@ describe("preconditioning view", () => {
         .map((element) => element.textContent?.trim()),
     ).toEqual([
       "preconditioningMaster",
+      "preconditioningSetpointOffset",
       "preconditioningTiming",
       "preconditioningModel",
       "preconditioningHistory",
@@ -395,7 +396,7 @@ describe("preconditioning view", () => {
     ]);
 
     const sections = [...container.querySelectorAll(".preconditioning-config-section")];
-    expect(sections).toHaveLength(5);
+    expect(sections).toHaveLength(6);
     expect(
       sections.every(
         (section) =>
@@ -1087,4 +1088,26 @@ it.each([
   render(renderPreconditioningView(viewHost, [entityId]), container);
   expect(container.textContent!.includes("unsupportedRangeThermalMode")).toBe(!supported);
   expect(Boolean(container.querySelector(".preconditioning-range-boundary"))).toBe(supported);
+});
+
+it("uses a zero-anchored climate step for both offsets and preserves the saved value until edited", () => {
+  const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.first"] });
+  viewHost._entityTemperatureStep = () => 0.3;
+  viewHost._data!.zones["climate.first"].preconditioning!.heating_setpoint_offset = 0.5;
+  const container = document.createElement("div");
+  render(renderPreconditioningView(viewHost, ["climate.first"]), container);
+  const section = [...container.querySelectorAll(".preconditioning-config-section")].find(element => element.querySelector("h3")?.textContent?.includes("preconditioningSetpointOffset"))!;
+  const inputs = section.querySelectorAll<HTMLInputElement>('input[type="number"]');
+  expect(inputs).toHaveLength(2);
+  expect(inputs[0].value).toBe("0.5");
+  expect(inputs[0].min).toBe("0");
+  expect(inputs[0].step).toBe("0.3");
+  expect(inputs[0].max).toBe("4.8");
+  expect(section.textContent).toContain("preconditioningOffsetSettingsHelp");
+  inputs[0].value = "0.65";
+  inputs[0].dispatchEvent(new Event("change"));
+  expect(saveZonePreconditioning).toHaveBeenLastCalledWith("climate.first", { heating_setpoint_offset: 0.6 });
+  inputs[1].value = "4.9";
+  inputs[1].dispatchEvent(new Event("change"));
+  expect(saveZonePreconditioning).toHaveBeenLastCalledWith("climate.first", { cooling_setpoint_offset: 4.8 });
 });

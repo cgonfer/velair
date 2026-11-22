@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](manual-control.md) · [Español](manual-control.
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.9 |
-| Laatst gesynchroniseerd | 2026-11-02 |
+| Referentieversie | 1.9.3-beta.3 |
+| Laatst gesynchroniseerd | 2026-11-22 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -91,6 +91,8 @@ Bij een entiteitswijziging koppelt Velair elk veranderd veld aan deze verwachtin
 Sommige apparaten melden tijdens één opdracht meerdere waarden: kort een ouder doel, een tussenwaarde of modus en temperatuur in andere volgorde. Velair gebruikt een korte begrensde stabilisatieperiode voor uitsluitend gewijzigde velden, zodat die updates niet onterecht een handmatige aanpassing maken. De periode begint bij een echo niet opnieuw en wordt definitief vastgesteld nadat de hele servicereeks terugkeert. Een duidelijk door een gebruiker of andere herkenbare automatisering/script veroorzaakte wijziging blijft extern; na stabilisatie geldt normale detectie.
 
 Als een anonieme update tijdens stabilisatie niet betrouwbaar van apparaatverwerking te onderscheiden is, behoudt Velair voorzichtig automatische besturing. Zo wordt een geweigerde of vertraagde eigen opdracht geen valse handmatige aanpassing. De stabilisatiestatus is runtimegebonden en wordt bij herstart gewist. Wijkt het apparaat na afloop nog af, dan blijft besturing automatisch en wordt een stabilisatiewaarschuwing vastgelegd. De volgende nieuwe Diagnose-momentopname toont verwacht en waargenomen resultaat. Velair herhaalt niet blind en maakt geen uitgestelde handmatige aanpassing.
+
+Tijdens een recent Off-commando van Velair wordt ook het terugzetten van één doeltemperatuur naar het expliciet door het apparaat gemelde minimum herkend als een mogelijk gevolg van uitschakelen. Het minimum kan vóór, tegelijk met of na de `off`-melding binnenkomen, ook terwijl de opdracht nog loopt. Deze uitzondering vereist geldige minimum- en maximumgrenzen en dat de actuele besturingsintentie van Velair Off blijft; herkenbare gebruikers- of automatiseringsacties worden niet verborgen. Dezelfde begrensde stabilisatieperiode geldt, en een nieuwere doel- of HVAC-opdracht trekt het oudere bewijs in. Het minimum wordt niet opgedragen of vereist: een thermostaat die zijn vorige doel behoudt kan het Off-commando nog steeds normaal bevestigen. Alleen een minimummelding bevestigt niet dat de thermostaat is uitgeschakeld.
 
 Een afzonderlijke uitzondering geldt zolang Velair een automatisch bestuurd klimaatapparaat in `off` houdt. Sommige apparaten melden een vervangende doeltemperatuur, bijvoorbeeld `0 °C` terwijl het gepubliceerde minimum `5 °C` is. Als alleen doeltemperaturen veranderen en alle nieuwe waarden buiten het expliciet door het apparaat gemelde minimum en maximum liggen, negeert Velair de update, ook wanneer die na de stabilisatieperiode binnenkomt. Er wordt geen externe-wijzigingsgebeurtenis verstuurd, geen handmatige aanpassing gestart en de uitvoering van het schema wordt niet onderbroken. Beide grenzen moeten geldig zijn; ontbreekt er één, dan blijft de gebruikelijke detectie actief. Geldige doelwijzigingen, externe HVAC-moduswijzigingen, herkenbare gebruikers- of automatiseringsacties en bestaande handmatige sessies behouden hun gebruikelijke gedrag.
 

@@ -728,17 +728,23 @@ unique id and expected revision under a lock, converts all thermal scopes, and
 persists before replacing runtime data. An exact retry is a no-op and a failed
 write leaves the original runtime untouched.
 
-Model 27 includes optional Room Assist reference schedules and braking levels
-in zone configuration.
+Model 28 includes optional Room Assist reference schedules, braking levels and
+separate heating/cooling preparation offsets in zone configuration. Exported
+learning directions carry a `setpoint_offset` compatibility tag from confirmed
+configuration. Import validates it against the resulting configuration again
+under the scheduler mutation lock, then removes the portable-only tag. Older or
+untagged learning belongs to offset zero. Changing a configured offset atomically
+clears only that direction's retained history; combined imports install compatible
+supplied learning after clearing incompatible retained history.
 This does not change the internal storage version. Earlier supported portable
-models remain importable; older Velair versions cannot import model 27 exports.
+models remain importable; older Velair versions cannot import model 28 exports.
 
 The current export format is:
 
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 27,
+  "model_version": 28,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {
@@ -829,6 +835,84 @@ projection but never owns or persists the calculation. Existing and older
 configurations continue to normalize to the Simple rectangular model.
 
 `preconditioning_learning` is an optional incremental section keyed by the exact climate entity ID. Import replaces learning only for matching managed climates contained in the section. Unknown IDs are ignored, while existing learning for local climates absent from the file is preserved.
+
+Temporary preparation control is tracked separately from learning observations.
+An accepted occurrence retains its nominal event/direction and applied offset
+context even when its observation is missing or invalid. Room Assist computes
+its base before applying the extra and retains its ordinary hysteresis phase
+separately from its effective control intent. One producer calculation captures
+the effective direction, demand, source and nominal boundaries alongside the
+target; both become committed runtime state after delivery acceptance or the
+existing equivalent-target no-service commit. Shared supply validates and consumes
+that cached intent through its existing interface. Its reader does not inspect
+the offset, recalculate preparation, advance hysteresis or scan learning history.
+Supply's engine, configuration and timers are unchanged. Without Room Assist,
+supply continues evaluating the device's reported target with its own hysteresis.
+Retirement invalidates the matching temporary intent before awaiting restoration;
+a failed restore remains owned but invalid until current control is confirmed.
+Arrival or scheduled start retires that extra before observation persistence and
+reconciles current authoritative intent through the existing delivery coordinator.
+A runtime retired marker prevents retries from restarting the same occurrence's
+offset. Public applied fields describe final accepted targets while nominal
+target fields keep their original meaning. The predictor and existing delivery
+and startup permission remain unchanged.
+
+Completed nominal continuity reuses
+`SchedulerData.preconditioning_accepted_anchors`, rather than a separate store
+or command journal. An accepted occurrence that reaches its original arrival
+threshold before `target_when` adds an optional four-field completion group:
+aware `completed_at`, exact `weekday`/`start` block locator and a lowercase
+64-character hexadecimal `completion_context` fingerprint. The existing envelope
+supplies accepted start, direction, occurrence identity, target time and dependency
+context. Preserve that legacy dependency hash algorithm. The separate completion
+fingerprint also binds target-range reference, group topology and active Mode
+identity; changing those must not recover a stale own target. Missing or malformed
+completion-group fields strip only that opt-in, preserving legacy source evidence. This
+does not depend on a usable learning session. Legacy anchors without completion
+fields retain their existing dependency meaning and cannot prove arrival.
+
+Resolve a valid completed occurrence in shared backend current-authority
+selection, after stronger authorities and before prediction/current-block
+fallback. Reconstruct its nominal scalar or pair and block options from the
+matching prepared Default/Profile/Mode or Planned Return source. Do not persist
+or replay a boosted setpoint, Room Assist cache/phase, sensor snapshot or elapsed
+observation. Rehydrate a retired, no-offset applied-target marker without opening
+learning or restoring preparation drive. Ordinary Room Assist can calculate its
+current correction against the recovered nominal target. Presentation and
+physical current-intent delivery consume this same resolution; Overview does
+not infer intent from the reported device setpoint.
+
+Require matching managed ownership, automatic authority, enabled preparation,
+prepared configuration/direction/reference, completion fingerprint and episode. Validate ordered aware
+instants in UTC, including DST overlap. Capability or authoritative-source
+hydration that is still pending defers validation through existing listeners;
+it neither consumes startup permission nor falls back prematurely to the old
+block. A valid completion needs no new live arrival reading. Startup apply
+enabled can deliver nominal `21 °C`; disabled restores its presentation/current
+intent without authorizing a target, mode or options command. Neither path
+restores the extra, even after room drift during downtime.
+
+Arrival retires the extra and retains correct nominal intent in memory before
+awaiting persistence. Save completion in the existing producer transaction,
+sharing observation persistence when possible or using one bounded save. A
+failure must not prevent physical withdrawal or in-memory continuity; report
+that restart continuity was not durably saved. A crash before successful commit
+cannot recover that evidence from learning history. Readers remain side-effect
+free and do not create writes, services, phases or timers.
+
+Completion fields are durably revoked within existing authoritative mutation
+flows when pause/manual takeover, override or schedule/selection/configuration
+replacement supersedes the target. Returning to a previous profile or expiring
+an override must not resurrect it. Scope revocation to the affected unit and
+direction/context. Own continuity ends at its `target_when`; accepted-start
+eligibility for dependents continues to use its separate `expires_at`. Expiry
+pruning preserves either still-valid role without extending source eligibility.
+The existing bounded capacity still applies: retain live own completions first,
+then live dependency sources, and fill remaining space with the expired legacy
+tail. Retained entries keep their original dictionary order. Learning-only import/reset does not erase or
+create control continuity. Unit migration invalidates obsolete context rather
+than rebasing a stored temperature snapshot. This local transient evidence is
+excluded from portable data and needs no portable model change.
 
 The complete persistence, conversion, validation, and recovery boundaries are
 documented in [Temperature unit internals](temperature-units.md).

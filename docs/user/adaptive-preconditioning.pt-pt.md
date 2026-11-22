@@ -8,8 +8,8 @@ Traduções: [Original em inglês](adaptive-preconditioning.md) · [Español](ad
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.6 |
-| Última sincronização | 2026-10-28 |
+| Versão de referência | 1.9.3-dev.20261120233407 |
+| Última sincronização | 2026-11-21 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -43,15 +43,51 @@ Um [grupo de divisão](room-groups.pt-pt.md#learning-and-membership-changes) arm
 
 Os intervalos nativos de `heat_cool` são compatíveis. Se a temperatura da divisão estiver abaixo do limite inferior por uma diferença maior que o delta mínimo de temperatura, o Velair calcula a previsão a partir desse limite e inicia antecipadamente o intervalo completo para aquecer. Se estiver acima do limite superior por uma diferença maior que esse delta, calcula a previsão a partir do limite superior e inicia o intervalo completo para arrefecer. Leituras dentro do intervalo ou das zonas de tolerância dos limites mantêm o horário normal. O Velair sempre envia os dois limites; nunca reduz um intervalo a uma única temperatura.
 
+Para dois alvos em `heat` ou `cool` fixo, selecione **Alvo de referência** para o dispositivo e modo em **Definições → Dispositivos de climatização e grupos**. Escolha o limite que o equipamento realmente usa: **Alvo inferior** ou **Alvo superior**. A seleção é partilhada com Room Assist. A preparação e a aprendizagem de aquecimento usam somente o limite selecionado como alvo de aquecimento; arrefecimento o usa como alvo de arrefecimento. A direção vem do modo, mesmo se for o limite superior em aquecimento ou inferior em arrefecimento. O Velair antecipa o par nominal completo, inclusive no Regresso planeado; nunca envia apenas o limite escolhido.
+
+Com **Não configurado**, pares em modo fixo mantêm o horário programado e não produzem amostras de aprendizagem térmica. Regresso planeado os aplica na chegada, sem preparação antecipada. Faixas em `auto` mantêm essa limitação, pois escolher um limite não estabelece o comportamento de aquecimento ou arrefecimento. O comportamento nativo de `heat_cool` não muda. Alterar a referência invalida observações de aprendizagem iniciadas com a interpretação anterior.
+
+<a id="temporary-setpoint-offset"></a>
+## Deslocamento temporário do alvo
+
+**Deslocamento no aquecimento** e **Deslocamento no arrefecimento** acrescentam esforço opcional ao atuador durante a preparação antecipada. Ambos começam em `0`, mantendo o comportamento existente. Escolha cada valor de acordo com o passo efetivo de temperatura do equipamento, até `5 °C` (`9 °F`). O maior valor selecionável é o maior passo compatível dentro desse limite. São diferenças de temperatura: um deslocamento de `2 °C` no aquecimento soma dois graus; no arrefecimento, subtrai dois graus.
+
+O alvo programado da divisão e o objetivo da aprendizagem não mudam. Por exemplo, preparar um bloco de aquecimento de `21 °C` com deslocamento de `2 °C` envia temporariamente `23 °C`. Preparar um bloco de arrefecimento de `24 °C` com deslocamento de `1.5 °C` envia `22.5 °C`. Com delta mínimo de temperatura de `0.1 °C`, estas preparações terminam em `20.9 °C` e `24.1 °C`, respetivamente. O deslocamento também é removido quando o bloco começa. O Velair concilia então a programação atual, o Room Assist e os outros controlos ativos através dos mecanismos existentes de envio e recuperação.
+
+Para um alvo com dois limites, ambos se deslocam pela mesma distância. Um intervalo de aquecimento de `20–24 °C` com deslocamento pedido de `3 °C` e máximo físico de `25 °C` torna-se `21–25 °C`: mantém quatro graus de largura e o deslocamento efetivo diminui para `1 °C`. O arrefecimento faz o equivalente no mínimo físico. O extra efetivo é arredondado para baixo para um passo de diferença compatível e nunca excede o pedido. Sem espaço disponível, um deslocamento positivo configurado pode aplicar `0 °C`; a preparação mantém a sua direção até atingir o limiar original de temperatura da divisão.
+
+Alterar o deslocamento configurado de uma direção reinicia apenas a aprendizagem dessa direção. As regras de previsão, seleção de amostras e validade das observações não mudam. As sessões cujo deslocamento efetivo varia devido aos limites do dispositivo ou ao Room Assist continuam elegíveis segundo essas regras. Repor as predefinições de pré-condicionamento coloca ambos os deslocamentos a zero, reinicia apenas as direções cujo valor mudou e preserva as definições separadas do Room Assist, incluindo a travagem.
+
+Se o dispositivo comunicar outro passo posteriormente, o Velair mantém o pedido guardado e reduz apenas o extra aplicado para um passo compatível. A conversão de unidade preserva a diferença física e não reinicia a aprendizagem. O modelo portátil `28` identifica a aprendizagem exportada com o deslocamento configurado de cada direção; a importação exige uma configuração resultante correspondente. A aprendizagem antiga é tratada como tendo deslocamento zero. Uma importação apenas de configuração que altere um deslocamento reinicia a aprendizagem local mantida dessa direção.
+
+O painel mantém **Alvo programado** e o valor atribuído ao Velair no alvo original. O marcador existente **Alvo aplicado** mostra o comando final. Um indicador de deslocamento ativo mostra o extra efetivo com sinal, incluindo zero devido a limitação; os detalhes explicam o alvo original, a base do Room Assist, o extra pedido, o efetivo, o comando final e qualquer limitação do dispositivo.
+
+<a id="after-reaching-the-target"></a>
+## Após atingir o alvo
+
+Quando uma preparação antecipada aceite atinge o limiar de chegada antes do início do bloco, o Velair mantém o alvo original desse bloco até ao horário programado. O deslocamento temporário termina na chegada. Isto também funciona com deslocamento zero, sem Room Assist e quando a observação é demasiado curta para gerar uma amostra de aprendizagem.
+
+Por exemplo, o bloco atual é `20 °C` e a preparação para um bloco futuro de `21 °C` termina em `20.9 °C`. Visão geral mantém **Alvo** em `21 °C`, sem voltar a `20 °C` quando a observação termina. Com deslocamento de aquecimento de `2 °C`, o comando temporário de `23 °C` regressa ao nominal de `21 °C`. Se **Aplicado** também for `21 °C`, o valor duplicado fica oculto como habitualmente. No arrefecimento, um alvo futuro de `24 °C` atingido em `24.1 °C` mantém o nominal de `24 °C` após terminar o comando temporário de `22 °C`. O Room Assist pode aplicar a sua correção ou travagem habitual em relação a esse alvo nominal.
+
+O Velair guarda localmente esta preparação concluída e valida a programação e o contexto de controlo correspondentes após reiniciar. **Aplicar programação ativo após arranque** continua a decidir se será enviado um comando:
+
+| Opção de inicialização | Preparação concluída válida antes do bloco |
+| --- | --- |
+| Ativada | Aplicar o alvo nominal recuperado, como `21 °C`, pelo envio normal. Não repor o deslocamento de preparação. |
+| Desativada | Recuperar o nominal de `21 °C` para o painel e a intenção atual, sem enviar alvo, modo ou outras opções do bloco devido a esta recuperação. Mostrar separadamente o alvo realmente aplicado se for diferente. |
+
+A recuperação não reabre a aprendizagem nem reativa o extra se a temperatura da divisão variar enquanto o Home Assistant estiver indisponível. Exige uma conclusão guardada com sucesso; um alvo comunicado pelo dispositivo não prova, por si só, que a preparação terminou. Uma falha ao guardar não garante continuidade após reiniciar. Pausas, Ajuste manual, substituições, preparação desativada e alterações à programação ou à responsabilidade de controlo continuam a ter prioridade. Alterar o alvo de referência, os membros do grupo ou o Modo ativo também invalida uma conclusão guardada quando o contexto preparado já não corresponde. No horário nominal do bloco, a programação normal assume o controlo.
+
+Sem confirmação de preparação antecipada concluída, a distinção existente permanece: **Alvo** `20 °C` e **Aplicado** `21 °C` podem representar valores diferentes da programação e do dispositivo. Ativar apenas o pré-condicionamento não muda esta distinção.
+
+<a id="live-predictions"></a>
+## Previsões em tempo real
+
 Ao expandir um dispositivo, cada modo compatível mostra um cartão de previsão em tempo real. Este utiliza os mesmos dados de próximos eventos do backend que o separador Visão geral, mantendo o tratamento consistente de pausas, reforços, modos incompatíveis e blocos que não permitem pré-condicionamento. Quando existe um bloco futuro correspondente, o cartão mostra o início calculado, o horário-alvo, a antecedência, a temperatura e o modo programados e se o Velair está a utilizar o modelo inicial ou um histórico local semelhante.
 
 A preparação do Regresso planeado é identificada separadamente da antecipação semanal. Para um regresso futuro aceite, as informações do equipamento mostram seu estado de regresso, início estimado, temperatura-alvo de chegada e motivos de suspensão ou indisponibilidade. Visão geral, Regresso planeado e cartões de climatização usam as mesmas informações de regresso do backend; não é outro evento semanal. Um ambiente ainda pode seguir Ausente enquanto mostra uma estimativa futura de regresso. **A preparar** descreve a intenção de controlo do Velair, não a confirmação de que um dispositivo recebeu um comando ou está fisicamente aquecendo ou arrefecendo. A linha do tempo do regresso mostra o tempo decorrido até a chegada guardada, não uma porcentagem de progresso térmico. Consulte [Preparação dos ambientes](planned-return.pt-pt.md#room-preparation) para os estados.
 
 Para conferir um cálculo específico, abra **Detalhes do cálculo** no cartão de previsão. Essa secção opcional mostra os valores do backend usados na previsão, incluindo a contagem de amostras, a estimativa das observações completas, o limite inferior das parciais, a estimativa combinada, o arredondamento e a antecedência final. Ela fica oculta por predefinição para manter a visão habitual simples.
-
-Para dois alvos em `heat` ou `cool` fixo, selecione **Alvo de referência** para o dispositivo e modo em **Definições → Dispositivos de climatização e grupos**. Escolha o limite que o equipamento realmente usa: **Alvo inferior** ou **Alvo superior**. A seleção é partilhada com Room Assist. A preparação e a aprendizagem de aquecimento usam somente o limite selecionado como alvo de aquecimento; arrefecimento o usa como alvo de arrefecimento. A direção vem do modo, mesmo se for o limite superior em aquecimento ou inferior em arrefecimento. O Velair antecipa o par nominal completo, inclusive no Regresso planeado; nunca envia apenas o limite escolhido.
-
-Com **Não configurado**, pares em modo fixo mantêm o horário programado e não produzem amostras de aprendizagem térmica. Regresso planeado os aplica na chegada, sem preparação antecipada. Faixas em `auto` mantêm essa limitação, pois escolher um limite não estabelece o comportamento de aquecimento ou arrefecimento. O comportamento nativo de `heat_cool` não muda. Alterar a referência invalida observações de aprendizagem iniciadas com a interpretação anterior.
 
 <a id="preconditioning-master"></a>
 ## Mestre do pré-condicionamento
@@ -228,6 +264,8 @@ Se o sensor exterior estiver indisponível ao guardar uma amostra, o Velair simp
 Por predefinição, o pré-condicionamento adaptativo usa `current_temperature` da entidade de climatização.
 
 Se a assistência com sensor ambiente estiver ativada para o dispositivo e houver um sensor ambiente selecionado, o pré-condicionamento adaptativo usa esse sensor como temperatura ambiente efetiva para as decisões e a aprendizagem.
+
+Durante a preparação, o Room Assist calcula primeiro o seu alvo base válido habitual; o deslocamento temporário é acrescentado depois. Por exemplo, um alvo nominal de aquecimento de `21 °C`, uma base do Room Assist de `22 °C` e um deslocamento de `2 °C` enviam `24 °C`, se o dispositivo o permitir. O Room Assist nunca usa esse comando temporário como objetivo de aprendizagem da divisão. Um deslocamento positivo configurado mantém temporariamente a direção de preparação ativa, mesmo que o Room Assist tenha herdado uma fase de histerese sem procura. Ao atingir o limiar original de preparação, voltam a aplicar-se a histerese normal e o nível de travagem escolhido. Esta prioridade também se aplica quando os limites físicos reduzem o extra efetivo a zero; configurar zero mantém o comportamento existente.
 
 Isso é útil para válvulas termostáticas ou termóstatos cujo sensor integrado está muito perto de um radiador, saída de ar ou outra fonte local de calor. Consulte [Room Assist](room-assist.pt-pt.md) para entender o comportamento do atuador.
 

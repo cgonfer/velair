@@ -39,7 +39,8 @@ Room Assist uses the selected boundary as its fixed heating or cooling target,
 including the scalar hysteresis cycle and scheduled-target protection. It moves
 both setpoints by the same amount, preserving their separation. Both boundaries
 must fit the climate's target step and physical limits, so the other boundary
-can limit the available correction. Existing limitation warnings still apply.
+can limit the available correction. Physical-limit information remains available
+in the graph and **Technical data**.
 
 With **Not configured**, fixed-mode pairs are delivered unchanged without Room
 Assist correction. Ranges in `auto` remain unsupported for assistance; native
@@ -113,7 +114,8 @@ deadband.
 
 Physical minimum and maximum setpoints can limit the available braking. With
 two setpoints, the complete pair moves together and either boundary can limit
-the shift. Existing limit warnings describe the requested and applied result.
+the shift. **Technical data** distinguishes the requested and applied result and the graph
+identifies the reached limit.
 
 Braking reduces requested heating or cooling; it does not confirm that the
 valve, compressor or thermostat has stopped. Device control, minimum run times
@@ -121,9 +123,9 @@ and thermal inertia can still cause overshoot. This setting does not learn
 cycles or withdraw demand before the scheduled target. Validate it with real
 heating and cooling cycles before relying on a level for a particular room.
 
-Portable exports use model **27** to preserve the braking setting. Keep a backup
+Portable exports use model **28** to preserve braking and preparation offsets. Keep a backup
 from the earlier version if you need to downgrade; older Velair versions cannot
-import model 27 exports.
+import model 28 exports.
 
 ### Optional sensor schedule (beta)
 
@@ -199,21 +201,16 @@ delta. It defaults to `0.3 °C` or `1 °F`, accepts `0` to disable the deadband,
 and can be configured in `0.1` degree steps up to `5 °C` or `9 °F`. Saving it
 while Room Assist is active refreshes the assisted target immediately.
 
-The live temperature scale draws the configured deadband as a neutral striped
-band. For a fixed single target with Default or Moderate braking, its two edges
-are the hysteresis switching limits and the live status identifies which one
-Room Assist is currently moving toward. High keeps this nominal band and marks
-its earlier withdrawal at the scheduled target separately. For scalar automatic modes, the same band remains a neutral
-margin. For a native `heat_cool` range, it spans from the lower limit minus the
-deadband to the upper limit plus the deadband. The scale expands to keep both
-edges visible. The complete translated legend remains centered on the actual
-deadband range, even when that range is narrower than its text, so its meaning
-does not change with the graph width. The complete explanation also remains
-available to assistive technology and as hover text. With a deadband of `0`,
-no surface is drawn and the static legend explicitly
-states that there is no deadband. The graph and legend update from the saved
-backend value; hiding `show_room_assist_deadband` in a Lovelace Room Assist
-card hides the setting, band, and legend together.
+The live graph draws the nominal deadband as a thin hatched strip immediately
+above the temperature axis, with a matching legend below. Effective stop and
+resume thresholds come from the committed control state, so **High** can stop
+demand at the target while the full nominal strip remains visible. For scalar
+automatic modes the strip represents the neutral margin. Native `heat_cool`
+ranges hatch only the outer margins beside the nominal band, with an
+**Outer margin** legend. A zero deadband draws no hatched area; the legend shows
+the configured zero margin. These indicators describe configured boundaries,
+not sensor movement. Hiding `show_room_assist_deadband` in a Lovelace Room Assist
+card hides the setting, strip and legend together.
 
 When upgrading from a version where Room Assist shared Adaptive
 Preconditioning's minimum delta, Velair copies the existing value into the new
@@ -244,8 +241,8 @@ When Room Assist is active, Overview condenses this information into **Toward
 lower limit**, **Toward upper limit**, **Active**, **Holding**, or **Scheduled
 protection**, as applicable, and shows the scheduled and applied values. A
 thermostat minimum or maximum is different from scheduled
-protection: the Room Assist tab displays a warning with the requested, applied,
-and supported values, and Home Assistant receives one persistent notification
+protection: the graph labels the reached physical limit, **Technical data** separates
+requested and applied values, and Home Assistant receives one persistent notification
 until that physical limit clears.
 
 ## Fixed Heating Hysteresis Example
@@ -305,7 +302,7 @@ both values. It identifies the calculated target and the target actually kept
 by Velair, and Overview shows a compact `Scheduled protection` state. This is
 normal protective behavior rather than a thermostat error, so it does not
 create a persistent Home Assistant notification. Physical thermostat limits
-continue to use their separate warning and notification.
+remain identified in the graph and **Technical data**, with their separate notification.
 
 The climate device remains responsible for compressor protection, minimum run
 times, and its physical response. The hysteresis cycle gives Velair a stronger
@@ -457,7 +454,7 @@ assist delta or apply the full maximum on every update.
 
 ### Why Climate target can differ from the calculation
 
-**Climate target** is the setpoint currently reported by the climate entity
+**Setpoint** is the value currently reported by the climate entity
 while Room Assist is ready or blocked. While Room Assist is assisting or
 holding an applied scalar target, it instead shows the temporary setpoint
 Velair sent to the entity. Neither value is the scheduled room target or the
@@ -469,9 +466,10 @@ For example, in fixed cooling Room Assist may calculate `23.9 °C` for a
 climate that accepts `0.5 °C` steps. Velair applies `24.0 °C`: cooling is
 aligned upward so it does not cool more aggressively than the calculation.
 Fixed heating is aligned downward, while scalar automatic modes use the nearest
-step. The information button beside **Climate target** adapts its explanation
-to the value currently shown and, when alignment actually changed the committed setpoint,
-shows the calculation, effective step, and applied value. Physical minimum or
+step. Expand the **Setpoint** chip or open **Technical data** to inspect the
+calculation, effective step, and applied value when that evidence is available.
+When alignment changed the committed setpoint, **Technical data** also shows the value
+before step alignment. Physical minimum or
 maximum limits and scheduled-target protection are reported separately and are
 not described as step alignment.
 
@@ -512,8 +510,8 @@ when physical target limits are reached. Velair never adjusts Min and Max
 independently.
 
 If a calculated scalar target or range exceeds the thermostat's supported
-minimum or maximum, Velair applies the nearest valid result. The live status
-shows the requested target, applied target, and reached limit before the graph.
+minimum or maximum, Velair applies the nearest valid result. The graph labels
+the reached limit; **Technical data** shows the requested and applied scalar target or range.
 Home Assistant also creates one persistent notification for the active limit;
 repeated sensor updates do not create duplicates, and Velair dismisses it after
 recovery.
@@ -600,6 +598,33 @@ When Adaptive Preconditioning is enabled and starts a future block early, Room A
 This matters because the current clock time may still belong to an older block. Velair treats the already-started preconditioning block as the active managed target, so Room Assist does not recalculate against the previous block.
 
 When Room Sensor Assist is enabled, Adaptive Preconditioning also uses the selected room sensor as the effective room temperature source for decisions and learning.
+
+Optional separate heating and cooling offsets are configured in Preconditioning.
+Room Assist calculates its base target from the original room objective, then
+Velair applies the preparation extra. Device limits reduce the extra; two-setpoint
+bands keep their width. A positive configured offset temporarily retains the
+preparation direction until the original room threshold, even when the effective
+extra is zero or Room Assist inherited a non-driving phase. After that threshold
+or the scheduled start, the extra ends and ordinary hysteresis and braking resume.
+Native `heat_cool` ranges retain their existing braking support limitations.
+
+Room Assist confirms its effective heating or cooling demand together with the
+applied target. During preparation, this includes the temporary request while
+preserving its ordinary hysteresis phase separately. Shared Climate Supply follows
+that effective demand through its existing Room Assist integration; it does not
+add another offset, hysteresis or preparation rule. When the extra ends, ordinary
+Room Assist demand resumes. A failed or superseded command does not confirm a new
+request, and a failed restore cannot leave the retired preparation requesting
+supply indefinitely. See [Shared climate supply](shared-climate-supply.md#room-assist).
+
+The graph keeps the nominal objective separate from the final Room Assist plus
+preparation setpoint. Its extra badge includes a limited `0`; **Technical data** separates
+the base, requested extra, effective extra and final command. During preparation,
+the **Preparation ends** threshold has an information button explaining the
+configured arrival margin. A target of `21 °C` with a `0.1 °C` arrival margin ends
+heating preparation at `20.9 °C`; this is separate from the Room Assist control
+band. See [Temporary Setpoint Offset](adaptive-preconditioning.md#temporary-setpoint-offset)
+for heating, cooling and physical-limit examples.
 
 ## Automation Events
 
@@ -695,9 +720,50 @@ entities:
   - climate.living_room
 ```
 
-The live temperature scale separates two relationships. For a single target, the upper line compares the room sensor with the scheduled target and the lower control line compares the climate reading with the climate target. In fixed `heat` or `cool`, the striped band marks both hysteresis limits and the status names the active limit. In scalar automatic modes it remains a neutral margin. For a native range, red and blue brackets identify the complete scheduled and applied bands, including both limits. One signed `Range shift` connector runs between their centers so it represents the movement of the whole band rather than either boundary alone. These indicators describe only the setpoint sent by Velair; they do not claim that the thermostat, valve, or compressor is actively heating or cooling.
+The same live graph is used in the sidebar panel and cards. Compact **Room**,
+**Target**, **Equipment** and **Setpoint** chips connect vertically to their
+temperature positions. Hover, focus or press a chip for details. **Normal** shows
+the current request and next threshold; **Detailed** adds the room-to-objective
+gap, total adjustment and any preparation extra already included in that total.
+Measurement labels sit on their lines when space allows and below them otherwise.
 
-In narrow dashboard columns, the live temperature scale scrolls horizontally so temperature markers remain readable.
+A solid arrow represents requested heating or cooling. A dashed arrow represents
+waiting and points to the resumption threshold. These arrows describe Room Assist
+demand, not a measured temperature trend or proof that a valve or compressor is
+running. When accepted demand is unavailable, the graph reports that uncertainty
+instead of inventing a request or a waiting state.
+
+The hatched strip immediately above the axis retains the nominal control band
+and its legend. An effective braking stop is marked separately; the strip does
+not imply that demand continues beyond that stop. The setpoint chip identifies
+braking only when its guard actually changed the applied command. For a native
+`heat_cool` range, separate brackets show the complete objective and applied bands,
+with hatching at the outer Room Assist margins. Physical limits are labelled.
+
+The graph shows the request in its status badge, readings in the temperature
+chips, and the stop or restart threshold beside the arrow. When a missing room
+reading prevents drawing that relation, the threshold remains in the status badge.
+**Explanation** opens a short contextual explanation below the graph: how the
+sensor readings differ, why a cycle continues after reaching the comfort target,
+or which preparation, braking or equipment limit is affecting the adjustment.
+It adds context without repeating the displayed temperatures, request or
+control-band help. The graph has no separate repeated summary below it.
+**Technical data** groups the equipment setpoint stages, control limits, and
+source/timing in the same detail area. Readings stay in the graph instead of
+appearing again in a second table. Consecutive calculated, requested, before-step
+and applied values share one row when they match, with every stage still named;
+different values remain separate. Range commands and their scalar reference
+evidence remain distinct. Stop/resume values are not repeated as a next threshold
+or identical nominal boundary, and the cycle direction is shown without repeating
+its temperature. Device step and relevant protection or physical limits remain
+available. Preparation extra has its own group, including requested and applied
+values when they differ and a limited zero. Source/timing shows the sensor entity
+and the dated block start, using the clock-only start as a fallback. Groups stack
+in narrow panels and cards. Only one detail view is open at a time; select its
+button again or press Escape to close it. The buttons support keyboard and touch,
+and the detail stays below the graph without covering other controls. Opening or
+closing a detail view does not change the control request. The graph adapts to narrow columns without changing the temperature scale
+or moving a reading away from its actual position.
 
 The Room Assist Lovelace card can also hide individual parts when you want a compact dashboard-only view:
 

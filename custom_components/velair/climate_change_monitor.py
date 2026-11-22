@@ -111,14 +111,12 @@ class ClimateChangeMonitor:
         self, old_state, new_state, changed_fields, owned_fields, assisted_fields,
         *, event_context=None,
     ) -> list[str]:
-        """Keep invalid Off placeholders out of both pending and processed input."""
+        """Keep device Off resets out of both pending and processed input."""
         external = [field for field in changed_fields
                     if field not in owned_fields and field not in assisted_fields]
         if (
             not external
             or not set(external) <= _TARGET_FIELDS
-            or new_state.state != "off"
-            or (old_state.state != "off" and ATTR_HVAC_MODE not in owned_fields)
         ):
             return external
         for context in (getattr(new_state, "context", None), event_context):
@@ -127,6 +125,20 @@ class ClimateChangeMonitor:
                 or getattr(context, "parent_id", None) is not None
             ):
                 return external
+        maintaining_off = getattr(self._scheduler, "is_maintaining_off", None)
+        if (
+            external == [ATTR_TEMPERATURE]
+            and self._climate_manager.is_recent_off_minimum_report(
+                new_state.entity_id, old_state, new_state
+            )
+            and callable(maintaining_off) and maintaining_off(new_state.entity_id)
+        ):
+            return []
+        if (
+            new_state.state != "off"
+            or (old_state.state != "off" and ATTR_HVAC_MODE not in owned_fields)
+        ):
+            return external
         attributes = new_state.attributes
         minimum, maximum = attributes.get("min_temp"), attributes.get("max_temp")
         values = [minimum, maximum, *(attributes.get(field) for field in external)]
@@ -136,7 +148,6 @@ class ClimateChangeMonitor:
         # Only explicit device limits are evidence; adapter defaults are not.
         if minimum >= maximum or any(minimum <= value <= maximum for value in values[2:]):
             return external
-        maintaining_off = getattr(self._scheduler, "is_maintaining_off", None)
         if callable(maintaining_off) and maintaining_off(new_state.entity_id):
             return []
         return external

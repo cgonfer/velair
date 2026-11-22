@@ -16,6 +16,7 @@ from homeassistant.util import dt as dt_util
 from .models import WEEKDAYS, ClimateEvent, temperature_target_from_mapping, normalize_preconditioning_data, preconditioning_observations_for_direction
 from .planned_return_preparation import preparation_status
 from .projection_inputs import input_value, thermal_input
+from .preconditioning_dependencies import occurrence_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,6 +96,7 @@ class PlannedReturnRuntime:
         self._has_return_master = False
         self._profile_effects = {}
         self._dependency_contexts = {}
+        self._completion_contexts = {}
         self._dependency_context_key = None
         self._dependency_episode_key = None
         self._zone_prediction_inputs = {}
@@ -292,6 +294,13 @@ class PlannedReturnRuntime:
         """Read the committed anchor context without hashing calendar inputs."""
         return self._dependency_contexts.get(entity)
 
+    def prepared_nominal_target(self, entity):
+        """Read the prepared destination without predicting or rebuilding it."""
+        return self._prepared_nominals.get(entity)
+
+    def prepared_completion_context(self, entity):
+        return self._completion_contexts.get(entity)
+
     def _prepare_nominal_context(self, now, key, arrival, mode_id):
         owner = self.scheduler
         revision = key[0]
@@ -376,6 +385,9 @@ class PlannedReturnRuntime:
         compute = getattr(owner, "_compute_dependency_context", None)
         self._dependency_contexts = ({entity: compute(entity, episode_key) for entity in self._zone_order}
                                      if compute is not None and episode_key is not None else {})
+        completion = getattr(owner, "_compute_completion_context", None)
+        self._completion_contexts = ({entity: completion(entity, episode_key, dependency_context=context)
+                                      for entity, context in self._dependency_contexts.items()} if completion is not None else {})
         self._dependency_context_key, self._dependency_episode_key = context_key, episode_key
         self._resolution_dirty.update(self._zone_order)
         self._status_dirty = True
@@ -440,11 +452,12 @@ class PlannedReturnRuntime:
         if target is None or arrival is None:
             return None
         key = owner._preconditioning_event_key(entity, target.weekday, target.start, arrival)
-        anchor = owner._data.get("preconditioning_accepted_anchors", {}).get(key)
+        anchor = owner._data.get("preconditioning_accepted_anchors", {}).get(occurrence_id(replace(target, target_when=arrival)))
         marker = owner._applied_preconditioning_targets.get(key)
         expiry = parse_instant(anchor.get("expires_at")) if anchor else None
         marker_value = ((getattr(marker, "active_from", None), marker.target_when,
-                         input_value(getattr(marker, "dependency", None)), marker.target_when > now)
+                         input_value(getattr(marker, "dependency", None)), marker.target_when > now,
+                         getattr(marker, "retired", False), getattr(marker, "completed_at", None))
                         if marker is not None else None)
         return input_value(anchor), expiry is not None and expiry > now, marker_value
 
@@ -901,7 +914,7 @@ class PlannedReturnRuntime:
             arrival = parse_instant(self.episode.get("return_at"))
             if arrival:
                 times.append(arrival)
-            times.extend(event.when for event in self.plans(now) if self._applied.get(event.entity_id) != self._intent(event) and not self._delivery_handed_off(event) and not owner._is_zone_override_active(event.entity_id, now) and (event.when > now or owner._dependency_delivery_allowed(event)))
+            times.extend(event.when for event in self.plans(now) if self._applied.get(event.entity_id) != self._intent(event) and not self._delivery_handed_off(event) and not owner._is_zone_override_active(event.entity_id, now) and owner._completed_preconditioning_event(event.entity_id, now) is None and not owner._completed_preconditioning_pending(event.entity_id, now) and (event.when > now or owner._dependency_delivery_allowed(event)))
         if self.occupancy() == "home" and self.episode is not None and self.episode["state"] != "armed" and not self.awaiting_departure_confirmation():
             times.append(now)
         if times:
@@ -1052,6 +1065,9 @@ class PlannedReturnRuntime:
                             self._temperature_only_suspensions.discard(entity)
                         self.prepare(now)
                         for event in self.plans(now):
+                            if (self.scheduler._completed_preconditioning_event(event.entity_id, now) is not None
+                                    or self.scheduler._completed_preconditioning_pending(event.entity_id, now)):
+                                continue
                             if event.when > now or self._applied.get(event.entity_id) == self._intent(event) or self._delivery_handed_off(event) or self.scheduler._is_zone_override_active(event.entity_id, now):
                                 continue
                             if not self.scheduler._dependency_delivery_allowed(event):

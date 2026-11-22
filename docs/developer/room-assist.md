@@ -138,6 +138,20 @@ Read-only cards keep their existing effective-reference status.
 
 The schedule response exposes a runtime-only `room_sensor_assist` snapshot for the panel and Lovelace card. It is derived from Home Assistant state and scheduler state when the response is built. It is not persisted as history.
 
+The additive `control_intent` display projection reuses the validated, committed
+Room Assist intent already consumed by Shared Climate Supply. It exposes
+`active`, `valid`, `demand`, `direction` and, when valid, `source` and directional
+`thresholds` (`target`, `start_temperature`, `stop_temperature`). It does not
+depend on a configured supply. Invalid or uncommitted intent retains an unknown
+demand; the frontend must not infer demand from `status`, signed correction or
+the relative sensor temperatures. Preparation uses the committed stop threshold
+to display its arrival margin, including when its effective extra is zero.
+
+This projection is read-only: fetching status or opening the graph must not
+advance hysteresis, accept delivery, change learning or write storage. Internal
+preparation keys are not exposed. The shared graph has temporary presentation
+state for Normal/Detailed and Data only; it adds no configuration or polling.
+
 This status can include:
 
 - whether assistance is idle, unavailable, or assisting;

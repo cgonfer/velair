@@ -684,6 +684,8 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
                 "master_entity_id": None,
                 "max_lead_minutes": 240,
                 "minimum_delta_temperature": 0.5,
+                "heating_setpoint_offset": 0.0,
+                "cooling_setpoint_offset": 0.0,
                 "learning_history_size": 120,
                 "similar_sample_count": 25,
                 "comfort_percentile": 80,

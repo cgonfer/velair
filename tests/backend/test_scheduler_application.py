@@ -12059,7 +12059,9 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
                     reason="test_failure",
                 )
 
-        self.assertEqual(self.scheduler._room_sensor_assist_states, {})
+        self.assertEqual(set(self.scheduler._room_sensor_assist_states), {self.entity_id})
+        retained = self.scheduler._room_sensor_assist_states[self.entity_id]
+        self.assertEqual(retained.effective_control_intent, {"source": "retiring", "valid": False})
         dismiss_ids = {
             call[2]["notification_id"]
             for call in self.hass.services.calls

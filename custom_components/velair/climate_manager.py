@@ -284,6 +284,12 @@ class ClimateManager:
             ATTR_TARGET_TEMP_LOW,
             ATTR_TARGET_TEMP_HIGH,
         }
+        if observable_fields & target_fields:
+            # A newer target owns its values even if an earlier Off is settling.
+            for older in candidates:
+                older.pop("off_minimum", None)
+            for settled in self._settling.get(entity_id, {}).values():
+                settled.pop("off_minimum", None)
         if (
             ATTR_HVAC_MODE in observable_fields
             or observable_fields & target_fields
@@ -323,6 +329,20 @@ class ClimateManager:
             "expected": expected,
             "generations": candidate_generations,
         }
+        if expected.get(ATTR_HVAC_MODE) == HVAC_MODE_OFF:
+            state = self._hass.states.get(entity_id)
+            if state is not None and state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+                minimum = state.attributes.get("min_temp")
+                maximum = state.attributes.get("max_temp")
+                if (
+                    all(isinstance(value, int | float) and not isinstance(value, bool)
+                        and math.isfinite(value) for value in (minimum, maximum))
+                    and minimum < maximum
+                ):
+                    # Optional device behavior, never a required delivery target.
+                    candidate["off_minimum"] = {
+                        "minimum": minimum, "maximum": maximum, "source_mode": state.state,
+                    }
         if previous_settling:
             candidate["previous_settling"] = previous_settling
         if superseded_structural_candidates:
@@ -535,6 +555,43 @@ class ClimateManager:
             setattr(preview, name, {entity_id: deepcopy(values[entity_id])}
                     if entity_id in values else {})
         return preview.owned_state_change_fields(entity_id, new_state, old_state)
+
+    def is_recent_off_minimum_report(
+        self, entity_id: str, old_state: Any, new_state: Any
+    ) -> bool:
+        """Read optional scalar reset evidence without consuming or extending it."""
+        if old_state is None or (
+            old_state.state != new_state.state and new_state.state != HVAC_MODE_OFF
+        ):
+            return False
+        now = monotonic()
+        evidence = [
+            item for item in self._expected.get(entity_id, [])
+            if item["expected"].get(ATTR_HVAC_MODE) == HVAC_MODE_OFF
+            and (
+                item.get("delivery_pending", False) and item["expires"] > now
+                or item.get("settles_until", 0.0) > now
+            )
+        ]
+        settled = self._settling.get(entity_id, {}).get(ATTR_HVAC_MODE)
+        if settled is not None and settled["expected"] == HVAC_MODE_OFF and (
+            settled["expires"] > now
+            or (settled.get("delivery_pending", False)
+                and settled.get("recovery_until", 0.0) > now)
+        ):
+            evidence.append(settled)
+        attributes = new_state.attributes
+        minimum, maximum = attributes.get("min_temp"), attributes.get("max_temp")
+        value = attributes.get(ATTR_TEMPERATURE)
+        if not all(isinstance(item, int | float) and not isinstance(item, bool)
+                   and math.isfinite(item) for item in (minimum, maximum, value)):
+            return False
+        return any(
+            new_state.state in (reset["source_mode"], HVAC_MODE_OFF)
+            and minimum == reset["minimum"] and maximum == reset["maximum"]
+            and abs(value - minimum) <= 1e-6
+            for item in evidence if (reset := item.get("off_minimum")) is not None
+        )
 
     def owned_state_change_fields(
         self, entity_id: str, new_state: Any, old_state: Any | None = None
@@ -962,6 +1019,8 @@ class ClimateManager:
                 field
             ),
         }
+        if field == ATTR_HVAC_MODE and "off_minimum" in candidate:
+            self._settling[entity_id][field]["off_minimum"] = candidate["off_minimum"]
 
     def _field_matches_expected(
         self, entity_id: str, state: Any, field: str, expected: Any

@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.3-beta.2 |
-| Dernière synchronisation | 2026-11-15 |
+| Version de référence | 1.9.3-beta.3 |
+| Dernière synchronisation | 2026-11-22 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -1171,9 +1171,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v27 conservent les valeurs brutes et
+Les exports actuels du format portable v28 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v27 ; utilisez une version prenant en charge v27 pour les
+les exports v28 ; utilisez une version prenant en charge v28 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1193,27 +1193,13 @@ modifier avant de se fier à cette programmation.
 La mise à niveau, la migration, les sauvegardes et la récupération complètes
 sont décrites dans [Unités de température et migration](temperature-units.fr.md).
 
-Lorsque l’assistance par capteur est activée, Room Assist montre une échelle
-compacte de température en direct pendant un bloc de température géré actif.
-Pour une consigne unique, elle indique la consigne programmée, le capteur de
-pièce, la consigne de l’appareil et son relevé. Une bande neutre hachurée indique
-les limites de bande morte. Avec `heat` ou `cool` fixe, l’état montre aussi si
-le contrôle se dirige vers la limite inférieure ou supérieure ; avec les
-modes automatiques scalaires, la bande reste une marge neutre. Pour une plage
-native, elle s’étend de la limite basse programmée moins la bande morte à la
-limite haute plus la bande morte ; des crochets séparés montrent toujours les
-bandes complètes programmée et appliquée, avec un connecteur entre leurs
-centres montrant le déplacement signé de toute la plage. Le capteur de pièce
-et le relevé de l’appareil restent des marqueurs individuels. La légende
-traduite complète reste centrée sur la bande morte représentée, même lorsque
-cette bande est plus étroite que le libellé ; une bande morte nulle supprime
-la surface et est indiquée explicitement. Masquer `show_room_assist_deadband`
-masque ensemble son réglage, sa bande et sa légende. Ces valeurs viennent de
-l’état Home Assistant et de l’état d’exécution Velair ; elles ne sont pas
-enregistrées comme nouvel historique. Si aucun bloc de température géré n’est
-actif, l’onglet montre un état d’attente plutôt que des valeurs fictives. Si
-un capteur est sélectionné mais que l’assistance est désactivée, l’onglet
-indique qu’il est enregistré mais non opérationnel. Pour une plage fixe Chauffage ou Refroidissement avec référence configurée, la bande marque la consigne de référence choisie moins et plus la bande morte ; les crochets montrent toujours les plages programmée et appliquée complètes.
+Lorsque l'assistance par capteur est activée, son graphique en direct sépare **Pièce**, **Cible**, **Appareil** et **Consigne** en pastilles compactes reliées verticalement à leurs positions de température. Développez une pastille pour les détails. **Normal** montre la demande actuelle, le prochain seuil effectif et tout supplément de préparation ; **Détaillé** ajoute l'écart de la pièce, l'ajustement total et le supplément déjà inclus dans ce total. Les libellés figurent sur les lignes de mesure si l'espace le permet, sinon dessous. Une flèche pleine représente la demande, tandis qu'une flèche en pointillés indique la reprise pendant l'attente ; aucune ne représente une tendance mesurée du capteur ni une activité physique HVAC.
+
+Une fine bande hachurée au-dessus de l'axe montre la bande de régulation nominale avec sa légende dessous. Les seuils de freinage effectifs restent distincts. Une plage native `heat_cool` ne hachure que les marges extérieures Room Assist. Pour une plage fixe Chauffage ou Refroidissement, la bande entoure plutôt la consigne de référence sélectionnée. Des crochets distincts montrent les bandes nominale et appliquée complètes ; **Détaillé** mesure leur décalage commun signé lorsqu'il est non nul. Une bande morte nulle ne dessine aucune zone hachurée et la légende affiche zéro. Masquer `show_room_assist_deadband` masque le réglage, la bande et la légende.
+
+Le graphique présente la demande une seule fois dans son badge d’état et le seuil d’arrêt ou de reprise à côté de la flèche. **Explication** ouvre un court contexte sous le graphique sans répéter ces libellés ni les mesures de température ; **Données techniques** regroupe les consignes de l’appareil, les limites de régulation et l’origine et les horaires dans la même zone. Un seul détail peut être ouvert à la fois. Sélectionnez de nouveau son bouton ou appuyez sur Échap pour le fermer ; ces commandes de présentation ne modifient pas la demande.
+
+Les étapes de calcul, de demande et d’application identiques partagent une seule valeur avec tous leurs libellés ; les valeurs différentes, les informations sur la référence d’une plage et les limites de préparation restent distinctes. Les mesures restent dans le graphique, et les groupes de supplément de préparation ou de protection n’apparaissent que lorsqu’ils sont pertinents. Une demande inconnue reste inconnue. Les valeurs viennent de Home Assistant et de l’état d’exécution de Velair, sans nouvel historique. Sans bloc de température géré actif, l’onglet affiche un état d’attente. Un capteur sélectionné avec l’assistance désactivée reste enregistré et est affiché comme inactif.
 
 L’assistance par capteur de pièce est pilotée par événements. Velair n’interroge
 pas périodiquement les températures. Il écoute uniquement le capteur configuré
@@ -1601,7 +1587,7 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Les exports actuels du modèle 27 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist et le niveau de freinage sélectionné, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 27. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+Les exports actuels du modèle 28 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist et le niveau de freinage sélectionné, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 28. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin

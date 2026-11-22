@@ -38,7 +38,7 @@ def record(component, output, *, port=8123):
             runtime = report.read_json(state)
             with browser.server(lock, private) as renderer:
                 env = dict(os.environ, VELAIR_HA_STATE=str(state), VELAIR_BROWSER_WS=renderer['endpoint'],
-                           VELAIR_QUALITY_VISUAL="compare", VELAIR_QUALITY_SUITE="smoke",
+                           VELAIR_QUALITY_VISUAL="compare", VELAIR_QUALITY_SUITE="smoke", VELAIR_QUALITY_BASELINE="false",
                            VELAIR_VISUAL_REPEATABILITY="true",
                            VELAIR_VISUAL_REFERENCES=str(output / "candidates"))
                 command = ["npm.cmd" if os.name == "nt" else "npm", "run", "test:e2e", "--", "e2e/visual.spec.mjs"]

@@ -27,6 +27,7 @@ import browser as quality_browser
 ROOT = Path(__file__).resolve().parents[2]
 LOCK = ROOT / "scripts/quality/environment.json"
 ACTION_CATALOG = ROOT / "scripts/quality/actions.json"
+HISTORICAL_VISUAL_LIMITATION = "Historical appearance is diagnostic only; candidate visual references and current editor layout requirements are not applied to the baseline."
 
 
 def resolve_visual_policy(value, lock):
@@ -279,6 +280,11 @@ def execute(args, component, output, label="candidate"):
         result["artifactRole"] = "release-package"
     else:
         result["artifactRole"] = "committed-integration" if args.suite == "release" else "ci-integration"
+    # Historical layouts are diagnostic captures, never compared with the
+    # candidate's approved references or candidate-only layout requirements.
+    visual = "capture" if label == "baseline" and args.visual == "compare" else args.visual
+    if label == "baseline":
+        result["limitations"].append(HISTORICAL_VISUAL_LIMITATION)
     bundle = component / "frontend/velair-card.js"
     result["componentBundleSha256"] = quality.digest(bundle) if bundle.exists() else None
     if os.getenv("QUALITY_COMPARISON_UNAVAILABLE"):
@@ -287,7 +293,8 @@ def execute(args, component, output, label="candidate"):
     with private_runtime() as private:
         state = Path(private) / "ha-state.json"
         env = dict(os.environ, VELAIR_HA_STATE=str(state), VELAIR_QUALITY_OUTPUT=str(output.resolve()),
-                   VELAIR_QUALITY_SUITE=args.suite, VELAIR_QUALITY_VISUAL=args.visual)
+                   VELAIR_QUALITY_SUITE=args.suite, VELAIR_QUALITY_VISUAL=visual,
+                   VELAIR_QUALITY_BASELINE="true" if label == "baseline" else "false")
         ha = [sys.executable, ROOT / "scripts/quality/ha.py"]
         try:
             started = checked([*ha, "start", "--component", component, "--state-file", state,
@@ -327,8 +334,8 @@ def execute(args, component, output, label="candidate"):
                 raise RuntimeError("Load runner did not produce its report")
             proof_path = output / "visual-results.json"
             proof = quality.read_json(proof_path) if proof_path.exists() else {}
-            result["visualStatus"] = visual_status(proof, args.visual, browser_exit)
-            if args.visual != "off":
+            result["visualStatus"] = visual_status(proof, visual, browser_exit)
+            if visual != "off":
                 result["limitations"].append("Selected visual screens use deterministic rendering inputs; separate functional journeys exercise real Home Assistant responses and scheduler time.")
             result["visualEvidence"] = {name: proof.get(name, 0) for name in ("compared", "captured", "failed")}
             result["scenarios"].append({"id": "resources/home-assistant", "status": "pass" if any(resources.samples.values()) else "not-run", "samples": resources.samples})
@@ -339,8 +346,8 @@ def execute(args, component, output, label="candidate"):
             if result["visualStatus"] not in ("compared", "capture-unreviewed", "off"):
                 result["outcome"] = "fail"
             result["status"] = "unreviewed" if result["outcome"] == "pass" and result["visualStatus"] != "compared" else result["outcome"]
-            if args.visual != "compare":
-                result["limitations"].append("Visual references are not approved; captures are evidence, not a passed regression comparison.")
+            if visual != "compare":
+                result["limitations"].append("This execution does not compare approved visual references; captures are evidence, not a passed regression comparison.")
             if args.skip_load:
                 result["limitations"].append("Load measurement was explicitly omitted for this diagnostic execution.")
         except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
@@ -393,6 +400,7 @@ def main():
                     (baseline_runs if label == "baseline" else candidate_runs).append(report)
             previous = quality.combine_repetitions(baseline_runs)
             result = quality.combine_repetitions(candidate_runs)
+            result["limitations"].append(HISTORICAL_VISUAL_LIMITATION)
             result["comparison"] = quality.compare(previous, result)
         else:
             result = execute(args, component, args.output)
