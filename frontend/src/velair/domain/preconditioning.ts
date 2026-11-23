@@ -85,6 +85,7 @@ export function preconditioningSettings(
       ?? defaultRoomAssistDeadband(temperatureUnit),
     ),
     room_sensor_assist_max_delta: Number(value?.room_sensor_assist_max_delta ?? defaultRoomAssistDelta(temperatureUnit)),
+    room_sensor_assist_minimum_margin: Number(value?.room_sensor_assist_minimum_margin ?? 0),
     room_sensor_assist_debounce_seconds: Number(
       value?.room_sensor_assist_debounce_seconds ?? 20,
     ),

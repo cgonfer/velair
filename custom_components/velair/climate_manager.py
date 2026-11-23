@@ -1492,13 +1492,15 @@ class ClimateManager:
         hvac_mode: str | None,
         range_target: bool,
         climate_options: dict[str, Any],
+        preserve_matching_mode: bool = False,
     ) -> None:
         """Deliver one logical mode-and-target intent with shared ownership."""
         mode_service: str | None = None
         mode_data: dict[str, Any] = {ATTR_ENTITY_ID: entity_id}
         expected = dict(target)
         if hvac_mode is not None:
-            mode_service = CLIMATE_SERVICE_SET_HVAC_MODE
+            if not preserve_matching_mode or self._current_hvac_mode(entity_id) != hvac_mode:
+                mode_service = CLIMATE_SERVICE_SET_HVAC_MODE
             mode_data[ATTR_HVAC_MODE] = hvac_mode
             expected[ATTR_HVAC_MODE] = hvac_mode
         elif ensure_on and self._current_hvac_mode(entity_id) == HVAC_MODE_OFF:
@@ -1568,6 +1570,10 @@ class ClimateManager:
                 context=context,
                 register_expected=False,
             )
+            if preserve_matching_mode and hvac_mode is not None:
+                # A return must confirm the saved mode even when no mode
+                # command was needed; resending it can reset native presets.
+                record_delivery_receipt(entity_id, {ATTR_HVAC_MODE: hvac_mode})
             self._mark_expected_action_delivered(entity_id, context.id)
         except (asyncio.CancelledError, Exception):
             if mode_service is None:
@@ -1849,6 +1855,31 @@ class ClimateManager:
             ):
                 return mode
         return None if range_target else (non_off_modes[0] if non_off_modes else None)
+
+    def boost_return_hvac_mode(
+        self, entity_id: str, snapshot: dict[str, Any], *, range_target: bool
+    ) -> str:
+        """Resolve the pre-Boost mode without consulting the temporary mode."""
+        mode = snapshot.get(ATTR_HVAC_MODE)
+        if not isinstance(mode, str) or not mode:
+            raise ValueError(f"Missing saved HVAC mode for {entity_id} Boost return")
+        if mode == HVAC_MODE_OFF:
+            mode = self._resolve_first_non_off_hvac_mode(entity_id, range_target=range_target)
+        if mode is None or mode not in self.supported_hvac_modes(entity_id):
+            raise ValueError(f"Unsupported saved HVAC mode for {entity_id} Boost return")
+        return mode
+
+    def boost_return_options(
+        self, entity_id: str, snapshot: dict[str, Any], block_options: dict[str, Any], *, hvac_mode: str
+    ) -> dict[str, Any]:
+        """Restore changed defaults, keeping explicit block options authoritative."""
+        options = self._climate_options_from_snapshot(snapshot)
+        state = self._hass.states.get(entity_id)
+        if state is not None and state.state == hvac_mode:
+            options = {key: value for key, value in options.items()
+                       if state.attributes.get(key) != value}
+        options.update(block_options)
+        return options
 
     def effective_hvac_mode(
         self,

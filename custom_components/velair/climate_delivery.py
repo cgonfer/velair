@@ -31,6 +31,7 @@ class Delivery:
     commit: CommitStep | None = None
     is_current: CurrentGuard | None = None
     commit_key: Any = None
+    confirmed: Callable[[], None] | None = None
 
 
 DeliveryResolver = Callable[[], Delivery | None]
@@ -69,6 +70,7 @@ class ClimateDeliveryCoordinator:
         self._receipts: dict[str, dict[str, dict[str, Any]]] = {}
         self._receipt_evidence: dict[str, dict[str, Any]] = {}
         self._accepted: dict[str, tuple[int, Any]] = {}
+        self._confirmed_callbacks: dict[str, tuple[int, dict[str, dict[str, Any]], Callable[[], None]]] = {}
         self._retry_counts: dict[str, int] = {}
         self._confirmation_events: dict[str, asyncio.Event] = {}
         self._confirmation_deadlines: dict[str, asyncio.TimerHandle] = {}
@@ -173,12 +175,24 @@ class ClimateDeliveryCoordinator:
                     await step()
                 resolver = self._eligible.get(entity_id)
                 if receipt and resolver is not None and not self._stopped:
+                    confirmation = self._confirmed_callbacks.get(entity_id)
+                    if confirmation is not None:
+                        # An RA update owns a newer physical target, but cannot
+                        # erase a still-unconfirmed saved mode or group member.
+                        combined = {member: dict(fields) for member, fields in confirmation[1].items()}
+                        for member, fields in receipt.items():
+                            combined.setdefault(member, {}).update(fields)
+                        receipt = combined
                     previous_acceptance = self._accepted.get(entity_id)
                     generation = self._replace(entity_id, notify=False, preserve_intent=True)
                     self._eligible_generations[entity_id] = generation
                     self._accepted[entity_id] = (generation, previous_acceptance[1] if previous_acceptance else None)
+                    if confirmation is not None:
+                        self._confirmed_callbacks[entity_id] = (generation, receipt, confirmation[2])
                     self._set_receipt(entity_id, receipt)
                     self._observe(entity_id, "success", self._success_details(entity_id, 0))
+                    if self._receipt_evidence.get(entity_id, {}).get("matches"):
+                        self._notify_delivery_confirmed(entity_id)
                     if entity_id in self._receipts:
                         self._schedule_confirmation_deadline(entity_id, generation, resolver)
             finally:
@@ -214,6 +228,7 @@ class ClimateDeliveryCoordinator:
         self._receipt_evidence.clear()
         self._confirmation_events.clear()
         self._accepted.clear()
+        self._confirmed_callbacks.clear()
         self._retry_counts.clear()
         for handle in self._confirmation_deadlines.values():
             handle.cancel()
@@ -249,6 +264,7 @@ class ClimateDeliveryCoordinator:
         self._confirmation_events.pop(entity_id, None)
         self._retry_counts.pop(entity_id, None)
         self._accepted.pop(entity_id, None)
+        self._confirmed_callbacks.pop(entity_id, None)
         current = asyncio.current_task()
         for task in list(self._tasks.get(entity_id, ())):
             if task is not current:
@@ -382,6 +398,10 @@ class ClimateDeliveryCoordinator:
                             "Climate delivery side-effect commit failed for %s",
                             entity_id,
                         )
+                if delivery.confirmed is not None and is_current():
+                    self._confirmed_callbacks[entity_id] = (generation, receipt, delivery.confirmed)
+                    if receipt and self._receipt_evidence.get(entity_id, {}).get("matches"):
+                        self._notify_delivery_confirmed(entity_id)
                 return "success"
             finally:
                 if self._owners.get(entity_id) is current:
@@ -571,9 +591,17 @@ class ClimateDeliveryCoordinator:
         retries = self._retry_counts.get(entity_id, 0)
         self._receipt_evidence[entity_id] = evidence
         self._receipt_confirmed(receipt)
+        self._notify_delivery_confirmed(entity_id)
         self._observe(entity_id, "recovered" if retries else "confirmation_confirmed", {
             **evidence, "retry_count": retries,
         })
+
+    @callback
+    def _notify_delivery_confirmed(self, entity_id: str) -> None:
+        """Complete opt-in durable work after acceptance and observed confirmation."""
+        pending = self._confirmed_callbacks.pop(entity_id, None)
+        if pending is not None and self._is_current(entity_id, pending[0]):
+            pending[2]()
 
     async def _async_wait_confirmation(self, entity_id: str, generation: int, delay: float) -> bool:
         """Wait for existing state events within one fixed retry deadline."""

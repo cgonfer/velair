@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.3-beta.3 |
-| Última sincronización | 2026-11-22 |
+| Versión de referencia | 1.9.3-beta.4 |
+| Última sincronización | 2026-11-23 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -58,7 +58,8 @@ Con **Sin configurar**, los pares de modo fijo se envían sin cambios ni correcc
 5. Ajusta la banda muerta de Room Assist para definir los límites inferior y superior de conmutación en calor o frío fijo alrededor de su objetivo único o referencia de intervalo elegida, o el margen neutro para modos automáticos de una consigna y bandas nativas `heat_cool`.
 6. Modifica Ajuste máximo de control si el valor predeterminado es insuficiente para esa habitación o menor que la diferencia de consigna que el termostato puede necesitar para dejar de calentar o enfriar.
 7. Opcionalmente, elige **Frenado: Moderado** o **Alto** para retirar la demanda con más firmeza. Estos niveles requieren una banda muerta de Room Assist mayor que cero. **Predeterminado** conserva el comportamiento existente.
-8. Ajusta Retraso de actualización si las actualizaciones de sensores parecen demasiado lentas o frecuentes.
+8. Opcionalmente, configura **Margen mínimo de control** si las correcciones pequeñas no hacen responder al termostato. Aumenta primero el Ajuste máximo de control si hace falta; el margen no puede superarlo. Déjalo en `0` para conservar el comportamiento existente.
+9. Ajusta Retraso de actualización si las actualizaciones de sensores parecen demasiado lentas o frecuentes.
 
 Solo se muestra la opción seleccionada. Si **Sensor fijo** ya es la modalidad guardada, cambiar su sensor se guarda inmediatamente. Alternar entre **Sensor fijo** y **Por horario** cambia un borrador: **Guardar** aplica la modalidad y sus ajustes, y **Cancelar** restaura la configuración guardada. Al alternar se conservan el sensor fijo y la programación guardada; no se activan ambos a la vez.
 
@@ -95,7 +96,44 @@ Las consignas físicas mínima y máxima pueden limitar el frenado disponible. C
 
 El frenado reduce la demanda de calor o frío; no confirma que la válvula, el compresor o el termostato se hayan detenido. El control del equipo, sus tiempos mínimos de funcionamiento y la inercia térmica pueden seguir causando sobrepasos. Este ajuste no aprende ciclos ni retira demanda antes del objetivo programado. Valídalo con ciclos reales de calefacción y refrigeración antes de confiar en un nivel para una habitación concreta.
 
-Las exportaciones portables utilizan el modelo **28** para conservar el frenado y las compensaciones de preparación. Guarda una copia de la versión anterior si necesitas volver a ella; las versiones antiguas de Velair no pueden importar archivos del modelo 28.
+Las exportaciones portables utilizan el modelo **29** para conservar el frenado, las compensaciones de preparación y el margen mínimo de control. Guarda una copia de la versión anterior si necesitas volver a ella; las versiones antiguas de Velair no pueden importar archivos del modelo 29.
+
+<a id="minimum-control-margin"></a>
+
+### Margen mínimo de control
+
+Algunos termostatos necesitan una diferencia considerable entre su temperatura interna y la consigna solicitada antes de responder. Un sensor montado en un radiador puede marcar varios grados más que la habitación mientras el sensor externo sigue pidiendo calor. **Margen mínimo de control** solicita al menos esa diferencia durante una corrección de Room Assist en la que se pueda aplicar. Es opcional y su valor predeterminado es `0`.
+
+Estos ajustes tienen funciones distintas:
+
+| Ajuste | Función |
+| --- | --- |
+| Banda de control de Room Assist | Determina la banda de conmutación o neutra del sensor externo de la habitación. |
+| Margen mínimo de control | Refuerza una corrección aplicable respecto a la lectura interna del termostato. |
+| Ajuste máximo de control | Limita esa corrección; aumentar solo el máximo no solicita una corrección mayor. |
+| Frenado | Cambia los umbrales de retirada de demanda y añade una protección de la consigna programada. |
+
+El margen admite `0–10 °C` (`0–18 °F`) y no puede superar el Ajuste máximo de control. Si los ajustes son incompatibles, Velair pide aumentar primero el máximo o reducir el margen. No modifica ninguno automáticamente. Los incrementos del campo siguen el paso efectivo de consigna del equipo.
+
+Por ejemplo, configura un objetivo de calefacción de `19.5 °C`, una banda de control de `±0.3 °C`, frenado **Predeterminado** y tanto el margen como el máximo en `10 °C`. Con una lectura interna de `21.5 °C` y un paso de consigna compatible de `0.5 °C`:
+
+| Sensor externo de la habitación | Fase de Room Assist | Consigna solicitada al equipo |
+| --- | --- | --- |
+| En `19.2 °C` o por debajo | Pedir calor hacia `19.8 °C` | `31.5 °C`: lectura interna + 10 |
+| Sube por la banda | Seguir pidiendo calor | Lectura interna actual + 10 |
+| Alcanza `19.8 °C` | Retirar la demanda de calor hasta `19.2 °C` | `11.5 °C`: lectura interna − 10 |
+
+La lectura interna puede cambiar, por lo que las solicitudes posteriores usan su valor actual. El objetivo de la habitación sigue siendo `19.5 °C`; las consignas elevadas o reducidas del equipo no amplían la banda de confort. El frenado Moderado o Alto conserva sus propios umbrales de parada y reanudación, y mantiene un resultado existente que retire más demanda.
+
+La refrigeración fija funciona en sentido contrario. Con un objetivo de `24 °C`, banda de `±0.3 °C`, lectura interna de `26 °C` y margen/máximo de `10 °C`, Room Assist solicita `16 °C` mientras se necesita refrigeración y `36 °C` cuando la habitación alcanza `23.7 °C`, antes de aplicar los límites del dispositivo. La refrigeración se reanuda en `24.3 °C`. Con banda cero y sin fase retenida, solo se refuerzan correcciones no nulas; la igualdad permanece neutra.
+
+Los modos automáticos de consigna única y los rangos nativos **Calor/frío** solo refuerzan las solicitudes activas de calefacción o refrigeración. Dentro de la banda neutra de la habitación conservan el mantenimiento existente. Bajar mucho la consigna para detener la calefacción podría, de otro modo, iniciar refrigeración en un equipo bidireccional. En los rangos nativos, ambos límites se desplazan juntos y conservan su separación original. Los pares de modo fijo usan la consigna de referencia configurada; las configuraciones de rango no compatibles siguen sin ser compatibles.
+
+El paso y los límites físicos del equipo pueden impedir alcanzar el margen solicitado. Por ejemplo, con lectura interna de `21.7 °C`, margen/máximo de `10 °C` y una rejilla de `0.5 °C`, no existe una consigna válida exactamente a `10 °C` de distancia. Velair elige una corrección válida dentro del máximo cuando es posible e indica que el paso limita el margen. Con dos consignas, conservar la anchura del rango puede restringir aún más el movimiento. La explicación en directo y **Datos técnicos** identifican un margen activo o limitado.
+
+La protección de la consigna programada, el frenado y las compensaciones temporales de preparación pueden producir un desplazamiento final mayor que el Ajuste máximo de control. Ese ajuste limita la corrección de Room Assist, no cada protección o incremento temporal posterior. Durante la preparación, el margen sigue su dirección actual antes de añadir la compensación.
+
+Esta función solicita una diferencia de consigna. No confirma la apertura física de la válvula, el funcionamiento del compresor ni una parada inmediata. Utiliza el menor margen que funcione con tu equipo y comprueba ciclos reales completos de calefacción o refrigeración.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -301,9 +339,9 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Configurar `3 °C` no aplica inmediatamente una corrección de `3 °C`. Solo permite que Room Assist alcance ese valor cuando la diferencia de la habitación externa lo requiera.
+Con Margen mínimo de control en `0`, configurar `3 °C` no aplica inmediatamente una corrección de `3 °C`. Solo permite que Room Assist alcance ese valor cuando la diferencia de la habitación externa lo requiera.
 
-Este ajuste limita la corrección proporcional, no la consigna final después de proteger el objetivo programado. El frenado opcional refuerza esa protección con su límite de uno o dos pasos; no cambia el Ajuste máximo de control ni aplica todo el máximo en cada actualización.
+Este ajuste limita la corrección proporcional, no la consigna final después de proteger el objetivo programado. El frenado opcional refuerza esa protección con su límite de uno o dos pasos; no cambia el Ajuste máximo de control ni aplica todo el máximo en cada actualización. Un [Margen mínimo de control](#minimum-control-margin) distinto de cero puede solicitar una corrección mayor incluso cuando la diferencia de temperatura externa es pequeña.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 

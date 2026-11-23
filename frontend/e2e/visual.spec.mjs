@@ -40,7 +40,15 @@ test("selected screens have explicit visual evidence in both themes", { annotati
   }
   const api = await connect();
   let fixture;
-  try { fixture = visualFixture(await api.call({ type: "velair/get_schedule" }), readState().climate_entities); }
+  try {
+    // Velair can respond before HA finishes startup. A fresh shell must start
+    // in RUNNING state, otherwise its startup toast can cover the reference.
+    await expect.poll(async () => (await api.call({ type: "get_config" })).state, {
+      message: "Home Assistant must finish startup before opening the visual page",
+      timeout: 60_000,
+    }).toBe("RUNNING");
+    fixture = visualFixture(await api.call({ type: "velair/get_schedule" }), readState().climate_entities);
+  }
   finally { api.close(); }
   await installVisualFixture(page, fixture);
   testInfo.annotations.push({ type: "visual-scope", description: "Deterministic rendering fixture v1; functional journeys use real HA runtime responses" });

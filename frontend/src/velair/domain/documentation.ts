@@ -14,6 +14,7 @@ const TOPIC_PATHS = {
   preconditioningMaster: "docs/user/adaptive-preconditioning.md#preconditioning-master",
   plannedReturn: "docs/user/planned-return.md",
   roomAssist: "docs/user/room-assist.md",
+  roomAssistMinimumMargin: "docs/user/room-assist.md#minimum-control-margin",
   comfort: "docs/user/comfort.md",
   diagnostics: "docs/user/diagnostics.md",
   troubleshooting: "docs/user/troubleshooting.md",

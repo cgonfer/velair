@@ -390,6 +390,7 @@ export type PreconditioningSettings = {
   room_sensor_assist_deadband: number;
   room_sensor_assist_braking_level?: RoomAssistBrakingLevel;
   room_sensor_assist_max_delta: number;
+  room_sensor_assist_minimum_margin?: number;
   room_sensor_assist_debounce_seconds: number;
 };
 
@@ -660,6 +661,11 @@ export type PreconditioningOffsetStatus = {
 };
 
 export type RoomSensorAssistStatus = {
+  minimum_margin?: {
+    configured: number;
+    active: boolean;
+    limited_by: "step" | "minimum" | "maximum" | "range_width" | null;
+  };
   reference_setpoint?: {
     boundary: "low" | "high";
     calculated_temperature: number;

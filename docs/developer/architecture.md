@@ -205,7 +205,8 @@ The storage model is intentionally simple and versioned:
         "minimum_delta_temperature": 0.3,
         "room_sensor_assist_enabled": true,
         "room_sensor_assist_deadband": 0.3,
-        "room_sensor_assist_max_delta": 2.0
+        "room_sensor_assist_max_delta": 2.0,
+        "room_sensor_assist_minimum_margin": 0.0
       },
       "comfort": {
         "enabled": true,
@@ -517,6 +518,7 @@ Velair stores temporary modes as timestamps:
 
 - Global pause suspends every schedule until it expires or the scheduler is resumed.
 - Zone boost stores an override on one zone and suppresses scheduled events only for that zone until the boost expires.
+- Ending or cancelling a Boost atomically replaces its override with a local `pending_boost_return` checkpoint. A thermal Keep block uses its live target and the saved pre-Boost mode; it never restores the saved temperature first. The checkpoint is not an active Boost and is excluded from portable exports. Startup resumes it independently of ordinary schedule-on-startup application. The existing delivery coordinator re-resolves the current target, retries and confirms reported mode/target before guarded asynchronous checkpoint cleanup; no additional polling or timers are used. New control authority supersedes the checkpoint, while availability waits and Keep-to-Keep target changes preserve it. Groups retain their common-mode validation and each delivered member's saved option defaults, overridden by the current block's selected options.
 - Zone pause stores one or more independent reasons on a zone and suppresses scheduled events until the final reason expires or is removed. A reason may optionally turn the climate off. Automated callers can attach a `pause_id`; an identified resume removes only the matching reason, while legacy/manual calls without an ID retain full resume authority. See [Pause, Stop, And Resume](../user/usage.md#pause-stop-and-resume) for the public service contract.
 
 ## Climate Application Rules
@@ -728,8 +730,10 @@ unique id and expected revision under a lock, converts all thermal scopes, and
 persists before replacing runtime data. An exact retry is a no-op and a failed
 write leaves the original runtime untouched.
 
-Model 28 includes optional Room Assist reference schedules, braking levels and
-separate heating/cooling preparation offsets in zone configuration. Exported
+Model 29 includes optional Room Assist reference schedules, braking levels,
+minimum control margin and separate heating/cooling preparation offsets in zone
+configuration. The margin uses canonical delta conversion and defaults to zero
+for earlier payloads. Exported
 learning directions carry a `setpoint_offset` compatibility tag from confirmed
 configuration. Import validates it against the resulting configuration again
 under the scheduler mutation lock, then removes the portable-only tag. Older or
@@ -737,14 +741,14 @@ untagged learning belongs to offset zero. Changing a configured offset atomicall
 clears only that direction's retained history; combined imports install compatible
 supplied learning after clearing incompatible retained history.
 This does not change the internal storage version. Earlier supported portable
-models remain importable; older Velair versions cannot import model 28 exports.
+models remain importable; older Velair versions cannot import model 29 exports.
 
 The current export format is:
 
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 28,
+  "model_version": 29,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {

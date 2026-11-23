@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.3-beta.3 |
-| Ostatnia synchronizacja | 2026-11-22 |
+| Wersja odniesienia | 1.9.3-beta.4 |
+| Ostatnia synchronizacja | 2026-11-23 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -55,7 +55,8 @@ Przy **Nie skonfigurowano** pary stałego trybu są wysyłane bez zmian i bez ko
 5. Ustaw strefę nieczułości Room Assist dla stałego ogrzewania lub chłodzenia wokół pojedynczego celu lub wybranego odniesienia zakresu; dla automatycznych pojedynczych celów i natywnych pasm `heat_cool` określa ona neutralny margines.
 6. Zwiększ ustawienie **Maksymalna delta wspomagania**, jeśli domyślna wartość jest za mała dla pomieszczenia lub dla różnicy temperatur, której termostat potrzebuje do zatrzymania ogrzewania albo chłodzenia.
 7. Opcjonalnie wybierz **Hamowanie: Umiarkowane** lub **Silne**, aby mocniej ograniczać zapotrzebowanie. Te poziomy wymagają strefy nieczułości Room Assist większej od zera. **Domyślne** zachowuje dotychczasowe działanie.
-8. Dostosuj opóźnienie odświeżania, jeśli odczyty są uwzględniane zbyt wolno lub zbyt często.
+8. Opcjonalnie ustaw **Minimalny margines sterowania**, jeśli małe korekty nie powodują reakcji termostatu. W razie potrzeby najpierw zwiększ Maksymalną deltę wspomagania; margines nie może jej przekraczać. Pozostaw `0`, aby zachować dotychczasowe działanie.
+9. Dostosuj opóźnienie odświeżania, jeśli odczyty są uwzględniane zbyt wolno lub zbyt często.
 
 Samo wybranie czujnika zapisuje jedynie jego przypisanie. Velair zaczyna używać go jako źródła rzeczywistej temperatury pomieszczenia dopiero po włączeniu wspomagania.
 
@@ -104,7 +105,82 @@ Fizyczna minimalna i maksymalna nastawa mogą ograniczyć dostępne hamowanie. P
 
 Hamowanie zmniejsza żądanie ogrzewania lub chłodzenia; nie potwierdza zatrzymania zaworu, sprężarki ani termostatu. Sterowanie urządzeniem, minimalne czasy pracy i bezwładność cieplna nadal mogą powodować przekroczenie temperatury. Ta opcja nie uczy się cykli ani nie ogranicza zapotrzebowania przed zaplanowaną temperaturą. Sprawdź ją w rzeczywistych cyklach, zanim zaczniesz polegać na danym poziomie w konkretnym pomieszczeniu.
 
-Przenośne eksporty używają modelu **28**, aby zachować hamowanie i przesunięcia przygotowania. Zachowaj kopię z poprzedniej wersji, jeśli potrzebujesz możliwości powrotu; starsze wersje Velair nie importują modelu 28.
+Przenośne eksporty używają modelu **29**, aby zachować hamowanie, przesunięcia przygotowania i minimalny margines sterowania. Zachowaj kopię z poprzedniej wersji, jeśli potrzebujesz możliwości powrotu; starsze wersje Velair nie importują modelu 29.
+
+<a id="minimum-control-margin"></a>
+### Minimalny margines sterowania
+
+Niektóre termostaty reagują dopiero przy znacznej różnicy między odczytem
+wewnętrznym a żądaną nastawą. Czujnik zamontowany przy grzejniku może wskazywać
+temperaturę o kilka stopni wyższą niż w pomieszczeniu, gdy zewnętrzny czujnik
+pokojowy nadal zgłasza zapotrzebowanie na ciepło. **Minimalny margines sterowania**
+żąda co najmniej takiej różnicy podczas odpowiedniej korekty Room Assist.
+Jest opcjonalny, a wartość domyślna wynosi `0`.
+
+Te ustawienia mają różne zadania:
+
+| Ustawienie | Zadanie |
+| --- | --- |
+| Strefa nieczułości Room Assist | Określa granice przełączania lub strefę neutralną dla zewnętrznego czujnika pokojowego. |
+| Minimalny margines sterowania | Wzmacnia odpowiednią korektę względem wewnętrznego odczytu termostatu. |
+| Maksymalna delta wspomagania | Ogranicza tę korektę; samo zwiększenie maksimum nie żąda większej korekty. |
+| Hamowanie | Zmienia progi wycofania zapotrzebowania i dodaje ochronę zaplanowanej temperatury docelowej. |
+
+Margines przyjmuje wartości `0–10 °C` (`0–18 °F`) i nie może przekraczać
+Maksymalnej delty wspomagania. Przy sprzecznych ustawieniach Velair prosi
+o zwiększenie najpierw maksimum albo zmniejszenie marginesu. Nie zmienia żadnej
+z wartości automatycznie. Przyrosty pola odpowiadają efektywnemu krokowi
+nastawy urządzenia.
+
+Przykład: ustaw ogrzewanie na `19.5 °C`, strefę nieczułości `±0.3 °C`,
+hamowanie **Domyślne**, a margines i maksimum na `10 °C`. Przy odczycie
+wewnętrznym `21.5 °C` i zgodnym kroku nastawy `0.5 °C`:
+
+| Zewnętrzny czujnik pokojowy | Faza Room Assist | Żądana nastawa urządzenia |
+| --- | --- | --- |
+| `19.2 °C` lub mniej | Żądanie ciepła w kierunku `19.8 °C` | `31.5 °C`: odczyt wewnętrzny + 10 |
+| Wzrost wewnątrz strefy | Dalsze żądanie ciepła | Bieżący odczyt wewnętrzny + 10 |
+| Osiąga `19.8 °C` | Wycofanie ciepła do `19.2 °C` | `11.5 °C`: odczyt wewnętrzny − 10 |
+
+Odczyt wewnętrzny może się zmieniać, więc kolejne żądania używają jego bieżącej
+wartości. Cel dla pomieszczenia pozostaje równy `19.5 °C`; duże różnice nastaw
+urządzenia nie poszerzają strefy komfortu. Hamowanie Umiarkowane lub Silne
+zachowuje własne progi zatrzymania i wznowienia oraz istniejący wynik, który
+silniej wycofuje zapotrzebowanie.
+
+Stałe chłodzenie działa odwrotnie. Dla celu `24 °C`, strefy nieczułości
+`±0.3 °C`, odczytu wewnętrznego `26 °C` i marginesu/maksimum `10 °C`
+Room Assist żąda `16 °C`, gdy potrzebne jest chłodzenie, i `36 °C`, gdy
+pomieszczenie osiąga `23.7 °C`, przed zastosowaniem granic urządzenia.
+Chłodzenie wznawia się przy `24.3 °C`. Przy zerowej strefie nieczułości i bez
+zachowanej fazy wzmacniane są tylko niezerowe korekty; równość pozostaje neutralna.
+
+Automatyczne tryby z jedną nastawą i natywne zakresy **Ogrzewanie/Chłodzenie**
+wzmacniają tylko aktywne żądania ogrzewania lub chłodzenia. W neutralnej strefie
+pomieszczenia zachowują dotychczasowe utrzymywanie temperatury. Mocne obniżenie nastawy,
+aby zatrzymać ogrzewanie, mogłoby uruchomić chłodzenie w urządzeniu
+dwukierunkowym. W natywnych zakresach obie granice przesuwają się razem,
+zachowując pierwotną odległość. Pary w stałym trybie używają skonfigurowanej
+nastawy odniesienia; nieobsługiwane konfiguracje zakresów pozostają nieobsługiwane.
+
+Krok i fizyczne granice urządzenia mogą uniemożliwić uzyskanie żądanego marginesu.
+Na przykład przy odczycie wewnętrznym `21.7 °C`, marginesie/maksimum `10 °C`
+i siatce `0.5 °C` nie istnieje punkt oddalony dokładnie o `10 °C`. Velair
+wybiera prawidłową korektę w granicach maksimum, gdy jest to możliwe,
+i informuje, że krok ogranicza margines. Przy dwóch nastawach zachowanie
+szerokości zakresu może dodatkowo ograniczyć przesunięcie. Objaśnienie na żywo
+i **Dane techniczne** wskazują margines aktywny lub ograniczony.
+
+Ochrona zaplanowanej temperatury, hamowanie i tymczasowe przesunięcia
+przygotowania mogą dać końcowe przesunięcie większe niż Maksymalna delta
+wspomagania. To ustawienie ogranicza korektę Room Assist, a nie każdą późniejszą
+ochronę lub tymczasowy dodatek. Podczas przygotowania margines podąża za jego
+bieżącym kierunkiem, zanim zostanie dodany tymczasowy dodatek.
+
+Ta funkcja żąda różnicy nastawy. Nie potwierdza fizycznego otwarcia zaworu,
+pracy sprężarki ani natychmiastowego zatrzymania. Użyj najmniejszego marginesu,
+który działa z Twoim urządzeniem, i sprawdź pełne rzeczywiste cykle ogrzewania
+lub chłodzenia.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -292,9 +368,9 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Ustawienie `3 °C` nie powoduje natychmiastowej korekty o `3 °C`. Jedynie pozwala osiągnąć tę wartość, gdy wymaga tego różnica temperatury w pokoju.
+Przy Minimalnym marginesie sterowania równym `0` ustawienie `3 °C` nie powoduje natychmiastowej korekty o `3 °C`. Jedynie pozwala osiągnąć tę wartość, gdy wymaga tego różnica temperatury w pokoju.
 
-Ta opcja ogranicza korektę proporcjonalną, a nie końcową nastawę po ochronie zaplanowanej temperatury. Opcjonalne hamowanie wzmacnia tę ochronę ograniczeniem jednego lub dwóch kroków; nie zmienia maksymalnej różnicy wspomagania ani nie stosuje całej maksymalnej wartości przy każdej aktualizacji.
+Ta opcja ogranicza korektę proporcjonalną, a nie końcową nastawę po ochronie zaplanowanej temperatury. Opcjonalne hamowanie wzmacnia tę ochronę ograniczeniem jednego lub dwóch kroków; nie zmienia maksymalnej różnicy wspomagania ani nie stosuje całej maksymalnej wartości przy każdej aktualizacji. Niezerowy [Minimalny margines sterowania](#minimum-control-margin) może żądać większej korekty nawet przy małej różnicy temperatury zewnętrznej.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Dlaczego nastawa urządzenia może różnić się od obliczeń

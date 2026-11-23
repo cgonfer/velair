@@ -8,8 +8,8 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.3-beta.3 |
-| Última sincronização | 2026-11-22 |
+| Versão de referência | 1.9.3-beta.4 |
+| Última sincronização | 2026-11-23 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -545,7 +545,7 @@ O Velair armazena valores térmicos sem conversão, na unidade registada com os 
 
 A atualização única de dados publicados do Velair que usavam apenas Celsius é diferente. Se o Home Assistant já usa Fahrenheit, o Velair assume que os dados antigos estão em Celsius sem perguntar, mantém o agendador interrompido e orienta o utilizador a **Redefinir Velair**. A redefinição descarta a configuração antiga e cria atomicamente novos valores predefinidos Fahrenheit. Após essa atualização, mudanças futuras de unidade no Home Assistant usam a conversão explícita completa descrita acima e preservam os dados.
 
-Exportações atuais do modelo portátil v28 preservam os valores sem conversão e declaram a sua unidade. Versões anteriores do Velair não conseguem importar exportações v28; use uma versão com suporte a v28 para restaurá-las. Ficheiros antigos suportados, incluindo v4, v5, v8 e v9, continuam a poder ser importados. Importações convertem os dados térmicos selecionados quando a unidade do ficheiro difere da unidade atual do Home Assistant. Ficheiros antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo guardar uma cópia de referência antes da redefinição e importá-la depois.
+Exportações atuais do modelo portátil v29 preservam os valores sem conversão e declaram a sua unidade. Versões anteriores do Velair não conseguem importar exportações v29; use uma versão com suporte a v29 para restaurá-las. Ficheiros antigos suportados, incluindo v4, v5, v8 e v9, continuam a poder ser importados. Importações convertem os dados térmicos selecionados quando a unidade do ficheiro difere da unidade atual do Home Assistant. Ficheiros antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo guardar uma cópia de referência antes da redefinição e importá-la depois.
 
 Se um termóstato estava indisponível durante a migração ou importação, o Velair verifica os seus limites e o seu incremento efetivo de temperatura. Um `target_temp_step` válido publicado pelo Home Assistant tem prioridade sobre o último incremento informado e depois sobre a alternativa manual por zona. O painel avisa quando uma temperatura-alvo armazenada já não é compatível, para que seja editada antes de depender dessa programação.
 
@@ -688,14 +688,16 @@ O reforço está disponível por serviços, scripts, automações e controlos de
 - aplicar um reforço por um assistente de voz;
 - aplicar um reforço com um modo HVAC preferido.
 
-Quando um reforço termina, o Velair resolve a zona afetada nesta ordem:
+Quando um reforço expira ou é cancelado, o Velair resolve a zona afetada nesta ordem:
 
-1. Se há um bloco ativo de programação com modo HVAC explícito, o Velair aplica a temperatura-alvo programada.
-2. Se há um bloco ativo que desliga o termóstato, o Velair o desliga.
-3. Se não há bloco ativo, o Velair restaura o estado capturado antes do reforço.
-4. Se o bloco ativo usa `Keep`, o Velair também restaura o estado capturado antes do reforço, pois `Keep` não define um novo modo HVAC a aplicar após a substituição temporária.
+1. Se houver um bloco ativo de programação com modo HVAC explícito, o Velair aplica a temperatura-alvo programada.
+2. Se houver um bloco ativo que desliga o termóstato, o Velair desliga-o.
+3. Se não houver bloco ativo, o Velair restaura o estado capturado antes do reforço.
+4. Se o bloco de temperatura ativo usar `Keep`, o Velair aplica a temperatura atual ou a gama completa desse bloco utilizando o modo HVAC guardado antes do reforço. As opções guardadas do dispositivo são restauradas, a menos que o bloco atual selecione outro valor. Se o modo guardado era Desligado, Keep utiliza, como habitualmente, o primeiro modo compatível que não seja Desligado. Modos guardados incompatíveis ou ausentes são assinalados como erros de entrega, sem que o Velair tente adivinhá-los.
 
-Isso significa que um reforço não deve levar o Velair a inventar uma nova temperatura-alvo de aquecimento ou arrefecimento quando a programação atual não a define explicitamente.
+Por exemplo, um equipamento no modo Arrefecimento a 24 °C pode receber temporariamente um Reforço no modo Aquecimento a 22 °C. Se o bloco ativo for Keep a 20 °C quando o Reforço terminar, o Velair regressa ao modo Arrefecimento a 20 °C, sem enviar primeiro os antigos 24 °C. Os blocos apenas de temperatura, com modo explícito, apenas de modo, apenas de opções e Desligado mantêm o seu comportamento normal. Esta regra específica de retorno não altera Keep durante a aplicação normal da programação.
+
+O Velair guarda um retorno pendente antes de remover o Reforço. Se o Home Assistant reiniciar antes da confirmação da entrega, esse retorno é retomado utilizando o bloco em vigor nesse momento, mesmo quando **Aplicar programação ativo após arranque** está desativado. Isto conclui um retorno já iniciado; não reativa o Reforço nem aplica a programação de todas as zonas. A indisponibilidade temporária do equipamento utiliza a recuperação de entrega existente. Qualquer novo controlo manual, Reforço, pausa ou mudança de Perfil ou de modo Velair substitui o retorno antigo. O mesmo acontece se a zona for desativada ou reatribuída.
 
 <a id="startup-behavior"></a>
 ## Comportamento ao iniciar
@@ -703,6 +705,8 @@ Isso significa que um reforço não deve levar o Velair a inventar uma nova temp
 Por predefinição, o Velair restaura o estado armazenado do agendador após iniciar o Home Assistant, mas não força os aparelhos de climatização a uma temperatura-alvo da programação.
 
 Em Definições, pode ativar **Aplicar programação ativo após arranque**. Quando ativado, o Velair aplica o bloco atualmente ativo aos termóstatos geridos após iniciar o Home Assistant, desde que o agendador esteja em modo automático. Um bloco iniciado num dia anterior continua a contar como bloco ativo até o início do próximo bloco semanal. Reforços ativos são respeitados.
+
+Um retorno de Reforço inacabado é recuperado independentemente desta definição, como descrito em [Boost](#boost).
 
 <a id="automation-blueprints"></a>
 ## Blueprints de automação
@@ -732,7 +736,7 @@ O ficheiro pode conter:
 - definições de perfis de climatização;
 - definições de modos.
 
-As exportações atuais do modelo 28 preservam os dois tipos de vínculo de modelos, referências de presets, relações de Mestre do pré-condicionamento, políticas de formato e referência de alvo e a autoridade e configuração partilhada dos grupos de divisão. As definições de zona também preservam programações opcionais de sensores do Room Assist e o nível de travagem selecionado, independentemente das programações de temperatura e dos Perfis. Âncoras aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como secções adicionais selecionadas. Quando há dados de grupo, grupos, programações e Perfis necessários também são incluídos, mesmo começando por uma exportação de aprendizagem. Importações validam a configuração combinada, incluindo consumidores existentes de recursos partilhados substituídos. Presets são mesclados pela chave estável: os correspondentes são substituídos, enquanto os locais ausentes do ficheiro permanecem. Backups existentes continuam importáveis; versões antigas do Velair não importam ficheiros do modelo 28. Mantenha uma cópia de segurança da versão anterior caso precise de voltar a ela. Consulte [o exemplo de backup](linked-schedule-examples.pt-pt.md#back-up-the-whole-setup).
+As exportações atuais do modelo 29 preservam os dois tipos de vínculo de modelos, referências de presets, relações de Mestre do pré-condicionamento, políticas de formato e referência de alvo e a autoridade e configuração partilhada dos grupos de divisão. As definições de zona também preservam programações opcionais de sensores do Room Assist, o nível de travagem selecionado e a margem mínima de controlo, independentemente das programações de temperatura e dos Perfis. Âncoras aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como secções adicionais selecionadas. Quando há dados de grupo, grupos, programações e Perfis necessários também são incluídos, mesmo começando por uma exportação de aprendizagem. Importações validam a configuração combinada, incluindo consumidores existentes de recursos partilhados substituídos. Presets são mesclados pela chave estável: os correspondentes são substituídos, enquanto os locais ausentes do ficheiro permanecem. Backups existentes continuam importáveis; versões antigas do Velair não importam ficheiros do modelo 29. Mantenha uma cópia de segurança da versão anterior caso precise de voltar a ela. Consulte [o exemplo de backup](linked-schedule-examples.pt-pt.md#back-up-the-whole-setup).
 
 Ao importar, o Velair permite escolher quais secções substituir. A importação substitui os dados selecionados; exporte antes se precisar de um ponto de recuperação. Definições de perfis e modos são portáteis, mas a sua seleção ativa não é. O Velair mantém IDs de perfis ativos que ainda existam e volta às programações predefinidas apenas quando nenhum deles permanece.
 
@@ -895,7 +899,7 @@ Um reforço com intervalo usa `target_temp_low` e `target_temp_high` no lugar de
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Cancele antecipadamente um reforço ativo. Isso sempre usa o mesmo comportamento da expiração normal: o Velair aplica a temperatura-alvo explícita da programação ativa, se houver; caso contrário, inclusive com um bloco `Keep`, restaura o estado de climatização guardado, incluindo as opções suportadas do dispositivo. A chamada não tem efeito quando não há reforço ativo.
+Cancele antecipadamente um reforço ativo. O retorno segue o mesmo comportamento da expiração normal: um bloco de temperatura que usa `Keep` combina o seu alvo atual com o modo HVAC anterior ao Reforço, enquanto os blocos explícitos mantêm o comportamento normal. Sem um bloco de programação aplicável, o Velair restaura o estado guardado do equipamento, incluindo as opções suportadas do dispositivo. A chamada não tem efeito quando não há reforço ativo.
 
 ```yaml
 action: velair.cancel_boost

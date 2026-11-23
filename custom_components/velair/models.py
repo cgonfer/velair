@@ -153,6 +153,17 @@ class ZoneOverride(TypedDict):
     previous_state: NotRequired["ClimateStateSnapshot"]
 
 
+class PendingBoostReturn(TypedDict):
+    """Local delivery checkpoint for an ended Boost, never an active override."""
+
+    id: str
+    ended_at: str
+    reason: Literal["manual", "expired"]
+    boost: ZoneOverride
+    announced: NotRequired[bool]
+    mode_retired: NotRequired[bool]
+
+
 class ZonePauseReason(TypedDict):
     """One independently owned reason that keeps a zone paused."""
 
@@ -205,6 +216,7 @@ class PreconditioningData(TypedDict):
     room_sensor_assist_enabled: bool
     room_sensor_assist_deadband: float
     room_sensor_assist_braking_level: str
+    room_sensor_assist_minimum_margin: float
     room_sensor_assist_max_delta: float
     room_sensor_assist_debounce_seconds: int
 
@@ -379,6 +391,7 @@ class ZoneData(TypedDict):
     template_links: NotRequired[dict[str, TemplateLinkData]]
     day_layout_key: NotRequired[str]
     override: NotRequired[ZoneOverride | None]
+    pending_boost_return: NotRequired[PendingBoostReturn]
     pauses: NotRequired[list[ZonePauseReason]]
     preconditioning: PreconditioningData
     comfort: ComfortData
@@ -904,6 +917,9 @@ def normalize_schedule_data(
             ),
         }
         from .day_layouts import normalize_day_layout_key
+        pending_return = _normalize_pending_boost_return(zone_data.get("pending_boost_return"))
+        if pending_return is not None and override is None and not pauses:
+            zones[entity_id]["pending_boost_return"] = pending_return
         zones[entity_id]["day_layout_key"] = normalize_day_layout_key(zone_data.get("day_layout_key"))
         if "template_links" in zone_data:
             zones[entity_id]["template_links"] = _stored_template_link_modes(zone_data["template_links"])
@@ -2002,6 +2018,9 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         ),
         "room_sensor_assist_deadband": _normalize_room_sensor_assist_deadband(
             data.get("room_sensor_assist_deadband")
+        ),
+        "room_sensor_assist_minimum_margin": _normalize_float(
+            data.get("room_sensor_assist_minimum_margin"), 0.0, minimum=0.0, maximum=18.0,
         ),
         "room_sensor_assist_max_delta": _normalize_float(
             data.get("room_sensor_assist_max_delta"),
@@ -3126,6 +3145,34 @@ def _normalize_zone_override(raw_override: Any) -> ZoneOverride | None:
         override["previous_state"] = previous_state
 
     return override
+
+
+def _normalize_pending_boost_return(raw: Any) -> PendingBoostReturn | None:
+    """Read bounded, valid local checkpoints without reviving a Boost."""
+    if not isinstance(raw, dict):
+        return None
+    token, ended_at, reason = raw.get("id"), raw.get("ended_at"), raw.get("reason")
+    if not isinstance(token, str) or not token or len(token) > 128:
+        return None
+    if not isinstance(ended_at, str) or reason not in ("manual", "expired"):
+        return None
+    try:
+        ended = datetime.fromisoformat(ended_at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ended.tzinfo is None:
+        return None
+    raw_boost = raw.get("boost")
+    boost = _normalize_zone_override(raw_boost)
+    if not boost or boost.get("type") != "boost" or not boost.get("previous_state"):
+        return None
+    _copy_climate_options(raw_boost, boost)
+    pending: PendingBoostReturn = {"id": token, "ended_at": ended_at, "reason": reason, "boost": boost}
+    if raw.get("announced") is True:
+        pending["announced"] = True
+    if raw.get("mode_retired") is True:
+        pending["mode_retired"] = True
+    return pending
 
 
 def _normalize_zone_pause_override(raw_override: dict[str, Any]) -> ZoneOverride | None:

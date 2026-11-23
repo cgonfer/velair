@@ -4,6 +4,11 @@ import { preconditioningMasterCandidates, preconditioningSettings, preconditioni
 import type { ScheduleResponse } from "../../src/velair/types";
 
 describe("preconditioning settings", () => {
+  it("defaults minimum control margin to zero and retains saved native values", () => {
+    expect(preconditioningSettings().room_sensor_assist_minimum_margin).toBe(0);
+    expect(preconditioningSettings(undefined, "°F").room_sensor_assist_minimum_margin).toBe(0);
+    expect(preconditioningSettings({ room_sensor_assist_minimum_margin: 18 }, "°F").room_sensor_assist_minimum_margin).toBe(18);
+  });
   it("defaults missing braking to the existing regulation and retains saved levels", () => {
     expect(preconditioningSettings().room_sensor_assist_braking_level).toBe("default");
     expect(preconditioningSettings({ room_sensor_assist_braking_level: "high" }).room_sensor_assist_braking_level).toBe("high");

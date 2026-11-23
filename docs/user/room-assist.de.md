@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.3-beta.3 |
-| Letzte Synchronisierung | 2026-11-22 |
+| Referenzversion | 1.9.3-beta.4 |
+| Letzte Synchronisierung | 2026-11-23 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -55,7 +55,8 @@ Bei **Nicht konfiguriert** werden Festmoduspaare ohne Room-Assist-Korrektur gese
 5. Stelle das Room-Assist-Totband für festes Heizen oder Kühlen um den Einzelwert oder die gewählte Bereichsreferenz ein; bei automatischen Einzelwertmodi und nativen `heat_cool`-Bändern bestimmt es den neutralen Abstand.
 6. Passe die maximale Unterstützungsdifferenz an, wenn der Standard für den Raum zu klein ist oder unter der Zielabweichung liegt, die das Thermostat zum Beenden von Heizen/Kühlen benötigt.
 7. Wähle optional **Bremsung: Moderat** oder **Stark**, um die Anforderung stärker zurückzunehmen. Diese Stufen benötigen ein Room-Assist-Totband größer als null. **Standard** erhält das bisherige Verhalten.
-8. Passe die Aktualisierungsverzögerung an, wenn Sensoraktualisierungen zu langsam oder zu häufig erscheinen.
+8. Stelle optional den **Mindestregelabstand** ein, wenn kleine Korrekturen das Thermostat nicht reagieren lassen. Erhöhe bei Bedarf zuerst **Maximale Korrektur**; der Mindestabstand darf diesen Wert nicht überschreiten. Mit `0` bleibt das bisherige Verhalten erhalten.
+9. Passe die Aktualisierungsverzögerung an, wenn Sensoraktualisierungen zu langsam oder zu häufig erscheinen.
 
 Die Auswahl eines Raumsensors allein speichert nur den Sensor. Velair verwendet ihn erst bei aktivierter Raumsensorunterstützung als wirksame Raumtemperatur.
 
@@ -104,7 +105,43 @@ Physische Mindest- und Höchstsollwerte können die Bremsung begrenzen. Bei zwei
 
 Die Bremsung reduziert die Heiz- oder Kühlanforderung; sie bestätigt keinen Stillstand von Ventil, Kompressor oder Thermostat. Gerätesteuerung, Mindestlaufzeiten und thermische Trägheit können weiterhin ein Überschwingen verursachen. Diese Einstellung lernt keine Zyklen und nimmt die Anforderung nicht vor dem geplanten Ziel zurück. Prüfe sie mit echten Heiz- und Kühlzyklen, bevor du dich für einen bestimmten Raum auf eine Stufe verlässt.
 
-Portable Exporte verwenden Modell **28**, um Bremsung und Vorbereitungsversätze zu erhalten. Bewahre für ein mögliches Downgrade eine Sicherung der früheren Version auf; ältere Velair-Versionen können Modell 28 nicht importieren.
+Portable Exporte verwenden Modell **29**, um Bremsung, Vorbereitungsversätze und den Mindestregelabstand zu erhalten. Bewahre für ein mögliches Downgrade eine Sicherung der früheren Version auf; ältere Velair-Versionen können Modell 29 nicht importieren.
+
+<a id="minimum-control-margin"></a>
+### Mindestregelabstand
+
+Manche Thermostate reagieren erst auf einen deutlichen Abstand zwischen ihrer internen Temperatur und dem angeforderten Sollwert. Ein am Heizkörper montierter Sensor kann mehrere Grad mehr als der Raum messen, obwohl der separate Raumsensor weiterhin Wärme anfordert. **Mindestregelabstand** fordert bei einer geeigneten Room-Assist-Korrektur mindestens diesen Abstand an. Die Einstellung ist optional und standardmäßig `0`.
+
+Die Einstellungen erfüllen unterschiedliche Aufgaben:
+
+| Einstellung | Zweck |
+| --- | --- |
+| Totband von Room Assist | Bestimmt die Umschaltgrenzen oder den neutralen Bereich der externen Raumtemperatur. |
+| Mindestregelabstand | Verstärkt eine geeignete Korrektur gegenüber dem internen Messwert des Thermostats. |
+| Maximale Korrektur | Begrenzt diese Korrektur; ein höheres Maximum allein fordert keine größere Korrektur an. |
+| Bremsung | Ändert die Rücknahmeschwellen und ergänzt den Schutz des geplanten Sollwerts. |
+
+Der Abstand unterstützt `0–10 °C` (`0–18 °F`) und darf **Maximale Korrektur** nicht überschreiten. Bei widersprüchlichen Werten fordert Velair dich auf, zuerst das Maximum zu erhöhen oder den Mindestabstand zu verringern. Es ändert keine der Einstellungen automatisch. Die Eingabeschritte folgen der effektiven Sollwertschrittweite des Geräts.
+
+Beispiel: Heizsollwert `19.5 °C`, Totband `±0.3 °C`, Bremsung **Standard** sowie Mindestabstand und Maximum jeweils `10 °C`. Bei internem Messwert `21.5 °C` und passender Sollwertschrittweite `0.5 °C`:
+
+| Separater Raumsensor | Room-Assist-Phase | Angeforderter Gerätesollwert |
+| --- | --- | --- |
+| Bei oder unter `19.2 °C` | Wärme in Richtung `19.8 °C` anfordern | `31.5 °C`: interner Messwert + 10 |
+| Temperatur steigt innerhalb des Bandes | Weiter Wärme anfordern | Aktueller interner Messwert + 10 |
+| Erreicht `19.8 °C` | Wärmeanforderung bis `19.2 °C` zurücknehmen | `11.5 °C`: interner Messwert − 10 |
+
+Der interne Messwert kann sich ändern; spätere Anforderungen verwenden dessen aktuellen Wert. Das Raumziel bleibt `19.5 °C`; die großen Gerätesollwerte verbreitern das Komfortband nicht. Die Bremsstufen Moderat und Stark behalten ihre Stopp- und Wiederaufnahmegrenzen sowie ein bereits stärkeres Rücknahmeergebnis bei.
+
+Festes Kühlen funktioniert umgekehrt. Bei Ziel `24 °C`, Totband `±0.3 °C`, internem Messwert `26 °C` und Mindestabstand/Maximum `10 °C` fordert Room Assist beim Kühlen `16 °C` an. Erreicht der Raum `23.7 °C`, fordert es vor Anwendung der Gerätegrenzen `36 °C` an. Die Kühlung wird bei `24.3 °C` wieder angefordert. Bei Totband null ohne beibehaltene Phase werden nur Korrekturen ungleich null verstärkt; bei Gleichheit bleibt die Anforderung neutral.
+
+Automatische Einzelzielmodi und native **Heizen/Kühlen**-Bereiche verstärken nur aktive Heiz- oder Kühlanforderungen. Innerhalb des neutralen Raumbandes bleibt das bisherige Halteverhalten erhalten. Eine starke Sollwertsenkung zum Beenden des Heizens könnte bei einem bidirektionalen Gerät sonst die Kühlung starten. Bei nativen Bereichen verschieben sich beide Grenzen gemeinsam und behalten ihren ursprünglichen Abstand. Festmoduspaare verwenden den konfigurierten Referenzsollwert; nicht unterstützte Bereichskonfigurationen bleiben nicht unterstützt.
+
+Geräteschritte und physische Grenzen können den angeforderten Abstand verhindern. Bei internem Messwert `21.7 °C`, Mindestabstand/Maximum `10 °C` und Raster `0.5 °C` liegt beispielsweise kein Rasterpunkt genau `10 °C` entfernt. Velair wählt nach Möglichkeit eine gültige Korrektur innerhalb des Maximums und meldet die Begrenzung durch die Schrittweite. Bei zwei Sollwerten kann die Erhaltung der Bereichsbreite die Bewegung zusätzlich begrenzen. Die aktuelle Erklärung und **Technische Daten** kennzeichnen einen aktiven oder begrenzten Abstand.
+
+Der Schutz des geplanten Sollwerts, die Bremsung und vorübergehende Vorbereitungsversätze können einen endgültigen Abstand oberhalb der maximalen Korrektur erzeugen. Diese Einstellung begrenzt die Room-Assist-Korrektur, nicht jede nachfolgende Schutzmaßnahme oder vorübergehende Zusatzkorrektur. Während der Vorbereitung folgt der Mindestabstand der aktuellen Vorbereitungsrichtung, bevor der Zusatz angewendet wird.
+
+Diese Funktion fordert einen Sollwertabstand an. Sie bestätigt weder das physische Öffnen eines Ventils noch den Kompressorbetrieb oder einen sofortigen Stopp. Verwende den kleinsten für dein Gerät wirksamen Abstand und prüfe vollständige reale Heiz- oder Kühlzyklen.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -292,9 +329,9 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Die Einstellung `3 °C` wendet nicht sofort eine Korrektur von `3 °C` an. Sie erlaubt Room Assist nur, diesen Wert bei einer entsprechenden Temperaturabweichung am separaten Raumsensor zu erreichen.
+Bei **Mindestregelabstand** `0` wendet die Einstellung `3 °C` nicht sofort eine Korrektur von `3 °C` an. Sie erlaubt Room Assist nur, diesen Wert bei einer entsprechenden Temperaturabweichung am separaten Raumsensor zu erreichen.
 
-Diese Einstellung begrenzt die proportionale Korrektur, nicht den endgültigen Sollwert nach dem Schutz des geplanten Ziels. Die optionale Bremsung verstärkt diesen Schutz mit einer Grenze von einem oder zwei Schritten; sie ändert die maximale Unterstützungsdifferenz nicht und wendet nicht bei jeder Aktualisierung den gesamten Höchstwert an.
+Diese Einstellung begrenzt die proportionale Korrektur, nicht den endgültigen Sollwert nach dem Schutz des geplanten Ziels. Die optionale Bremsung verstärkt diesen Schutz mit einer Grenze von einem oder zwei Schritten; sie ändert die maximale Unterstützungsdifferenz nicht und wendet nicht bei jeder Aktualisierung den gesamten Höchstwert an. Ein [Mindestregelabstand](#minimum-control-margin) größer als null kann auch bei kleiner externer Raumtemperaturabweichung eine größere Korrektur anfordern.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Warum das Geräteziel von der Berechnung abweichen kann

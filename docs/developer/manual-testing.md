@@ -1,5 +1,36 @@
 # Manual Testing
 
+## Room Assist minimum control margin
+
+1. Compare existing behavior with a missing margin and an explicit zero. Set
+   **Minimum control margin** above Maximum assist delta, then try reducing the
+   maximum below the saved margin: both edits must show validation without
+   changing another setting or persisting an invalid combination.
+2. With fixed Heat, target 19.5, deadband 0.3, internal reading 21.5, step 0.5
+   and margin/maximum 10, verify requests 31.5 while driving and 11.5 after the
+   external room reaches 19.8; resume at 19.2. Mirror the cycle in fixed Cool.
+   Check all braking levels and a zero-deadband equality without forced demand.
+3. Exercise scalar automatic modes and native Heat/Cool ranges across heating,
+   holding and cooling. The margin must not turn withdrawal into opposite demand
+   or move a valid stable holding range. Fixed-mode pairs must preserve width
+   for either configured reference in each direction.
+4. Check step/cap conflicts (internal 21.7, step 0.5, margin/maximum 10), a cap
+   narrower than the grid, physical saturation and width-constrained pairs.
+   Inspect requested/applied values and minimum-margin limitation metadata.
+   Repeat with Fahrenheit deltas and a missing published-step fallback.
+5. Change the margin during an active phase and preparation. Preserve valid
+   phase and preparation direction; add temporary offsets only after the base
+   correction. Failed saves, failed/superseded commands and status-only reads
+   must not confirm a new demand state or change Supply thresholds.
+6. Restart, restore unrelated preconditioning defaults and round-trip portable
+   model v29 with standalone zones and groups. Preserve the margin and canonical
+   units; older files without the field use zero. Older consumers must reject
+   the new model rather than lose a non-default request.
+7. On mobile, tablet and desktop in both themes, check the field, validation,
+   disabled/saving states, keyboard focus, short help and explicit English link
+   to the Minimum control margin guide section. Check the live graph's limited
+   state without interpreting it as confirmed physical actuator activity.
+
 ## Temporary preparation offsets
 
 1. Configure independent heat/cool deltas, including zero, `0.2–0.3 °C` where
@@ -31,7 +62,7 @@
    the opposite direction, and reconcile current physical intent. Hold/fail/cancel
    persistence while a sample completes or an import waits. A rollback restores
    the old rule; no incompatible sample may survive a successful rule change.
-6. Round-trip portable model v28, including zones-only, learning-only, combined
+6. Round-trip portable model v29, including zones-only, learning-only, combined
    imports and groups. Require matching converted direction tags, treat old or
    absent tags as zero, preserve compatible supplied history and clear only
    changed retained directions. Unit migration must preserve the physical delta.
@@ -159,7 +190,7 @@ Home Assistant installation before treating physical-device recovery as verified
    no silent change to a different room.
 6. Verify advance preparation does not cross a source boundary and is recalculated
    afterward. Learning readiness and samples must match the effective source.
-7. Export/import portable model v28, including a saved disabled schedule. Reject
+7. Export/import portable model v29, including a saved disabled schedule. Reject
    overlapping periods without replacing configuration. Verify native group
    references and preserve the fixed sensor when disabling the schedule.
 8. Switch between **Fixed sensor** and **By schedule**, edit both setups, and
@@ -189,7 +220,7 @@ Home Assistant installation before treating physical-device recovery as verified
    Default before saving band zero. Fail a settings write and confirm the saved
    level and phase remain authoritative. Level changes reset phase; H-only
    changes reset Moderate/High while Default retains its established phase
-   behavior. Reload and round-trip portable model v28, including missing-level
+   behavior. Reload and round-trip portable model v29, including missing-level
    older data that defaults to Default and opposite-unit imports.
 4. Compare the panel, narrow Room Assist card, shared graph and Supply live
    demand. Nominal band limits remain centered on T; High's effective stop and
@@ -233,7 +264,7 @@ Home Assistant installation before treating physical-device recovery as verified
    the entire room is targeted once. Reject unmanaged climates. Remove members
    and dissolve the group; check inherited schedules/Profiles and cleared
    temporary actions. Options must reject removal of a still-grouped climate.
-7. Export/import portable model v28, including empty groups, the same group graph,
+7. Export/import portable model v29, including empty groups, the same group graph,
    imported learning, changed Profiles and active selection reconciliation. Test
    restart/reload, temperature conversion and per-member boost restoration.
 8. Reorder groups and members; reload and check Settings, scheduling selectors

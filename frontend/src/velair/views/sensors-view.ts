@@ -234,6 +234,17 @@ function renderSensorConfiguration(
           : nothing}
         ${options.showMaxDelta
           ? renderSensorNumber(
+              host, entityId, "roomSensorAssistMinimumMargin", "room_sensor_assist_minimum_margin",
+              settings.room_sensor_assist_minimum_margin ?? 0, 0,
+              maxAssistDeltaForUnit(host._temperatureUnit(entityId)),
+              host._temperatureStep?.(undefined, entityId) ?? 1,
+              host._temperatureUnit(entityId),
+              { inactive: !(settings.room_temperature_entity_id || settings.room_sensor_schedule?.enabled)
+                  || !settings.room_sensor_assist_enabled },
+            )
+          : nothing}
+        ${options.showMaxDelta
+          ? renderSensorNumber(
               host,
               entityId,
               "roomSensorAssistMaxDelta",
@@ -414,7 +425,9 @@ function renderSensorLabel(
       ${options.inputId
         ? html`<label for=${options.inputId}>${host._t(labelKey)}</label>`
         : html`<span>${host._t(labelKey)}</span>`}
-      ${helpKey && options.showHelp !== false
+      ${labelKey === "roomSensorAssistMinimumMargin"
+        ? renderDocumentationHelp(host, "roomAssistMinimumMargin")
+        : helpKey && options.showHelp !== false
         ? renderInlineHelp(options.helpId ?? `sensor-${labelKey}-help`, help, help)
         : nothing}
     </span>
@@ -425,7 +438,7 @@ function renderSensorNumber(
   host: SensorsViewHost,
   entityId: string,
   labelKey: TranslationKey,
-  field: "room_sensor_assist_debounce_seconds" | "room_sensor_assist_deadband" | "room_sensor_assist_max_delta",
+  field: "room_sensor_assist_debounce_seconds" | "room_sensor_assist_deadband" | "room_sensor_assist_max_delta" | "room_sensor_assist_minimum_margin",
   value: number,
   min: number,
   max: number,
@@ -438,8 +451,11 @@ function renderSensorNumber(
     && (preconditioningSettings(host._data?.zones[entityId]?.preconditioning).room_sensor_assist_braking_level ?? "default") !== "default";
   const safeEntityId = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
   const inputId = `room-sensor-${safeEntityId}-${field}`;
+  const errorId = `${inputId}-error`;
+  const marginField = field === "room_sensor_assist_minimum_margin" || field === "room_sensor_assist_max_delta";
   const descriptionKey = field === "room_sensor_assist_deadband" ? "roomSensorAssistDeadbandDescription"
     : field === "room_sensor_assist_max_delta" ? "roomSensorAssistMaxDeltaDescription"
+    : field === "room_sensor_assist_minimum_margin" ? "roomSensorAssistMinimumMarginDescription"
     : "roomSensorAssistDebounceDescription";
   return html`
     <div class=${`sensor-config-row ${options.inactive ? "inactive" : ""}`}>
@@ -451,19 +467,45 @@ function renderSensorNumber(
       <span class="sensor-number-input">
         <input
           id=${inputId}
-          aria-describedby=${`${inputId}-description`}
+          aria-describedby=${`${inputId}-description${marginField ? ` ${errorId}` : ""}`}
           type="number"
           min=${String(brakingRequiresBand ? Math.max(min, step) : min)}
           max=${String(max)}
           step=${String(step)}
           .value=${String(value)}
           ?disabled=${disabled}
+          @input=${(event: Event) => {
+            if (!marginField) return;
+            const input = event.currentTarget as HTMLInputElement;
+            input.setCustomValidity("");
+            input.removeAttribute("aria-invalid");
+            const error = input.closest(".sensor-config-row")?.querySelector<HTMLElement>(".sensor-field-error");
+            if (error) { error.textContent = ""; error.hidden = true; }
+          }}
           @change=${(event: Event) => {
             if (disabled) {
               return;
             }
             const inputValue = (event.currentTarget as HTMLInputElement).value.trim();
             const rawValue = Number(inputValue);
+            if (marginField) {
+              const input = event.currentTarget as HTMLInputElement;
+              const settings = preconditioningSettings(host._data?.zones[entityId]?.preconditioning, unit);
+              const margin = field === "room_sensor_assist_minimum_margin" ? rawValue : settings.room_sensor_assist_minimum_margin ?? 0;
+              const maximum = field === "room_sensor_assist_max_delta" ? rawValue : settings.room_sensor_assist_max_delta;
+              const invalid = inputValue === "" || !Number.isFinite(rawValue) || rawValue < min || rawValue > max;
+              const message = invalid
+                ? host._t("roomSensorAssistMarginValueValidation", { minimum: min, maximum: max })
+                : margin > maximum ? host._t("roomSensorAssistMinimumMarginValidation") : "";
+              const error = input.closest(".sensor-config-row")?.querySelector<HTMLElement>(".sensor-field-error");
+              input.setCustomValidity(message);
+              if (message) input.setAttribute("aria-invalid", "true");
+              else input.removeAttribute("aria-invalid");
+              if (error) { error.textContent = message; error.hidden = !message; }
+              if (message) return;
+              host._saveZonePreconditioning(entityId, { [field]: rawValue });
+              return;
+            }
             if (field === "room_sensor_assist_deadband") {
               if (
                 inputValue === ""
@@ -490,7 +532,10 @@ function renderSensorNumber(
         />
         <span>${unit}</span>
       </span>
-      <small class="sensor-field-description" id=${`${inputId}-description`}>${host._t(descriptionKey)}</small>
+      <div class="sensor-field-description">
+        <span id=${`${inputId}-description`}>${host._t(descriptionKey)}</span>
+        ${marginField ? html`<span class="sensor-field-error" id=${errorId} role="alert" hidden></span>` : nothing}
+      </div>
     </div>
   `;
 }

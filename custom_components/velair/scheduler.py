@@ -14,6 +14,13 @@ import math
 from typing import AsyncIterator, Literal
 from uuid import uuid4
 
+from .boost_return import (
+    is_thermal_keep,
+    keep_return_event,
+    pending_boost_return,
+    return_authority_changed,
+)
+
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -95,6 +102,7 @@ from .schedule_resources import (
 )
 from .template_assignments import allocate_template_update, destination_identity
 from .room_assist_braking import LEVEL_KEY, braking_policy, validate_braking_settings
+from .room_assist_margin import margin_correction, margin_step_temperature, margin_status, validate_minimum_margin
 from .models import (
     validate_preconditioning_dependencies,
     normalize_schedule_blocks,
@@ -314,6 +322,7 @@ class _RoomSensorAssistState:
     calculated_temperature: float | None = None
     scheduled_target_guard: Literal["heating_ceiling", "cooling_floor"] | None = None
     braking: dict | None = None
+    minimum_margin: dict | None = None
     requested_target_temp_low: float | None = None
     requested_target_temp_high: float | None = None
     hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None
@@ -343,6 +352,7 @@ class _RoomSensorAssistTargetResult:
     limited_by: Literal["minimum", "maximum"] | None
     limit_temperature: float | None
     braking: dict | None = None
+    minimum_margin: dict | None = None
     hysteresis_phase: Literal["towards_lower", "towards_upper"] | None = None
     hysteresis_target: float | None = None
     deadband_low: float | None = None
@@ -364,6 +374,7 @@ class _RoomSensorAssistRangeResult:
     limited_by: Literal["minimum", "maximum"] | None
     limit_temperature: float | None
     scalar_result: _RoomSensorAssistTargetResult | None = None
+    minimum_margin: dict | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -404,6 +415,7 @@ class VelairScheduler:
         self._physical_climate_manager = climate_manager
         self._climate_manager = (GroupClimateManager(hass, data, climate_manager)
                                  if isinstance(climate_manager, ClimateManager) else climate_manager)
+        self._climate_manager._boost_return_provider = self._boost_return_snapshot_for_entity
         if hasattr(climate_manager, "target_format_policy"):
             climate_manager._target_policy_provider = lambda entity: self._data["zones"].get(self.owner_for_entity(entity), {})
             self._climate_manager._target_policy_provider = climate_manager._target_policy_provider
@@ -507,6 +519,8 @@ class VelairScheduler:
         self._capability_entities = ()
         self._capability_waiting_cursors = {}
         self._startup_pending = set()
+        self._boost_return_startup_pending = set()
+        self._boost_return_cleanup_tasks: dict[str, asyncio.Task] = {}
         self._unsub_projection_horizon = None
         self._projection_horizon_generation = 0
         self._projection_horizon_refresh_pending = False
@@ -549,7 +563,16 @@ class VelairScheduler:
                 for entity, zone in self._data["zones"].items():
                     if projection._configuration_input(entity, zone) != projection._configuration_inputs.get(entity):
                         entities.add(entity)
+        entities = set(entities)
         completion_revocations = []
+        boost_return_revocations = []
+        for entity, zone in self._data["zones"].items():
+            pending = zone.get("pending_boost_return")
+            previous = committed.get("zones", {}).get(entity, {}).get("pending_boost_return")
+            if (pending and previous and pending.get("id") == previous.get("id")
+                    and return_authority_changed(committed, self._data, entity)):
+                boost_return_revocations.append((entity, zone.pop("pending_boost_return")))
+                entities.add(entity)
         compared_completion_authorities = {}
         # Compare only persisted own authority. Availability, room readings and
         # learning writes do not revoke a verified arrival. Scope fencing below
@@ -582,6 +605,10 @@ class VelairScheduler:
         try:
             yield
         except BaseException:
+            for entity, pending in boost_return_revocations:
+                zone = self._data["zones"].get(entity)
+                if zone is not None and "pending_boost_return" not in zone:
+                    zone["pending_boost_return"] = pending
             # Restore only this transaction's opt-in fields. Never replace an
             # anchor map that may contain an unrelated newly completed room.
             for key, replacement, fields in completion_revocations:
@@ -954,6 +981,7 @@ class VelairScheduler:
 
     async def _async_apply_pending_startup(self, entities=None):
         """Consume each startup permission once, after resolving fresh authority."""
+        await self._async_resume_pending_boost_returns(entities)
         epoch = self._timer_epoch
         selected = self._startup_pending if entities is None else self._startup_pending & set(entities)
         for entity in sorted(selected):
@@ -1471,6 +1499,9 @@ class VelairScheduler:
         self._capability_waiting_cursors.clear()
         self._startup_pending = (set(self._data["zones"])
                                  if apply_current_schedule and self.mode == MODE_AUTO else set())
+        self._boost_return_startup_pending = {
+            entity for entity, zone in self._data["zones"].items()
+            if zone.get("pending_boost_return")}
         self._refresh_capability_listener()
         for entity_id in sorted(self._data["zones"]):
             if entity_id in self._room_sensor_assist_notification_cleanup_done:
@@ -1482,6 +1513,12 @@ class VelairScheduler:
         if self._temperature_migration_blocked:
             self.async_schedule_next_event()
             return
+        # An expired persisted Boost must hand off its saved mode before the
+        # ordinary startup Keep path can observe the temporary physical mode.
+        await self._async_clear_expired_zone_overrides(dt_util.now(), boosts_only=True)
+        self._boost_return_startup_pending.update(
+            entity for entity, zone in self._data["zones"].items()
+            if zone.get("pending_boost_return"))
         self.async_schedule_next_event()
         await self._async_apply_pending_startup()
 
@@ -1490,6 +1527,13 @@ class VelairScheduler:
         self._stopped = True
         self._projection_started = False
         self._startup_pending.clear()
+        self._boost_return_startup_pending.clear()
+        cleanup_tasks = list(self._boost_return_cleanup_tasks.values())
+        for task in cleanup_tasks:
+            task.cancel()
+        if cleanup_tasks:
+            await asyncio.gather(*cleanup_tasks, return_exceptions=True)
+        self._boost_return_cleanup_tasks.clear()
         self._capability_waiting_cursors.clear()
         if self._unsub_capability_listener is not None:
             self._unsub_capability_listener()
@@ -1840,6 +1884,7 @@ class VelairScheduler:
         )
         if self._temperature_migration_blocked:
             raise ValueError("Temperature migration must be resolved before changing targets")
+        await self._async_clear_pending_boost_return(entity_id)
         self._invalidate_climate_delivery(entity_id)
         await self._async_clear_room_sensor_assist(
             entity_id,
@@ -1922,6 +1967,7 @@ class VelairScheduler:
         if hvac_mode not in supported_modes:
             raise ValueError(f"{entity_id} does not support HVAC mode {hvac_mode}")
 
+        await self._async_clear_pending_boost_return(entity_id)
         self._invalidate_climate_delivery(entity_id)
 
         def resolve_manual_mode() -> Delivery:
@@ -2941,6 +2987,10 @@ class VelairScheduler:
             *minimum_delta_limits,
             values={"room_sensor_assist_deadband": deadband_value},
         )
+        normalized["room_sensor_assist_minimum_margin"] = direct_float(
+            "room_sensor_assist_minimum_margin", 0.0, 0.0,
+            18.0 if unit == FAHRENHEIT else 10.0,
+        )
         normalized["room_sensor_assist_max_delta"] = direct_float(
             "room_sensor_assist_max_delta",
             defaults[2],
@@ -2974,6 +3024,7 @@ class VelairScheduler:
                 0.0,
                 9.0 if unit == FAHRENHEIT else 5.0,
             ),
+            "room_sensor_assist_minimum_margin": (0.0, 18.0 if unit == FAHRENHEIT else 10.0),
             "room_sensor_assist_max_delta": (
                 0.1,
                 18.0 if unit == FAHRENHEIT else 10.0,
@@ -3656,6 +3707,9 @@ class VelairScheduler:
                 return
 
             self._invalidate_climate_delivery(entity_id)
+            previous_return = self._data["zones"][entity_id].get("pending_boost_return")
+            self._data["zones"][entity_id]["pending_boost_return"] = pending_boost_return(
+                override, dt_util.now(), "manual")
             self._data["zones"][entity_id]["override"] = None
             try:
                 with self._projection_save_scope():
@@ -3663,6 +3717,10 @@ class VelairScheduler:
                 self._prepare_runtime_projection(configuration=True)
             except (asyncio.CancelledError, Exception):
                 self._data["zones"][entity_id]["override"] = override
+                if previous_return is None:
+                    self._data["zones"][entity_id].pop("pending_boost_return", None)
+                else:
+                    self._data["zones"][entity_id]["pending_boost_return"] = previous_return
                 await self._async_restore_delivery_after_failed_mutation(entity_id)
                 raise
             await self._async_finish_zone_boost(
@@ -5290,6 +5348,10 @@ class VelairScheduler:
                 ("heat", "heating_setpoint_offset"), ("cool", "cooling_setpoint_offset")
             ) if previous_preconditioning[key] != next_preconditioning[key]
         }
+        margin_keys = {"room_sensor_assist_minimum_margin", "room_sensor_assist_max_delta"}
+        only_margin_changed = (any(previous_preconditioning[key] != next_preconditioning[key] for key in margin_keys)
+            and {key: value for key, value in previous_preconditioning.items() if key not in margin_keys}
+            == {key: value for key, value in next_preconditioning.items() if key not in margin_keys})
         offset_keys = {"heating_setpoint_offset", "cooling_setpoint_offset"}
         only_offsets_changed = bool(offset_directions) and (
             {key: value for key, value in previous_preconditioning.items() if key not in offset_keys}
@@ -5298,10 +5360,12 @@ class VelairScheduler:
         active_offset_keys = {
             key for key, marker in self._applied_preconditioning_targets.items()
             if key.startswith(f"{entity_id}|") and marker.offset is not None and not marker.retired
+            and not only_margin_changed
             and (not only_offsets_changed or marker.direction in offset_directions)
         }
         reconcile_offset = bool(active_offset_keys)
         validate_braking_settings(next_preconditioning)
+        validate_minimum_margin(next_preconditioning, 18.0 if self._comfort_temperature_unit(entity_id) == FAHRENHEIT else 10.0)
         normalize_physical_comfort = (
             entity_id in self._configured_physical_entities()
             and previous_preconditioning.get("room_temperature_entity_id")
@@ -5319,8 +5383,9 @@ class VelairScheduler:
                 previous_anchors = deepcopy(self._data.get("preconditioning_accepted_anchors", {}))
                 coherent_opposite_anchors = {
                     key for key, value in previous_anchors.items()
-                    if only_offsets_changed and value.get("entity_id") == entity_id
-                    and value.get("direction") in {"heat", "cool"} - offset_directions
+                    if value.get("entity_id") == entity_id
+                    and (only_margin_changed or (only_offsets_changed
+                         and value.get("direction") in {"heat", "cool"} - offset_directions))
                     and value.get("context") == self._compute_dependency_context(entity_id, value.get("episode"))
                 }
                 previous_learning = deepcopy(self._data.get("preconditioning_learning", {}))
@@ -5382,6 +5447,12 @@ class VelairScheduler:
         session = self._preconditioning_sessions.get(entity_id)
         if session is not None and session.direction in offset_directions:
             self._discard_preconditioning_session(entity_id)
+        if only_margin_changed:
+            for key, marker in list(self._applied_preconditioning_targets.items()):
+                if key.startswith(f"{entity_id}|"):
+                    self._applied_preconditioning_targets[key] = replace(
+                        marker, context=self._dependency_context(entity_id, marker.episode),
+                        completion_context=self._completion_context(entity_id, marker.episode))
         if only_offsets_changed:
             for key, marker in list(self._applied_preconditioning_targets.items()):
                 if key.startswith(f"{entity_id}|") and marker.direction in {"heat", "cool"} - offset_directions:
@@ -5412,7 +5483,7 @@ class VelairScheduler:
             and previous_preconditioning.get("master_entity_id") != next_preconditioning.get("master_entity_id")
         )
         has_active_marker = any(key.startswith(f"{entity_id}|") and value.target_when > dt_util.now() for key, value in self._applied_preconditioning_targets.items())
-        if not only_offsets_changed and not (only_relation_changed and has_active_marker):
+        if not only_offsets_changed and not only_margin_changed and not (only_relation_changed and has_active_marker):
             self._clear_applied_preconditioning_targets_for_entity(entity_id)
         self._clear_room_sensor_assist_timer()
         if (not next_preconditioning["enabled"]
@@ -5756,6 +5827,7 @@ class VelairScheduler:
         defaults["room_sensor_assist_deadband"] = current[
             "room_sensor_assist_deadband"
         ]
+        defaults["room_sensor_assist_minimum_margin"] = current["room_sensor_assist_minimum_margin"]
         defaults["room_sensor_assist_max_delta"] = current[
             "room_sensor_assist_max_delta"
         ]
@@ -7788,13 +7860,28 @@ class VelairScheduler:
         reason: str,
     ) -> None:
         """Finalize a boost through the same path for expiry and cancellation."""
-        restoration, scheduled_event = self._resolve_ended_zone_boost_restoration(
+        _restoration, scheduled_event = self._resolve_ended_zone_boost_restoration(
             entity_id,
             override,
             now,
         )
 
         async def announce(is_current: CurrentGuard) -> None:
+            if not is_current():
+                return
+            restoration, _event = self._resolve_ended_zone_boost_restoration(
+                entity_id, override, dt_util.now())
+            pending = self._data["zones"].get(entity_id, {}).get("pending_boost_return")
+            if pending is not None:
+                if pending.get("announced"):
+                    return
+                pending["announced"] = True
+                try:
+                    with self._projection_save_scope():
+                        await self._async_save_data()
+                except (asyncio.CancelledError, Exception):
+                    pending.pop("announced", None)
+                    raise
             await self._async_logbook(
                 self._message(
                     "Boost cancelled" if reason == "manual" else "Boost ended",
@@ -7828,17 +7915,20 @@ class VelairScheduler:
         if self.mode == MODE_AUTO:
             events = self._iter_current_events(now, entity_id)
             event = events[0] if events else None
-            if event is not None and _event_has_explicit_target(event):
+            if event is not None and (_event_has_explicit_target(event) or is_thermal_keep(event)):
+                effective = keep_return_event(
+                    event, self._data["zones"][entity_id].get("pending_boost_return"),
+                    self._climate_manager)
                 return (
                     {
                         "type": "schedule",
                         "source": "boost_ended",
                         "target": {
                             "action": event.action,
-                            **_event_target_mapping(event),
-                            "hvac_mode": event.hvac_mode,
+                            **_event_target_mapping(effective),
+                            "hvac_mode": effective.hvac_mode,
                             **({"temperature_only": True} if event.temperature_only else {}),
-                            **_climate_options_from_event(event),
+                            **_climate_options_from_event(effective),
                             "weekday": event.weekday,
                             "start": event.start,
                         },
@@ -7911,20 +8001,24 @@ class VelairScheduler:
 
         def resolve_restore() -> Delivery | None:
             current_event = self._resolve_authoritative_delivery_event(entity_id)
-            if current_event is not None and _event_has_explicit_target(current_event):
+            if current_event is not None and (_event_has_explicit_target(current_event) or is_thermal_keep(current_event)):
+                effective = keep_return_event(
+                    current_event, self._data["zones"][entity_id].get("pending_boost_return"),
+                    self._climate_manager)
                 return_preparation = self._planned_return.preparation_for_delivery(current_event)
                 return_episode = self._dependency_episode()
                 async def apply_current() -> None:
+                    await self._async_retire_boost_return_mode(current_event)
                     await self._async_apply_resolved_event_call(
-                        current_event,
-                        hvac_mode=current_event.hvac_mode,
+                        effective,
+                        hvac_mode=effective.hvac_mode,
                         source="boost_ended",
                     )
 
                 async def commit_current(is_current: CurrentGuard) -> None:
                     await self._async_commit_resolved_event(
-                        current_event,
-                        hvac_mode=current_event.hvac_mode,
+                        effective,
+                        hvac_mode=effective.hvac_mode,
                         source="boost_ended",
                         is_current=is_current,
                     )
@@ -7936,12 +8030,18 @@ class VelairScheduler:
                     if on_success is not None and is_current():
                         await on_success(is_current)
 
-                return Delivery(apply_current, commit_and_announce)
+                return Delivery(apply_current, commit_and_announce,
+                                confirmed=self._boost_return_confirmation(entity_id, current_event))
             if (
                 self._stopped
                 or self._temperature_migration_blocked
                 or self.mode != MODE_AUTO
             ):
+                return None
+            pending = self._data["zones"].get(entity_id, {}).get("pending_boost_return")
+            if pending and pending.get("mode_retired"):
+                # A later explicit authority already replaced this snapshot;
+                # unresolved capabilities must not bring its old state back.
                 return None
 
             async def deliver_previous() -> None:
@@ -7949,11 +8049,112 @@ class VelairScheduler:
                     entity_id, previous_state
                 )
 
-            return Delivery(deliver_previous, on_success)
+            return Delivery(deliver_previous, on_success,
+                            confirmed=self._boost_return_confirmation(entity_id))
 
         await self._climate_delivery.async_deliver(
             entity_id, resolve_restore,
             on_handoff=handed_off if preparation is not None else None)
+
+    def _boost_return_snapshot_for_entity(self, entity_id):
+        """Expose saved option defaults only for the currently owned Keep return."""
+        pending = self._data["zones"].get(entity_id, {}).get("pending_boost_return")
+        event = self._current_schedule_event(entity_id, dt_util.now()) if pending and not pending.get("mode_retired") else None
+        return ((pending.get("boost", {}).get("previous_state"), _climate_options_from_event(event))
+                if is_thermal_keep(event) else None)
+
+    async def _async_resume_pending_boost_returns(self, entities=None):
+        selected = self._boost_return_startup_pending.copy()
+        if entities is not None:
+            selected.intersection_update(entities)
+        for entity_id in selected:
+            pending = self._data["zones"].get(entity_id, {}).get("pending_boost_return")
+            if not pending or not self._startup_application_allowed(entity_id):
+                self._boost_return_startup_pending.discard(entity_id)
+                continue
+            if (self._climate_capabilities_pending(entity_id)
+                    or self.get_schedule_resolution_status(entity_id)["status"] != "ready"):
+                continue
+            self._boost_return_startup_pending.discard(entity_id)
+            self._startup_pending.discard(entity_id)
+            try:
+                await self._async_finish_zone_boost(
+                    entity_id, pending["boost"], dt_util.now(), reason=pending["reason"])
+            except (ValueError, HomeAssistantError):
+                _LOGGER.exception("Unable to finish pending Boost return for %s", entity_id)
+
+    async def _async_clear_pending_boost_return(self, entity_id, expected_id=None, *, confirmed_intent=_MISSING):
+        async with self._zone_override_lock(entity_id):
+            zone = self._data["zones"].get(entity_id)
+            pending = zone.get("pending_boost_return") if zone is not None else None
+            if not pending or expected_id is not None and pending["id"] != expected_id:
+                return
+            if confirmed_intent is not _MISSING:
+                if self._stopped:
+                    return
+                current = self._resolve_authoritative_delivery_event(entity_id)
+                if (None if current is None else _event_control_intent(current)) != confirmed_intent:
+                    return
+            zone.pop("pending_boost_return")
+            try:
+                with self._projection_save_scope():
+                    await self._async_save_data()
+                self._prepare_runtime_projection(configuration=True)
+            except (asyncio.CancelledError, Exception):
+                zone["pending_boost_return"] = pending
+                raise
+
+    async def _async_retire_boost_return_mode(self, event):
+        """A newly resolved explicit mode cannot later resurrect the old mode."""
+        if event.hvac_mode is None and event.action != ACTION_TURN_OFF:
+            return
+        # This runs under the delivery guard. Acquiring the zone lock here
+        # would invert the established zone-before-delivery lock ordering.
+        check_delivery()
+        zone = self._data["zones"].get(event.entity_id, {})
+        pending = zone.get("pending_boost_return")
+        if not pending or pending.get("mode_retired"):
+            return
+        replacement = {**pending, "mode_retired": True}
+        zone["pending_boost_return"] = replacement
+        try:
+            with self._projection_save_scope():
+                await self._async_save_data()
+        except (asyncio.CancelledError, Exception):
+            if zone.get("pending_boost_return") is replacement:
+                zone["pending_boost_return"] = pending
+            raise
+        check_delivery()
+
+    def _boost_return_confirmation(self, entity_id, event=None):
+        pending = self._data["zones"].get(entity_id, {}).get("pending_boost_return")
+        if not pending:
+            return None
+        token = pending["id"]
+        intent = _event_control_intent(event) if event is not None else None
+
+        @callback
+        def confirmed():
+            previous = self._boost_return_cleanup_tasks.get(token)
+            if previous is not None and not previous.done():
+                return
+
+            async def clean():
+                try:
+                    await self._projection_save_finished.wait()
+                    if self._stopped:
+                        return
+                    await self._async_clear_pending_boost_return(
+                        entity_id, token, confirmed_intent=intent)
+                except Exception:
+                    # Persisting cleanup must never replay accepted physical work.
+                    _LOGGER.exception("Unable to save confirmed Boost return for %s", entity_id)
+                finally:
+                    self._boost_return_cleanup_tasks.pop(token, None)
+
+            self._boost_return_cleanup_tasks[token] = self._hass.async_create_task(clean())
+
+        return confirmed
 
     async def _async_clear_expired_global_mode(self, now: datetime) -> None:
         """Return to auto mode when a temporary global mode expires."""
@@ -9187,6 +9388,10 @@ class VelairScheduler:
         on_handoff: Callable[[CurrentGuard], None] | None = None,
     ) -> bool:
         """Deliver the current authoritative scheduler event."""
+        pending = self._data["zones"].get(event.entity_id, {}).get("pending_boost_return")
+        if (pending and source not in ("boost_ended", "startup")
+                and (event.hvac_mode is not None or event.action == ACTION_TURN_OFF)):
+            await self._async_clear_pending_boost_return(event.entity_id, pending["id"])
         if source != "startup":
             self._startup_pending.discard(event.entity_id)
         self._refresh_control_projection(event.entity_id)
@@ -9210,15 +9415,18 @@ class VelairScheduler:
                 and accepted_intent != _event_control_intent(resolved)):
                 return None
             authority_context = self._delivery_authority_context(resolved.entity_id)
+            pending = self._data["zones"].get(resolved.entity_id, {}).get("pending_boost_return")
+            effective = keep_return_event(resolved, pending, self._climate_manager)
             return_preparation = self._planned_return.preparation_for_delivery(resolved)
             return_episode = self._dependency_episode()
             acceptance = None
 
             async def apply() -> None:
                 nonlocal acceptance
+                await self._async_retire_boost_return_mode(resolved)
                 await self._async_apply_resolved_event_call(
-                    resolved,
-                    hvac_mode=mode_override or resolved.hvac_mode,
+                    effective,
+                    hvac_mode=mode_override or effective.hvac_mode,
                     source=source,
                 )
                 if resolved.preconditioning_dependency or any(zone.get("preconditioning", {}).get("master_entity_id") == resolved.entity_id for zone in self._data["zones"].values()):
@@ -9228,8 +9436,8 @@ class VelairScheduler:
                 nonlocal accepted_intent
                 accepted_intent = _event_control_intent(resolved)
                 await self._async_commit_resolved_event(
-                    resolved,
-                    hvac_mode=mode_override or resolved.hvac_mode,
+                    effective,
+                    hvac_mode=mode_override or effective.hvac_mode,
                     source=source,
                     applied_at=applied_at,
                     is_current=is_current,
@@ -9245,6 +9453,7 @@ class VelairScheduler:
                 lambda: authority_context == self._delivery_authority_context(resolved.entity_id) and self._delivery_projection_is_current(resolved.entity_id, resolved, requested_at=applied_at),
                 (_event_control_intent(resolved), resolved.weekday, resolved.start,
                  dt_util.as_utc(resolved.target_when or resolved.when) if resolved.start is not None else None),
+                self._boost_return_confirmation(resolved.entity_id, resolved),
             )
 
         def resolve_initial() -> Delivery | None:
@@ -11249,6 +11458,14 @@ class VelairScheduler:
             else braking_policy(config, braking_mode, braking_target, self.get_temperature_step(entity_id),
                                 reason=braking_reason)
         )
+        status_data["minimum_margin"] = (
+            dict(runtime_state.minimum_margin)
+            if (runtime_state is not None and runtime_state.minimum_margin is not None
+                and config["room_sensor_assist_enabled"]
+                and room_temperature is not None and climate_temperature is not None
+                and status_data["status"] in ("assisting", "holding"))
+            else margin_status(config)
+        )
         # Display the accepted control intent, never a newly calculated preview.
         # The shared projection validates delivery ownership even when Climate
         # Supply is disabled; its unknown result must remain unknown in the UI.
@@ -11811,6 +12028,7 @@ class VelairScheduler:
             calculated_temperature=target_result.calculated_temperature,
             scheduled_target_guard=target_result.scheduled_target_guard,
             braking=target_result.braking,
+            minimum_margin=target_result.minimum_margin,
             hysteresis_phase=hysteresis_phase,
             hysteresis_target=hysteresis_target,
             deadband_low=deadband_low,
@@ -11859,6 +12077,7 @@ class VelairScheduler:
                 calculated_temperature=target_result.calculated_temperature,
                 scheduled_target_guard=target_result.scheduled_target_guard,
                 braking=target_result.braking,
+                minimum_margin=target_result.minimum_margin,
                 hysteresis_phase=hysteresis_phase,
                 hysteresis_target=hysteresis_target,
                 deadband_low=deadband_low,
@@ -11939,6 +12158,7 @@ class VelairScheduler:
             calculated_temperature=target_result.calculated_temperature,
             scheduled_target_guard=target_result.scheduled_target_guard,
             braking=target_result.braking,
+            minimum_margin=target_result.minimum_margin,
             hysteresis_phase=hysteresis_phase,
             hysteresis_target=hysteresis_target,
             deadband_low=deadband_low,
@@ -12062,6 +12282,7 @@ class VelairScheduler:
                 "target_temp_step": scalar_result.target_temp_step,
             } if reference is not None and scalar_result is not None else None,
             braking=scalar_result.braking if scalar_result else None,
+            minimum_margin=range_result.minimum_margin,
             limited_by=range_result.limited_by,
             limit_temperature=range_result.limit_temperature,
             requested_target_temp_low=range_result.requested_low,
@@ -12138,6 +12359,7 @@ class VelairScheduler:
             applied_target_temp_high=applied_high,
             range_shift=range_shift,
             braking=scalar_result.braking if scalar_result else None,
+            minimum_margin=range_result.minimum_margin,
             room_temperature=room_temperature,
             climate_temperature=climate_temperature,
             assist_delta=assist_delta,
@@ -12383,9 +12605,19 @@ class VelairScheduler:
         if preparation is not None or hysteresis_phase is not None or abs(error) > minimum_delta:
             max_delta = config["room_sensor_assist_max_delta"]
             correction = max(-max_delta, min(max_delta, error))
+        correction, margin_active = margin_correction(
+            config, correction,
+            phase=hysteresis_phase if fixed_direction and preparation is None else None,
+            eligible=preparation is not None or fixed_direction or abs(error) > minimum_delta,
+        )
         desired_temperature = climate_temperature + correction
         temperature_step = self.get_temperature_step(entity_id)
         min_temperature, max_temperature = self.get_temperature_limits(entity_id)
+        if margin_active:
+            desired_temperature = margin_step_temperature(
+                climate_temperature, correction, config["room_sensor_assist_max_delta"],
+                temperature_step, min_temperature,
+            )
         neutral_auto_target = not fixed_direction and correction == 0
         calculated_temperature = (
             _room_sensor_assist_nearest_step_temperature(
@@ -12499,6 +12731,9 @@ class VelairScheduler:
             calculated_temperature=round(calculated_temperature, 6),
             scheduled_target_guard=scheduled_target_guard,
             braking=policy,
+            minimum_margin=margin_status(config, margin_active, correction=correction,
+                                         current=climate_temperature, applied=applied_temperature,
+                                         limited_by=limited_by or ("step" if abs(calculated_temperature - climate_temperature) > config["room_sensor_assist_max_delta"] + 0.000001 else None)),
             limited_by=limited_by,
             limit_temperature=limit_temperature,
             hysteresis_phase=hysteresis_phase,
@@ -12654,22 +12889,32 @@ class VelairScheduler:
                 holding_state,
             )
             if stable_holding_range is not None:
-                return stable_holding_range
+                return replace(stable_holding_range, minimum_margin=margin_status(config))
 
+        margin_active = False
+        correction = 0.0
         if scalar_result is None and direction == "heat":
             boundary_error = target_temp_low - room_temperature
             correction = min(config["room_sensor_assist_max_delta"], boundary_error)
+            correction, margin_active = margin_correction(config, correction)
             anchor = _room_sensor_assist_step_temperature(
                 climate_temperature + correction, step, "heat", minimum
             )
+            if margin_active:
+                anchor = margin_step_temperature(climate_temperature, correction,
+                    config["room_sensor_assist_max_delta"], step, minimum)
             desired_shift = anchor - target_temp_low
             assist_delta = correction
         elif scalar_result is None and direction == "cool":
             boundary_error = room_temperature - target_temp_high
             correction = -min(config["room_sensor_assist_max_delta"], boundary_error)
+            correction, margin_active = margin_correction(config, correction)
             anchor = _room_sensor_assist_step_temperature(
                 climate_temperature + correction, step, "cool", minimum
             )
+            if margin_active:
+                anchor = margin_step_temperature(climate_temperature, correction,
+                    config["room_sensor_assist_max_delta"], step, minimum)
             desired_shift = anchor - target_temp_high
             assist_delta = abs(correction)
         elif scalar_result is None:
@@ -12718,6 +12963,21 @@ class VelairScheduler:
             entity_id,
             applied_low + width,
         )
+        if scalar_result is not None:
+            margin_active = bool(scalar_result.minimum_margin and scalar_result.minimum_margin["active"])
+            correction = ((1 if preparation.direction == "heat" else -1) if preparation is not None else
+                          (1 if scalar_result.hysteresis_phase == "towards_upper" else -1)
+                          if scalar_result.hysteresis_phase else
+                          (1 if scalar_result.requested_temperature > climate_temperature else -1))
+        applied_anchor = applied_low if reference == "low" or (reference is None and direction == "heat") else applied_high
+        margin_limit = "range_width" if limited_by is not None else (
+            scalar_result.minimum_margin.get("limited_by")
+            if scalar_result is not None and scalar_result.minimum_margin is not None else
+            "step" if margin_active and abs(anchor - climate_temperature) > config["room_sensor_assist_max_delta"] + 0.000001 else None
+        )
+        margin = margin_status(config, margin_active, correction=correction,
+                               current=climate_temperature, applied=applied_anchor,
+                               limited_by=margin_limit)
         return _RoomSensorAssistRangeResult(
             applied_low=applied_low,
             applied_high=applied_high,
@@ -12728,6 +12988,7 @@ class VelairScheduler:
             limited_by=limited_by,
             limit_temperature=limit_temperature,
             scalar_result=scalar_result,
+            minimum_margin=margin,
         )
 
     def _room_sensor_assist_candidate_climates(self) -> set[str]:
@@ -15215,6 +15476,7 @@ class VelairScheduler:
         deadband_low: float | None = None,
         deadband_high: float | None = None,
         braking: dict | None = None,
+        minimum_margin: dict | None = None,
     ) -> None:
         """Fire a room sensor assist automation event."""
         data = {
@@ -15257,6 +15519,8 @@ class VelairScheduler:
                         "deadband_high": deadband_high,
                     }
                 )
+        if minimum_margin is not None:
+            data["minimum_margin"] = dict(minimum_margin)
         if braking is not None:
             data["braking"] = dict(braking)
         self._async_fire_event(event_name, data)
@@ -15719,11 +15983,15 @@ class VelairScheduler:
     async def _async_clear_expired_zone_overrides(
         self,
         now: datetime,
+        *,
+        boosts_only: bool = False,
     ) -> dict[str, ZoneOverride]:
         """Clear expired zone overrides and return affected entity overrides."""
         candidates = []
         for entity_id, zone in self._data["zones"].items():
             override = zone.get("override")
+            if boosts_only and not _is_boost_override(override):
+                continue
             if _is_pause_override(override):
                 if any(
                     self._pause_reason_expired(item, now)
@@ -15756,6 +16024,10 @@ class VelairScheduler:
                 self._invalidate_climate_delivery(entity_id)
                 previous_reasons = deepcopy(self._data["zones"][entity_id].get("pauses", []))
                 had_pauses_key = "pauses" in self._data["zones"][entity_id]
+                previous_return = self._data["zones"][entity_id].get("pending_boost_return")
+                if _is_boost_override(override):
+                    self._data["zones"][entity_id]["pending_boost_return"] = pending_boost_return(
+                        override, now, "expired")
                 self._data["zones"][entity_id]["pauses"] = remaining
                 self._data["zones"][entity_id]["override"] = (
                     zone_pause_override_from_reasons(remaining)
@@ -15775,6 +16047,10 @@ class VelairScheduler:
                     else:
                         self._data["zones"][entity_id].pop("pauses", None)
                     self._data["zones"][entity_id]["override"] = override
+                    if previous_return is None:
+                        self._data["zones"][entity_id].pop("pending_boost_return", None)
+                    else:
+                        self._data["zones"][entity_id]["pending_boost_return"] = previous_return
                     await self._async_restore_delivery_after_failed_mutation(
                         entity_id
                     )

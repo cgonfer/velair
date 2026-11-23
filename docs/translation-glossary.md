@@ -15,6 +15,14 @@ use the maintained panel translations; the Spanish and French labels are:
 | Moderate | Moderado | Modéré |
 | High | Alto | Élevé |
 
+The Room Assist **Minimum control margin** sets a minimum requested gap from
+the equipment's internal reading. It does not widen the room's deadband or
+change braking thresholds. Match the maintained panel label in translated guides:
+
+| English | Spanish | French |
+| --- | --- | --- |
+| Minimum control margin | Margen mínimo de control | Marge minimale de commande |
+
 | English | Spanish | French |
 | --- | --- | --- |
 | sidebar panel | panel de la barra lateral | panneau de la barre latérale |

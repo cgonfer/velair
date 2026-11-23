@@ -28,6 +28,9 @@ function host(options: {
   hysteresisPhase?: "towards_lower" | "towards_upper";
   hysteresisTarget?: number;
   maxDelta?: number;
+  minimumMargin?: number;
+  temperatureUnit?: string;
+  temperatureStep?: number;
   limitedBy?: "minimum" | "maximum";
   limitTemperature?: number;
   requestedRange?: [number, number];
@@ -61,6 +64,7 @@ function host(options: {
             room_sensor_assist_deadband: options.deadband ?? 0.3,
             room_sensor_assist_braking_level: options.brakingLevel,
             room_sensor_assist_max_delta: options.maxDelta ?? 5,
+            room_sensor_assist_minimum_margin: options.minimumMargin ?? 0,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
           },
           schedule: {},
@@ -72,7 +76,8 @@ function host(options: {
             room_sensor_assist_enabled: true,
             room_sensor_assist_deadband: options.deadband ?? 0.3,
             room_sensor_assist_braking_level: options.brakingLevel,
-            room_sensor_assist_max_delta: 2,
+            room_sensor_assist_max_delta: options.maxDelta ?? 2,
+            room_sensor_assist_minimum_margin: options.minimumMargin ?? 0,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
           },
           schedule: {},
@@ -167,7 +172,8 @@ function host(options: {
         : key,
     _weekdayName: (day: string) => day,
     _shortWeekdayName: (day: string) => day.slice(0, 3),
-    _temperatureUnit: () => "°C",
+    _temperatureUnit: () => options.temperatureUnit ?? "°C",
+    _temperatureStep: () => options.temperatureStep ?? 1,
     _togglePreconditioningZone: togglePreconditioningZone,
   } as unknown as VelairViewHost;
 
@@ -179,6 +185,77 @@ function host(options: {
 }
 
 describe("sensors view", () => {
+  it("saves the minimum margin through the existing flow using the native effective step", () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"], maxDelta: 18, temperatureUnit: "°F", temperatureStep: .9 });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const input = container.querySelector<HTMLInputElement>('input[id$="room_sensor_assist_minimum_margin"]')!;
+    expect(input.value).toBe("0");
+    expect(input.step).toBe("0.9");
+    expect(input.max).toBe("18");
+    expect(input.parentElement!.textContent).toContain("°F");
+    input.value = "18";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith("climate.second", { room_sensor_assist_minimum_margin: 18 });
+  });
+
+  it.each(["room_sensor_assist_minimum_margin", "room_sensor_assist_max_delta"])("validates the final margin/maximum pair without changing another field (%s)", (field) => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"], maxDelta: 5, minimumMargin: 3 });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const input = container.querySelector<HTMLInputElement>(`input[id$="${field}"]`)!;
+    input.value = field === "room_sensor_assist_minimum_margin" ? "6" : "2";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    const error = input.closest(".sensor-config-row")!.querySelector<HTMLElement>('[role="alert"]')!;
+    expect(error.hidden).toBe(false);
+    expect(error.textContent).toBe("roomSensorAssistMinimumMarginValidation");
+    expect(input.getAttribute("aria-describedby")).toContain(error.id);
+    input.value = "4";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(error.hidden).toBe(true);
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledWith("climate.second", { [field]: 4 });
+  });
+
+  it("keeps the margin help linked to its canonical section and shares maximum visibility", () => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
+    viewHost.hass!.language = "es";
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const field = container.querySelector('input[id$="room_sensor_assist_minimum_margin"]')!.closest(".sensor-config-row")!;
+    expect(field.querySelector(".documentation-guide")!.getAttribute("href")).toMatch(/\/docs\/user\/room-assist\.es\.md#minimum-control-margin$/);
+    expect(field.textContent).not.toContain("documentationLanguageNote");
+    render(renderSensorsView(viewHost, ["climate.second"], { showMaxDelta: false }), container);
+    expect(container.querySelector('input[id$="room_sensor_assist_minimum_margin"]')).toBeNull();
+  });
+
+  it("preserves translated margin labels and blocks margin edits while saving", () => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"] });
+    viewHost._t = (key, replacements) => translate("es", key, replacements);
+    viewHost._settingsSaving = true;
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const input = container.querySelector<HTMLInputElement>('input[id$="room_sensor_assist_minimum_margin"]')!;
+    expect(input.disabled).toBe(true);
+    expect(input.closest(".sensor-config-row")!.textContent).toContain("Margen mínimo de control");
+    input.value = "1";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+  });
+
+  it.each(["", "letters", "-1", "10.1", "Infinity"])("rejects an invalid margin without clamping it (%s)", value => {
+    const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"], maxDelta: 10 });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const input = container.querySelector<HTMLInputElement>('input[id$="room_sensor_assist_minimum_margin"]')!;
+    input.value = value;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).not.toHaveBeenCalled();
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.validationMessage).toContain("roomSensorAssistMarginValueValidation");
+  });
   it("delegates live presentation without duplicating the old runtime summary", () => {
     const { viewHost } = host({ expandedZoneIds: ["climate.second"] });
     const container = document.createElement("div");
@@ -655,11 +732,12 @@ describe("sensors view", () => {
     });
     const container = document.createElement("div");
     render(renderSensorsView(viewHost, ["climate.first"]), container);
-    const descriptions = ["roomSensorAssistDeadbandDescription", "roomSensorAssistMaxDeltaDescription", "roomSensorAssistDebounceDescription"];
+    const descriptions = ["roomSensorAssistDeadbandDescription", "roomSensorAssistMinimumMarginDescription", "roomSensorAssistMaxDeltaDescription", "roomSensorAssistDebounceDescription"];
     const inputs = [...container.querySelectorAll<HTMLInputElement>(".sensor-number-fields input")];
-    expect(inputs).toHaveLength(3);
+    expect(inputs).toHaveLength(4);
     inputs.forEach((input, index) => {
-      const description = container.querySelector(`#${input.getAttribute("aria-describedby")}`)!;
+      const description = document.getElementById(input.getAttribute("aria-describedby")!.split(" ")[0])
+        ?? container.querySelector(`#${input.getAttribute("aria-describedby")!.split(" ")[0]}`)!;
       expect(description.textContent).toBe(descriptions[index]);
       expect(input.compareDocumentPosition(description) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
       expect(input.disabled).toBe(!assistEnabled);

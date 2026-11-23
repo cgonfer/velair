@@ -2762,7 +2762,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
             [("set_temperature", self.entity_id, 21.0, True, "heat")],
         )
 
-    async def test_expired_boost_restores_previous_state_for_keep_block(self) -> None:
+    async def test_expired_boost_applies_keep_target_with_previous_mode(self) -> None:
         previous_state = {"hvac_mode": "cool", "temperature": 19}
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
             {
@@ -2784,7 +2784,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
 
         self.assertEqual(
             self.climate.calls,
-            [("restore_state", self.entity_id, previous_state)],
+            [("set_temperature", self.entity_id, 21.0, True, "cool")],
         )
 
     async def test_expired_boost_applies_current_turn_off_block(self) -> None:
@@ -3148,7 +3148,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
             ],
         )
 
-    async def test_cancel_boost_restores_previous_state_for_keep_block(self) -> None:
+    async def test_cancel_boost_applies_keep_target_with_previous_mode(self) -> None:
         previous_state = {"hvac_mode": "cool", "temperature": 19}
         self.climate.snapshots[self.entity_id] = previous_state
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
@@ -3169,7 +3169,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
 
         self.assertEqual(
             self.climate.calls[-1],
-            ("restore_state", self.entity_id, previous_state),
+            ("set_temperature", self.entity_id, 21.0, True, "cool"),
         )
 
     async def test_cancel_boost_is_idempotent_without_active_boost(self) -> None:

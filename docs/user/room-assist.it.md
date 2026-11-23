@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.3-beta.3 |
-| Ultima sincronizzazione | 2026-11-22 |
+| Versione di riferimento | 1.9.3-beta.4 |
+| Ultima sincronizzazione | 2026-11-23 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -56,7 +56,8 @@ Con **Non configurato**, le coppie in modalità fissa vengono inviate invariate 
 5. Regola la banda morta di Room Assist per definire i limiti inferiore e superiore del riscaldamento o raffrescamento fisso intorno all’obiettivo singolo o al riferimento di intervallo scelto, oppure il margine neutro delle modalità automatiche a obiettivo singolo e delle bande native `heat_cool`.
 6. Regola **Delta assistenza massimo** se il valore predefinito è troppo piccolo per la stanza o inferiore alla differenza di obiettivo necessaria al termostato per interrompere riscaldamento o raffrescamento.
 7. Scegli facoltativamente **Frenata: Moderato** o **Alto** per ridurre la richiesta con maggiore decisione. Questi livelli richiedono una fascia di tolleranza Room Assist maggiore di zero. **Predefinito** mantiene il comportamento esistente.
-8. Regola **Ritardo aggiornamento** se gli aggiornamenti del sensore sembrano troppo lenti o troppo frequenti.
+8. Imposta facoltativamente **Margine minimo di controllo** se le piccole correzioni non fanno reagire il termostato. Se necessario, aumenta prima il Delta assistenza massimo: il margine non può superarlo. Lascialo a `0` per mantenere il comportamento esistente.
+9. Regola **Ritardo aggiornamento** se gli aggiornamenti del sensore sembrano troppo lenti o troppo frequenti.
 
 Viene mostrata solo l’opzione selezionata. Quando **Sensore fisso** è già la modalità salvata, cambiarne il sensore viene salvato immediatamente. Passare da **Sensore fisso** a **Per orario**, o viceversa, modifica una bozza: **Salva** applica la modalità e le relative impostazioni, mentre **Annulla** ripristina la configurazione salvata. Il sensore fisso e la programmazione salvata vengono conservati durante il cambio; non si attivano entrambi contemporaneamente.
 
@@ -93,7 +94,44 @@ I setpoint fisici minimo e massimo possono limitare la frenata disponibile. Con 
 
 La frenata riduce la richiesta di riscaldamento o raffreddamento; non conferma l’arresto di valvola, compressore o termostato. Il controllo del dispositivo, i tempi minimi di funzionamento e l’inerzia termica possono comunque causare un superamento. Questa impostazione non apprende i cicli e non riduce la richiesta prima dell’obiettivo programmato. Verificala con cicli reali prima di affidarti a un livello per una stanza specifica.
 
-Le esportazioni portabili usano il modello **28** per conservare frenata e scostamenti di preparazione. Mantieni un backup della versione precedente se devi tornare indietro; le vecchie versioni di Velair non possono importare il modello 28.
+Le esportazioni portabili usano il modello **29** per conservare frenata, scostamenti di preparazione e margine minimo di controllo. Mantieni un backup della versione precedente se devi tornare indietro; le vecchie versioni di Velair non possono importare il modello 29.
+
+<a id="minimum-control-margin"></a>
+
+### Margine minimo di controllo
+
+Alcuni termostati richiedono una differenza considerevole tra la temperatura interna e il setpoint richiesto prima di rispondere. Un sensore montato sul radiatore può rilevare diversi gradi in più rispetto alla stanza mentre il sensore esterno richiede ancora calore. **Margine minimo di controllo** richiede almeno questa differenza durante una correzione Room Assist a cui può essere applicato. È facoltativo e il valore predefinito è `0`.
+
+Queste impostazioni hanno scopi diversi:
+
+| Impostazione | Scopo |
+| --- | --- |
+| Banda morta di Room Assist | Determina la fascia di commutazione o neutra del sensore esterno della stanza. |
+| Margine minimo di controllo | Rafforza una correzione applicabile rispetto alla lettura interna del termostato. |
+| Delta assistenza massimo | Limita tale correzione; aumentare soltanto il massimo non richiede una correzione maggiore. |
+| Frenata | Modifica le soglie di riduzione della richiesta e aggiunge una protezione dell’obiettivo programmato. |
+
+Il margine ammette `0–10 °C` (`0–18 °F`) e non può superare il Delta assistenza massimo. Se le impostazioni non sono compatibili, Velair chiede di aumentare prima il massimo oppure ridurre il margine. Non modifica automaticamente nessuno dei due valori. Gli incrementi del campo seguono il passo effettivo del setpoint del dispositivo.
+
+Per esempio, configura un obiettivo di riscaldamento di `19.5 °C`, una banda morta di `±0.3 °C`, la frenata **Predefinito** e sia il margine sia il massimo a `10 °C`. Con una lettura interna di `21.5 °C` e un passo compatibile di `0.5 °C`:
+
+| Sensore esterno della stanza | Fase Room Assist | Setpoint richiesto al dispositivo |
+| --- | --- | --- |
+| A `19.2 °C` o meno | Richiedere calore verso `19.8 °C` | `31.5 °C`: lettura interna + 10 |
+| Sale attraverso la fascia | Continuare a richiedere calore | Lettura interna attuale + 10 |
+| Raggiunge `19.8 °C` | Ridurre la richiesta di calore fino a `19.2 °C` | `11.5 °C`: lettura interna − 10 |
+
+La lettura interna può cambiare, quindi le richieste successive usano il suo valore attuale. L’obiettivo della stanza rimane `19.5 °C`; le grandi variazioni del setpoint del dispositivo non ampliano la fascia di comfort della stanza. La frenata Moderato o Alto conserva le proprie soglie di arresto e ripresa e mantiene un risultato esistente che riduce maggiormente la richiesta.
+
+Il raffreddamento fisso funziona in senso opposto. Con un obiettivo di `24 °C`, banda morta di `±0.3 °C`, lettura interna di `26 °C` e margine/massimo di `10 °C`, Room Assist richiede `16 °C` mentre serve raffreddare e `36 °C` quando la stanza raggiunge `23.7 °C`, prima di applicare i limiti del dispositivo. Il raffreddamento riprende a `24.3 °C`. Con banda morta zero e nessuna fase conservata, si rafforzano solo le correzioni non nulle; l’uguaglianza rimane neutra.
+
+Le modalità automatiche a obiettivo singolo e gli intervalli nativi **Riscaldamento/raffreddamento** rafforzano solo le richieste attive di riscaldamento o raffreddamento. All’interno della fascia neutra della stanza mantengono il comportamento di mantenimento esistente. Abbassare molto un setpoint per fermare il riscaldamento potrebbe altrimenti avviare il raffreddamento su un dispositivo bidirezionale. Per gli intervalli nativi, entrambi i limiti si spostano insieme e mantengono la separazione originale. Le coppie in modalità fissa usano il riferimento di setpoint configurato; le configurazioni di intervallo non supportate restano tali.
+
+Il passo e i limiti fisici possono impedire di raggiungere il margine richiesto. Per esempio, con lettura interna di `21.7 °C`, margine/massimo di `10 °C` e una griglia di `0.5 °C`, non esiste un punto valido esattamente a `10 °C` di distanza. Velair sceglie una correzione valida entro il massimo quando possibile e segnala che il passo limita il margine. Con due setpoint, preservare l’ampiezza dell’intervallo può limitare ulteriormente lo spostamento. La spiegazione in tempo reale e i **Dati tecnici** identificano un margine attivo o limitato.
+
+La protezione dell’obiettivo programmato, la frenata e gli scostamenti temporanei di preparazione possono produrre uno spostamento finale superiore al Delta assistenza massimo. Questa impostazione limita la correzione Room Assist, non ogni protezione o incremento temporaneo applicato in seguito. Durante la preparazione, il margine ne segue la direzione attuale prima dell’aggiunta dell’incremento.
+
+Questa funzione richiede una differenza di setpoint. Non conferma l’apertura fisica della valvola, il funzionamento del compressore né un arresto immediato. Usa il margine più basso che funziona con il tuo dispositivo e verifica cicli reali completi di riscaldamento o raffreddamento.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -293,9 +331,9 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Impostare `3 °C` non applica subito una correzione di `3 °C`. Permette soltanto a Room Assist di raggiungerla quando la differenza esterna lo richiede.
+Con Margine minimo di controllo a `0`, impostare `3 °C` non applica subito una correzione di `3 °C`. Permette soltanto a Room Assist di raggiungerla quando la differenza esterna lo richiede.
 
-Questa impostazione limita la correzione proporzionale, non il setpoint finale dopo la protezione dell’obiettivo programmato. La frenata facoltativa rafforza tale protezione con il limite di uno o due passi; non modifica il delta massimo di assistenza né applica tutto il massimo a ogni aggiornamento.
+Questa impostazione limita la correzione proporzionale, non il setpoint finale dopo la protezione dell’obiettivo programmato. La frenata facoltativa rafforza tale protezione con il limite di uno o due passi; non modifica il delta massimo di assistenza né applica tutto il massimo a ogni aggiornamento. Un [Margine minimo di controllo](#minimum-control-margin) diverso da zero può richiedere una correzione maggiore anche quando la differenza di temperatura esterna è piccola.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Perché l’obiettivo del dispositivo può differire dal calcolo

@@ -9,8 +9,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.3-beta.3 |
-| Dernière synchronisation | 2026-11-22 |
+| Version de référence | 1.9.3-beta.4 |
+| Dernière synchronisation | 2026-11-23 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -56,7 +56,8 @@ Avec **Non configurée**, les paires en mode fixe sont envoyées sans modificati
 5. Réglez la bande morte de Room Assist pour définir les limites basse et haute du chauffage ou refroidissement fixe autour de la cible unique ou de la référence de plage choisie, ou la marge neutre des modes automatiques à cible unique et des bandes natives `heat_cool`.
 6. Ajustez **Écart d’assistance maximal** si la valeur par défaut est trop faible pour la pièce ou inférieure à l’écart de consigne dont le thermostat peut avoir besoin pour arrêter de chauffer ou refroidir.
 7. Choisissez éventuellement **Freinage : Modéré** ou **Élevé** pour retirer la demande plus fermement. Ces niveaux nécessitent une bande morte Room Assist supérieure à zéro. **Par défaut** conserve le fonctionnement existant.
-8. Ajustez **Délai d’actualisation** si les mises à jour semblent trop lentes ou trop fréquentes.
+8. Configurez éventuellement **Marge minimale de commande** si les petites corrections ne font pas réagir le thermostat. Augmentez d’abord l’Écart d’assistance maximal si nécessaire ; la marge ne peut pas le dépasser. Laissez-la à `0` pour conserver le comportement existant.
+9. Ajustez **Délai d’actualisation** si les mises à jour semblent trop lentes ou trop fréquentes.
 
 Seule l’option sélectionnée est affichée. Lorsque **Capteur fixe** est déjà le mode enregistré, changer son capteur est enregistré immédiatement. Passer de **Capteur fixe** à **Selon les horaires**, ou inversement, modifie un brouillon : **Enregistrer** applique le mode et ses réglages, et **Annuler** rétablit la configuration enregistrée. Le capteur fixe et la programmation enregistrée sont conservés lors du changement ; les deux ne sont pas activés en même temps.
 
@@ -93,7 +94,44 @@ Les consignes physiques minimale et maximale peuvent limiter le freinage disponi
 
 Le freinage réduit la demande de chauffage ou refroidissement ; il ne confirme pas l’arrêt de la vanne, du compresseur ou du thermostat. Le contrôle de l’équipement, ses durées minimales de fonctionnement et l’inertie thermique peuvent toujours provoquer un dépassement. Ce réglage n’apprend pas les cycles et ne retire pas la demande avant la cible programmée. Validez-le avec des cycles réels avant de vous fier à un niveau pour une pièce donnée.
 
-Les exports portables utilisent le modèle **28** pour conserver le freinage et les décalages de préparation. Gardez une sauvegarde de la version précédente pour revenir en arrière ; les anciennes versions de Velair ne peuvent pas importer le modèle 28.
+Les exports portables utilisent le modèle **29** pour conserver le freinage, les décalages de préparation et la marge minimale de commande. Gardez une sauvegarde de la version précédente pour un éventuel retour en arrière ; les anciennes versions de Velair ne peuvent pas importer les exports du modèle 29.
+
+<a id="minimum-control-margin"></a>
+
+### Marge minimale de commande
+
+Certains thermostats ont besoin d’un écart important entre leur température interne et la consigne demandée avant de réagir. Un capteur fixé au radiateur peut mesurer plusieurs degrés de plus que la pièce alors que le capteur externe demande encore du chauffage. **Marge minimale de commande** demande au moins cet écart pendant une correction Room Assist à laquelle elle peut s’appliquer. Elle est facultative et vaut `0` par défaut.
+
+Ces réglages ont des fonctions différentes :
+
+| Réglage | Fonction |
+| --- | --- |
+| Zone morte de Room Assist | Détermine la bande de commutation ou neutre du capteur externe de la pièce. |
+| Marge minimale de commande | Renforce une correction applicable par rapport à la mesure interne du thermostat. |
+| Écart d’assistance maximal | Plafonne cette correction ; augmenter seulement le maximum ne demande pas une correction plus forte. |
+| Freinage | Modifie les seuils de retrait de la demande et ajoute une protection de la consigne programmée. |
+
+La marge accepte `0–10 °C` (`0–18 °F`) et ne peut pas dépasser l’Écart d’assistance maximal. Si les réglages sont incompatibles, Velair demande d’augmenter d’abord le maximum ou de réduire la marge. Il ne modifie aucun des deux automatiquement. Les incréments du champ suivent le pas effectif de consigne de l’appareil.
+
+Par exemple, configurez une cible de chauffage de `19.5 °C`, une zone morte de `±0.3 °C`, le freinage **Par défaut**, et la marge ainsi que le maximum à `10 °C`. Avec une mesure interne de `21.5 °C` et un pas de consigne compatible de `0.5 °C` :
+
+| Capteur externe de la pièce | Phase Room Assist | Consigne demandée à l’appareil |
+| --- | --- | --- |
+| À `19.2 °C` ou en dessous | Demander du chauffage vers `19.8 °C` | `31.5 °C` : mesure interne + 10 |
+| Monte à travers la bande | Continuer à demander du chauffage | Mesure interne actuelle + 10 |
+| Atteint `19.8 °C` | Retirer la demande de chauffage jusqu’à `19.2 °C` | `11.5 °C` : mesure interne − 10 |
+
+La mesure interne peut varier ; les demandes suivantes utilisent donc sa valeur actuelle. La cible de la pièce reste `19.5 °C` ; les grandes variations de consigne de l’appareil n’élargissent pas sa bande de confort. Le freinage Modéré ou Élevé conserve ses propres seuils d’arrêt et de reprise et maintient un résultat existant qui retire davantage de demande.
+
+Le refroidissement fixe fonctionne en sens inverse. Pour une cible de `24 °C`, une zone morte de `±0.3 °C`, une mesure interne de `26 °C` et une marge/un maximum de `10 °C`, Room Assist demande `16 °C` tant que le refroidissement est nécessaire et `36 °C` lorsque la pièce atteint `23.7 °C`, avant d’appliquer les limites de l’appareil. Le refroidissement reprend à `24.3 °C`. Avec une zone morte nulle et aucune phase conservée, seules les corrections non nulles sont renforcées ; l’égalité reste neutre.
+
+Les modes automatiques à consigne unique et les plages natives **Chauffage/climatisation** renforcent uniquement les demandes actives de chauffage ou de refroidissement. Dans la bande neutre de la pièce, ils conservent le maintien existant. Abaisser fortement une consigne pour arrêter le chauffage pourrait sinon déclencher le refroidissement sur un appareil bidirectionnel. Pour les plages natives, les deux limites se déplacent ensemble et gardent leur séparation d’origine. Les paires en mode fixe utilisent leur consigne de référence configurée ; les configurations de plage non prises en charge restent non prises en charge.
+
+Le pas et les limites physiques peuvent empêcher d’atteindre la marge demandée. Par exemple, avec une mesure interne de `21.7 °C`, une marge/un maximum de `10 °C` et une grille de `0.5 °C`, aucun point valide ne se trouve exactement à `10 °C` d’écart. Velair choisit une correction valide dans le maximum lorsque c’est possible et indique que le pas limite la marge. Avec deux consignes, préserver la largeur de la plage peut encore restreindre le déplacement. L’explication en direct et les **Données techniques** indiquent une marge active ou limitée.
+
+La protection de la consigne programmée, le freinage et les décalages temporaires de préparation peuvent produire un déplacement final supérieur à l’Écart d’assistance maximal. Ce réglage limite la correction Room Assist, et non chaque protection ou supplément temporaire appliqué ensuite. Pendant la préparation, la marge suit sa direction actuelle avant l’ajout du supplément.
+
+Cette fonction demande un écart de consigne. Elle ne confirme ni l’ouverture physique de la vanne, ni le fonctionnement du compresseur, ni un arrêt immédiat. Utilisez la plus petite marge efficace pour votre équipement et vérifiez des cycles réels complets de chauffage ou de refroidissement.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -295,9 +333,9 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Régler `3 °C` n’applique pas immédiatement une correction de `3 °C`. Cela autorise seulement Room Assist à l’atteindre lorsque l’écart externe le nécessite.
+Avec Marge minimale de commande à `0`, régler `3 °C` n’applique pas immédiatement une correction de `3 °C`. Cela autorise seulement Room Assist à l’atteindre lorsque l’écart externe le nécessite.
 
-Ce réglage limite la correction proportionnelle, pas la consigne finale après protection de la cible programmée. Le freinage facultatif renforce cette protection avec sa limite d’un ou deux pas ; il ne modifie pas l’Écart d’assistance maximal et n’applique pas tout le maximum à chaque mise à jour.
+Ce réglage limite la correction proportionnelle, pas la consigne finale après protection de la cible programmée. Le freinage facultatif renforce cette protection avec sa limite d’un ou deux pas ; il ne modifie pas l’Écart d’assistance maximal et n’applique pas tout le maximum à chaque mise à jour. Une [Marge minimale de commande](#minimum-control-margin) non nulle peut demander une correction plus forte même lorsque l’écart de température externe est faible.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Pourquoi la consigne de l’appareil peut différer du calcul

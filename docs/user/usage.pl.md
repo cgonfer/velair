@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.3-beta.3 |
-| Ostatnia synchronizacja | 2026-11-22 |
+| Wersja odniesienia | 1.9.3-beta.4 |
+| Ostatnia synchronizacja | 2026-11-23 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -549,7 +549,7 @@ Velair zapisuje wartości związane z temperaturą bez przeliczania, w jednostce
 
 Jednorazowa aktualizacja z opublikowanych wersji Velair zapisujących wyłącznie Celsjusza przebiega inaczej. Jeśli Home Assistant już używa Fahrenheita, Velair bez pytania uznaje dawne dane za zapisane w Celsjuszu, pozostawia harmonogram zatrzymany i kieruje do **Zresetuj Velair**. Reset usuwa dawną konfigurację i atomowo tworzy nowe ustawienia domyślne w Fahrenheitach. Po tej aktualizacji kolejne zmiany jednostki Home Assistant korzystają z pełnego jawnego przeliczenia opisanego wyżej, z zachowaniem danych.
 
-Eksporty przenośnego modelu v28 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v28; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
+Eksporty przenośnego modelu v29 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v29; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
 
 Jeśli urządzenie było niedostępne podczas migracji lub importu, Velair sprawdza jego limity i efektywny krok temperatury po odzyskaniu dostępności. Prawidłowy `target_temp_step` ma pierwszeństwo przed ostatnim zgłoszonym i ręcznym zastępczym. Panel ostrzega o niezgodnych celach do edycji przed użyciem. Pełne zasady w [Jednostkach temperatury i migracji](temperature-units.pl.md).
 
@@ -670,19 +670,23 @@ Wzmocnienie jest dostępne w usługach, skryptach, automatyzacjach i pulpitach b
 - poleceniem głosowym;
 - z preferowanym trybem HVAC.
 
-Po wygaśnięciu:
+Po wygaśnięciu lub anulowaniu Wzmocnienia Velair rozpatruje daną strefę w tej kolejności:
 
 1. Jeśli aktywny blok ma jawny tryb HVAC, Velair stosuje zaplanowaną temperaturę docelową.
 2. Jeśli aktywny blok wyłącza urządzenie, Velair je wyłącza.
-3. Jeśli nie ma aktywnego bloku, Velair przywraca zapamiętany stan urządzenia.
-4. Blok `Keep` również przywraca zapamiętany stan, ponieważ nie określa nowego trybu HVAC po zakończeniu nadpisania.
+3. Jeśli nie ma aktywnego bloku, Velair przywraca stan przechwycony przed Wzmocnieniem.
+4. Jeśli aktywny blok temperatury używa `Keep`, Velair stosuje jego bieżącą temperaturę lub pełny zakres, używając trybu HVAC zapisanego przed Wzmocnieniem. Przywraca zapisane opcje urządzenia, chyba że bieżący blok wybiera inną wartość. Jeśli zapisanym trybem był wyłączony, Keep jak zwykle używa pierwszego zgodnego trybu innego niż wyłączony. Niezgodne lub brakujące zapisane tryby są zgłaszane jako błędy przekazania polecenia, a nie zgadywane.
 
-Velair nie wymyśla celu ogrzewania/chłodzenia bez jawnego określenia.
+Na przykład urządzenie w trybie Chłodzenie przy 24 °C może tymczasowo otrzymać Wzmocnienie w trybie Ogrzewanie przy 22 °C. Jeśli w chwili zakończenia Wzmocnienia aktywny jest blok Keep przy 20 °C, Velair wraca do Chłodzenia przy 20 °C, bez wcześniejszego wysyłania starych 24 °C. Bloki tylko temperatury, jawnego trybu, tylko trybu, tylko opcji i Wyłączone zachowują dotychczasowe działanie. Ta zasada dotyczy wyłącznie powrotu i nie zmienia Keep podczas zwykłego stosowania harmonogramu.
+
+Velair zapisuje oczekujący powrót przed usunięciem Wzmocnienia. Jeśli Home Assistant uruchomi się ponownie przed potwierdzeniem przekazania polecenia, powrót zostanie wznowiony z użyciem obowiązującego wtedy bloku, nawet gdy **Zastosuj aktywny harmonogram po uruchomieniu** jest wyłączone. Kończy to już rozpoczęty powrót; nie włącza ponownie Wzmocnienia ani nie stosuje harmonogramów wszystkich stref. Tymczasowa niedostępność urządzenia korzysta z dotychczasowego odzyskiwania przekazania poleceń. Nowe sterowanie ręczne, Wzmocnienie, pauza, zmiana Profilu lub Trybu Velair albo wyłączenie lub ponowne przypisanie strefy zastępuje poprzedni powrót.
 
 <a id="startup-behavior"></a>
 ## Zachowanie przy uruchomieniu
 
 Domyślnie Velair po uruchomieniu Home Assistant odtwarza zapisany stan harmonogramu bez wymuszania nastaw urządzeń. Włącz w Ustawieniach stosowanie aktywnego harmonogramu po uruchomieniu, jeśli chcesz od razu zastosować bieżący blok podczas działania automatyki. Blok rozpoczęty we wcześniejszym dniu nadal obowiązuje do następnego bloku w tygodniu. Aktywne Wzmocnienia są respektowane.
+
+Niedokończony powrót ze Wzmocnienia jest odzyskiwany niezależnie od tego ustawienia, jak opisano w sekcji [Boost](#boost).
 
 <a id="automation-blueprints"></a>
 ## Blueprinty automatyzacji
@@ -710,7 +714,7 @@ Ustawienia eksportują/importują wersjonowany JSON zawierający:
 - definicje Profili;
 - definicje Trybów.
 
-Bieżący model eksportu 28 zachowuje oba powiązania szablonów, odwołania presetów, zależności nadrzędnego przygotowania, polityki formatów i odniesień, własność grup pomieszczeń i wspólną konfigurację. Ustawienia stref zachowują również opcjonalne harmonogramy czujników Room Assist oraz wybrany poziom hamowania, niezależnie od harmonogramów temperatury i profili. Przyjęte kotwice wykonania nadrzędnego pozostają lokalne. Eksport harmonogramów lub profili automatycznie dołącza wymagane szablony i presety jako dodatkowe sekcje. Przy danych grup dołączane są wymagane grupy, harmonogramy i profile, także przy eksporcie uczenia. Import sprawdza łączną konfigurację, w tym istniejących użytkowników zastępowanych zasobów. Presety są scalane po stałym kluczu: zgodne zastępowane, nieobecne lokalne zachowane. Dawne kopie nadal można importować; starsze wersje Velair nie importują modelu 28. Zachowaj kopię z poprzedniej wersji, jeśli może być potrzebny powrót do niej. Zobacz [przykład kopii](linked-schedule-examples.pl.md#back-up-the-whole-setup).
+Bieżący model eksportu 29 zachowuje oba powiązania szablonów, odwołania presetów, zależności nadrzędnego przygotowania, polityki formatów i odniesień, własność grup pomieszczeń i wspólną konfigurację. Ustawienia stref zachowują również opcjonalne harmonogramy czujników Room Assist, wybrany poziom hamowania i minimalny margines sterowania, niezależnie od harmonogramów temperatury i profili. Przyjęte kotwice wykonania nadrzędnego pozostają lokalne. Eksport harmonogramów lub profili automatycznie dołącza wymagane szablony i presety jako dodatkowe sekcje. Przy danych grup dołączane są wymagane grupy, harmonogramy i profile, także przy eksporcie uczenia. Import sprawdza łączną konfigurację, w tym istniejących użytkowników zastępowanych zasobów. Presety są scalane po stałym kluczu: zgodne zastępowane, nieobecne lokalne zachowane. Dawne kopie nadal można importować; starsze wersje Velair nie importują modelu 29. Zachowaj kopię z poprzedniej wersji, jeśli może być potrzebny powrót do niej. Zobacz [przykład kopii](linked-schedule-examples.pl.md#back-up-the-whole-setup).
 
 Podczas importu możesz wybrać sekcje do nadpisania. Import zastępuje wybrane dane, więc najpierw wykonaj eksport, jeśli potrzebujesz punktu odzyskania. Definicje Profili i Trybów są przenośne, ale ich aktywny wybór nie jest. Velair zachowuje aktywne identyfikatory Profili, które nadal istnieją, i wraca do harmonogramów domyślnych tylko wtedy, gdy żaden z nich nie pozostał.
 
@@ -865,7 +869,7 @@ Wzmocnienie z zakresem korzysta z `target_temp_low` i `target_temp_high` zamiast
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Anuluje aktywne Wzmocnienie przed upływem jego czasu. Powrót przebiega tak samo jak przy zwykłym wygaśnięciu: Velair stosuje aktywny cel wyraźnie określony w harmonogramie, jeśli taki istnieje. W przeciwnym razie, także przy bloku `Keep`, przywraca zapisany stan urządzenia, w tym obsługiwane opcje urządzenia. Wywołanie bez aktywnego Wzmocnienia nie ma skutku.
+Anuluje aktywne Wzmocnienie przed upływem jego czasu. Powrót przebiega tak samo jak przy zwykłym wygaśnięciu: blok temperatury używający `Keep` łączy swój bieżący cel z trybem HVAC sprzed Wzmocnienia, a jawne bloki zachowują dotychczasowe działanie. Bez odpowiedniego aktywnego bloku harmonogramu Velair przywraca zapisany stan, w tym obsługiwane opcje urządzenia. Wywołanie bez aktywnego Wzmocnienia nie ma skutku.
 
 ```yaml
 action: velair.cancel_boost

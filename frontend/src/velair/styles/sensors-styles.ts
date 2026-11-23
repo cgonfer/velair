@@ -272,6 +272,12 @@ export const sensorsStyles = css`
   line-height: 1.45;
 }
 
+.sensor-field-error:not([hidden]) {
+  color: var(--error-color);
+  display: block;
+  margin-top: 6px;
+}
+
 .sensor-braking-row {
   border-top: 0;
   border-bottom: 1px solid var(--divider-color);
@@ -387,6 +393,27 @@ export const sensorsStyles = css`
   display: grid;
   gap: 12px;
   padding: 12px;
+}
+
+.sensors-view .sensor-runtime-section:not(.sensor-inactive-section) {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--divider-color);
+  border-radius: 0;
+}
+
+.sensors-view .sensor-runtime-heading {
+  background: transparent;
+  border-bottom: 0;
+  padding: 14px 0;
+}
+
+.sensors-view .sensor-status-card {
+  padding: 0;
+}
+
+.sensors-view velair-room-assist-graph {
+  --ra-explanation-max-width: none;
 }
 
 .sensor-inactive-section p {

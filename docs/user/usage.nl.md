@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.3-beta.3 |
-| Laatst gesynchroniseerd | 2026-11-22 |
+| Referentieversie | 1.9.3-beta.4 |
+| Laatst gesynchroniseerd | 2026-11-23 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -557,7 +557,7 @@ Thermische waarden worden onbewerkt opgeslagen in de vastgelegde eenheid. Bij ee
 
 De eenmalige upgrade van gepubliceerde gegevens die alleen Celsius ondersteunden is anders. Gebruikt Home Assistant al Fahrenheit, dan neemt Velair zonder vraag aan dat oude gegevens Celsius zijn, houdt planning gestopt en verwijst naar **Velair resetten**. Reset wist de oude configuratie en maakt atomair nieuwe Fahrenheit-standaarden. Latere eenheidswijzigingen gebruiken daarna de volledige expliciete conversie met gegevensbehoud.
 
-Huidige draagbare exports in model v28 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v28 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
+Huidige draagbare exports in model v29 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v29 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
 
 Was een apparaat tijdens migratie of import niet beschikbaar, dan controleert Velair later grenzen en effectieve temperatuurstap. Een actuele geldige `target_temp_step` heeft voorrang op de laatst gemelde stap en handmatige zoneterugval. Het paneel waarschuwt bij onverenigbare opgeslagen doelen, zodat je vóór gebruik kunt corrigeren. Zie [Temperatuureenheden en migratie](temperature-units.nl.md) voor volledige upgrade-, migratie-, back-up- en herstelregels.
 
@@ -660,19 +660,23 @@ Bij het herstellen van de opgeslagen toestand stuurt Velair HVAC-modi en apparaa
 
 De functie is beschikbaar via services, scripts, automatiseringen en dashboards, zodat de schema-editor overzichtelijk blijft. Je kunt bijvoorbeeld via een knop, beweging of spraak een kamer tijdelijk aanpassen, eventueel met gewenste HVAC-modus.
 
-Bij verlopen bepaalt Velair de uitkomst in deze volgorde:
+Bij verlopen of annuleren van een tijdelijke aanpassing bepaalt Velair de uitkomst in deze volgorde:
 
 1. Een actief blok met expliciete HVAC-modus past zijn geplande doel toe.
 2. Een actief uitschakelblok schakelt uit.
 3. Zonder actief blok herstelt Velair de toestand van vóór de aanpassing.
-4. Ook bij `Huidige modus behouden` herstelt het die eerdere toestand, omdat dat blok geen nieuwe HVAC-modus voor na de tijdelijke aanpassing bepaalt.
+4. Als het actieve temperatuurblok `Huidige modus behouden` gebruikt, past Velair de huidige temperatuur of het volledige bereik van dat blok toe met de HVAC-modus die vóór de tijdelijke aanpassing is opgeslagen. Opgeslagen apparaatopties worden hersteld, tenzij het huidige blok een andere waarde kiest. Was de opgeslagen modus uit, dan kiest Behouden zoals gebruikelijk de eerste compatibele modus behalve Uit. Onverenigbare of ontbrekende opgeslagen modi worden als overdrachtsfouten gemeld; Velair raadt geen modus.
 
-Velair verzint zo geen verwarmings- of koeldoel als het schema er geen expliciet vastlegt.
+Een apparaat in Koelen op 24 °C kan bijvoorbeeld tijdelijk in Verwarmen op 22 °C werken. Als bij het einde Huidige modus behouden op 20 °C actief is, keert Velair terug naar Koelen op 20 °C, zonder eerst de oude 24 °C te sturen. Blokken met alleen temperatuur, expliciete modus, alleen modus, alleen opties en Uit behouden hun normale gedrag. Deze terugkeerregel verandert Behouden bij gewone schematoepassing niet.
+
+Velair slaat een wachtende terugkeer op voordat het de tijdelijke aanpassing verwijdert. Als Home Assistant opnieuw start voordat de overdracht is bevestigd, wordt de terugkeer hervat met het dan geldende blok, ook als **Actief schema toepassen na opstarten** uitgeschakeld is. Dit voltooit een al begonnen terugkeer; het activeert de tijdelijke aanpassing niet opnieuw en past niet alle zoneschema’s toe. Tijdelijke onbeschikbaarheid van het apparaat gebruikt het bestaande overdrachtsherstel. Nieuwe handmatige bediening, een tijdelijke aanpassing, pauze, profiel- of Velair-moduswijziging, of uitschakelen/opnieuw toewijzen van de zone vervangt de oude terugkeer.
 
 <a id="startup-behavior"></a>
 ## Gedrag bij opstarten
 
 Standaard herstelt Velair na Home Assistant-start de opgeslagen plannerstatus, zonder apparaten naar schemadoelen te dwingen. Schakel in Instellingen **Actief schema toepassen na opstarten** in om huidige actieve blokken na opstarten toe te passen, mits automatische planning actief is. Een blok van een eerdere dag blijft actief tot het volgende weekblok. Actieve tijdelijke aanpassingen worden gerespecteerd.
+
+Een onvoltooide terugkeer na een tijdelijke aanpassing wordt onafhankelijk van deze instelling hersteld, zoals beschreven onder [Tijdelijke aanpassing](#boost).
 
 <a id="automation-blueprints"></a>
 ## Automatiseringsblueprints
@@ -692,7 +696,7 @@ De [seizoensblueprint](blueprints/seasonal-climate-selection.nl.md) bevestigt st
 
 Instellingen kan een JSON-bestand met versie exporteren en importeren. Het kan thermostaatschema's, sjablonen, gedeelde blokpresets, paneelinstellingen, leergegevens voor adaptieve voorconditionering, klimaatprofielen en modussen bevatten.
 
-Huidige exports in model 28 behouden beide sjabloonkoppelingen, presetverwijzingen, voorconditioneringsmasterrelaties, doel- en referentiebeleid, kamergroepeigenaarschap en gedeelde configuratie. Zone-instellingen behouden ook optionele Room Assist-sensorschema’s en het gekozen afremniveau, onafhankelijk van temperatuurschema’s en profielen. Geaccepteerde masteruitvoeringsankers blijven lokaal. Schema- en profielexports nemen benodigde sjablonen en presets automatisch op als extra geselecteerde onderdelen. Bij groepsgegevens worden vereiste kamergroepen, schema's en profielen ook opgenomen, zelfs vanuit een leerexport. Imports valideren de gecombineerde configuratie inclusief bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op stabiele sleutel samengevoegd: overeenkomsten vervangen, ontbrekende lokale behouden. Oude back-ups blijven importeerbaar; oudere Velair-versies kunnen model 28 niet importeren. Bewaar een back-up van de vorige versie als je mogelijk wilt teruggaan. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
+Huidige exports in model 29 behouden beide sjabloonkoppelingen, presetverwijzingen, voorconditioneringsmasterrelaties, doel- en referentiebeleid, kamergroepeigenaarschap en gedeelde configuratie. Zone-instellingen behouden ook optionele Room Assist-sensorschema’s en het gekozen afremniveau en de minimale regelmarge, onafhankelijk van temperatuurschema’s en profielen. Geaccepteerde masteruitvoeringsankers blijven lokaal. Schema- en profielexports nemen benodigde sjablonen en presets automatisch op als extra geselecteerde onderdelen. Bij groepsgegevens worden vereiste kamergroepen, schema's en profielen ook opgenomen, zelfs vanuit een leerexport. Imports valideren de gecombineerde configuratie inclusief bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op stabiele sleutel samengevoegd: overeenkomsten vervangen, ontbrekende lokale behouden. Oude back-ups blijven importeerbaar; oudere Velair-versies kunnen model 29 niet importeren. Bewaar een back-up van de vorige versie als je mogelijk wilt teruggaan. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
 
 Bij import kies je te overschrijven secties. Import vervangt gekozen gegevens; exporteer eerst voor een herstelpunt. Profiel- en modusdefinities zijn overdraagbaar, de actieve selectie niet. Velair behoudt actieve profiel-ID's die nog bestaan en keert pas naar standaard terug als geen meer overblijven.
 
@@ -838,7 +842,7 @@ Velair legt herstelbare toestand vóór toepassing vast. Is het apparaat niet be
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Beëindig een actieve tijdelijke aanpassing vroeg. Dit gebruikt hetzelfde herstel als verlopen: een actief expliciet doel of anders, ook bij `Huidige modus behouden`, de opgeslagen klimaattoestand, inclusief ondersteunde apparaatopties. Zonder actieve aanpassing doet de aanroep niets.
+Beëindig een actieve tijdelijke aanpassing vroeg. Dit gebruikt hetzelfde terugkeergedrag als verlopen: een temperatuurblok met `Huidige modus behouden` combineert zijn huidige doel met de HVAC-modus van vóór de tijdelijke aanpassing; expliciete blokken behouden hun normale gedrag. Zonder toepasselijk schemablok herstelt Velair de opgeslagen klimaattoestand, inclusief ondersteunde apparaatopties. Zonder actieve aanpassing doet de aanroep niets.
 
 ```yaml
 action: velair.cancel_boost

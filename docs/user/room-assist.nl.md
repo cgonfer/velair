@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.3-beta.3 |
-| Laatst gesynchroniseerd | 2026-11-22 |
+| Referentieversie | 1.9.3-beta.4 |
+| Laatst gesynchroniseerd | 2026-11-23 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -55,7 +55,8 @@ Bij **Niet ingesteld** worden vaste paren ongewijzigd zonder Room Assist-correct
 5. Stel de Room Assist-dode band in voor vast verwarmen of koelen rond het enkele doel of de gekozen bereikreferentie; bij automatische enkeldoelmodi en oorspronkelijke `heat_cool`-banden bepaalt deze de neutrale marge.
 6. Pas Maximale correctie aan als de standaard te klein is voor die kamer of onder het verschil ligt dat de thermostaat nodig kan hebben om verwarmen/koelen te stoppen.
 7. Kies eventueel **Afremming: Gemiddeld** of **Hoog** om de vraag sterker terug te nemen. Deze niveaus vereisen een Room Assist-dode band groter dan nul. **Standaard** behoudt het bestaande gedrag.
-8. Pas Vernieuwingsvertraging aan als sensorupdates te traag of te frequent aanvoelen.
+8. Stel eventueel **Minimale regelmarge** in als kleine correcties de thermostaat niet laten reageren. Verhoog zo nodig eerst **Maximale correctie**; de marge mag deze niet overschrijden. Laat de marge op `0` om het bestaande gedrag te behouden.
+9. Pas Vernieuwingsvertraging aan als sensorupdates te traag of te frequent aanvoelen.
 
 Alleen een kamersensor kiezen bewaart die sensor. Velair gebruikt deze pas als effectieve kamertemperatuur wanneer Ondersteuning via kamersensor is ingeschakeld.
 
@@ -104,7 +105,43 @@ Fysieke minimum- en maximuminstelpunten kunnen de beschikbare afremming beperken
 
 Afremming vermindert de gevraagde verwarming of koeling; het bevestigt niet dat klep, compressor of thermostaat gestopt is. Apparaatregeling, minimale looptijden en thermische traagheid kunnen nog steeds overschrijding veroorzaken. Deze instelling leert geen cycli en neemt de vraag niet vóór het geplande doel terug. Controleer haar met echte verwarmings- en koelcycli voordat je voor een bepaalde kamer op een niveau vertrouwt.
 
-Draagbare exports gebruiken model **28** om afremming en voorbereidingsverschuivingen te bewaren. Bewaar een back-up uit de eerdere versie als je wilt kunnen teruggaan; oudere Velair-versies kunnen model 28 niet importeren.
+Draagbare exports gebruiken model **29** om afremming, voorbereidingsverschuivingen en de minimale regelmarge te bewaren. Bewaar een back-up uit de eerdere versie als je wilt kunnen teruggaan; oudere Velair-versies kunnen model 29 niet importeren.
+
+<a id="minimum-control-margin"></a>
+### Minimale regelmarge
+
+Sommige thermostaten reageren pas als er een aanzienlijk verschil is tussen hun interne temperatuur en de gevraagde instelwaarde. Een sensor op de radiator kan enkele graden boven de kamertemperatuur meten terwijl de externe kamersensor nog warmte vraagt. **Minimale regelmarge** vraagt minstens dit verschil bij een toepasselijke Room Assist-correctie. De instelling is optioneel en staat standaard op `0`.
+
+Deze instellingen hebben verschillende functies:
+
+| Instelling | Doel |
+| --- | --- |
+| Dode zone Room Assist | Bepaalt de schakelgrenzen of neutrale band van de externe kamertemperatuur. |
+| Minimale regelmarge | Versterkt een toepasselijke correctie ten opzichte van de interne meting van de thermostaat. |
+| Maximale correctie | Begrenst die correctie; alleen het maximum verhogen vraagt geen grotere correctie. |
+| Afremming | Wijzigt de grenzen voor het intrekken van de vraag en voegt bescherming van het geplande doel toe. |
+
+De marge ondersteunt `0–10 °C` (`0–18 °F`) en mag **Maximale correctie** niet overschrijden. Bij conflicterende instellingen vraagt Velair eerst het maximum te verhogen of de marge te verlagen. Geen van beide instellingen wordt automatisch veranderd. De invoerstappen volgen de effectieve doelstap van het apparaat.
+
+Stel bijvoorbeeld een verwarmingsdoel van `19.5 °C`, dode zone `±0.3 °C`, afremming **Standaard**, en zowel marge als maximum van `10 °C` in. Met een interne meting van `21.5 °C` en een passende doelstap van `0.5 °C`:
+
+| Externe kamersensor | Room Assist-fase | Gevraagde apparaatinstelwaarde |
+| --- | --- | --- |
+| Op of onder `19.2 °C` | Warmte vragen richting `19.8 °C` | `31.5 °C`: interne meting + 10 |
+| Stijgend door de band | Warmte blijven vragen | Huidige interne meting + 10 |
+| Bereikt `19.8 °C` | Warmtevraag intrekken tot `19.2 °C` | `11.5 °C`: interne meting − 10 |
+
+De interne meting kan veranderen; volgende aanvragen gebruiken haar huidige waarde. Het kamerdoel blijft `19.5 °C`; de grote apparaatinstelwaarden verbreden de comfortband niet. Afremming Gemiddeld of Hoog behoudt de eigen stop- en hervattingsgrenzen en een bestaand sterker resultaat voor vraagvermindering.
+
+Vast koelen werkt andersom. Bij doel `24 °C`, dode zone `±0.3 °C`, interne meting `26 °C` en marge/maximum `10 °C` vraagt Room Assist `16 °C` zolang koeling nodig is. Wanneer de kamer `23.7 °C` bereikt, vraagt het `36 °C`, voordat apparaatgrenzen worden toegepast. Koeling wordt bij `24.3 °C` hervat. Bij een dode zone van nul zonder behouden fase worden alleen correcties ongelijk aan nul versterkt; gelijkheid blijft neutraal.
+
+Automatische enkeldoelmodi en oorspronkelijke **Verwarmen/Koelen**-bereiken versterken alleen actieve verwarmings- of koelvragen. Binnen de neutrale kamerband behouden ze het bestaande vasthoudgedrag. Een sterke verlaging van de instelwaarde om verwarming te stoppen zou bij een tweerichtingsapparaat anders koeling kunnen starten. Bij oorspronkelijke bereiken verschuiven beide grenzen samen en behouden hun oorspronkelijke afstand. Paren in een vaste modus gebruiken de ingestelde referentie; niet-ondersteunde bereikconfiguraties blijven niet ondersteund.
+
+Apparaatstappen en fysieke grenzen kunnen de gevraagde marge verhinderen. Bij interne meting `21.7 °C`, marge/maximum `10 °C` en raster `0.5 °C` ligt bijvoorbeeld geen rasterpunt precies `10 °C` verder. Velair kiest waar mogelijk een geldige correctie binnen het maximum en meldt dat de stap de marge beperkt. Bij twee instelwaarden kan behoud van de bereikbreedte de verschuiving verder beperken. De actuele uitleg en **Technische gegevens** tonen of een marge actief of beperkt is.
+
+Bescherming van het geplande doel, afremming en tijdelijke voorbereidingsverschuivingen kunnen een uiteindelijke afwijking groter dan Maximale correctie geven. Die instelling begrenst de Room Assist-correctie, niet elke volgende bescherming of tijdelijke extra. Tijdens voorbereiding volgt de marge de huidige voorbereidingsrichting voordat de extra wordt toegevoegd.
+
+Deze functie vraagt een verschil tussen instelwaarde en interne meting. Ze bevestigt geen fysieke klepopening, compressorwerking of onmiddellijke stop. Gebruik de laagste marge die voor jouw apparaat werkt en controleer volledige echte verwarmings- of koelcycli.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -292,9 +329,9 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-`3 °C` instellen past niet meteen `3 °C` correctie toe. Het staat alleen toe dat Room Assist die waarde bereikt wanneer het externe kamerverschil dit vereist.
+Met **Minimale regelmarge** op `0` past `3 °C` instellen niet meteen `3 °C` correctie toe. Het staat alleen toe dat Room Assist die waarde bereikt wanneer het externe kamerverschil dit vereist.
 
-Deze instelling begrenst de proportionele correctie, niet het uiteindelijke instelpunt na bescherming van het geplande doel. Optionele afremming versterkt die bescherming met een grens van één of twee stappen; het wijzigt Maximale correctie niet en past niet bij elke update het volledige maximum toe.
+Deze instelling begrenst de proportionele correctie, niet het uiteindelijke instelpunt na bescherming van het geplande doel. Optionele afremming versterkt die bescherming met een grens van één of twee stappen; het wijzigt Maximale correctie niet en past niet bij elke update het volledige maximum toe. Een [Minimale regelmarge](#minimum-control-margin) groter dan nul kan ook bij een klein extern kamerverschil een grotere correctie vragen.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Waarom het apparaatdoel kan afwijken van de berekening

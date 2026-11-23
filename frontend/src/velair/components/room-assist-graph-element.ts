@@ -75,7 +75,7 @@ export class VelairRoomAssistGraph extends LitElement {
     .detail-toggle[aria-expanded=true] .data-chevron { transform:rotate(180deg); }
     .detail-panel { border-top:1px solid var(--ra-rule); padding-top:16px; margin-top:12px; }
     [hidden] { display:none!important; }
-    .human-explanation { max-width:76ch; }
+    .human-explanation { max-width:var(--ra-explanation-max-width,76ch); }
     .human-explanation p { margin:0; }
     .human-explanation p+p { margin-top:10px; }
     .data { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 28px; }
@@ -343,6 +343,10 @@ export class VelairRoomAssistGraph extends LitElement {
     }
     if (!parts.length) parts.push(this.t(finite(s.room_temperature) ? "raGraphContextRoomReference" : "raGraphContextMissingReadings"));
     const limits: string[] = [];
+    if (s.minimum_margin && s.minimum_margin.configured > 0) {
+      parts.push(this.t(s.minimum_margin.active ? "roomSensorAssistMinimumMarginActive" : "roomSensorAssistMinimumMarginInactive"));
+      if (s.minimum_margin.active && s.minimum_margin.limited_by) limits.push(this.t("roomSensorAssistMinimumMarginLimited"));
+    }
     if (guardEffect) limits.push(this.t("raGraphContextBrakingApplied"));
     else if (correctionRespectsBound) limits.push(this.t("raGraphExplainCompliant"));
     if (finite(physicalLimit)) limits.push(this.t("raGraphContextPhysicalLimit"));
@@ -449,6 +453,11 @@ export class VelairRoomAssistGraph extends LitElement {
       ? scheduled && !s.target_boundary ? Math.max(0, scheduled.low - s.deadband_low, s.deadband_high - scheduled.high) : (s.deadband_high - s.deadband_low) / 2 : undefined;
     const configuredMargin = this.settings?.room_sensor_assist_deadband;
     const offset = s.preconditioning_offset;
+    const margin = s.minimum_margin;
+    const marginLimitKey = margin?.limited_by === "step" ? "roomSensorAssistMinimumMarginStep"
+      : margin?.limited_by === "minimum" ? "roomSensorAssistMinimumMarginMinimum"
+      : margin?.limited_by === "maximum" ? "roomSensorAssistMinimumMarginMaximum"
+      : "roomSensorAssistMinimumMarginRange";
     const base = offset?.base_target;
     const baseValue: Value | undefined = base ? "temperature" in base ? base.temperature : [base.target_temp_low, base.target_temp_high] : undefined;
     const extras: Stage[] = offset ? [{ label: "raGraphDataRequested", value: offset.requested }, { label: "raGraphDataApplied", value: offset.applied }] : [];
@@ -480,6 +489,11 @@ export class VelairRoomAssistGraph extends LitElement {
           : row("raGraphDataBraking", `${level(braking.configured_level)}${brakingState ? ` · ${brakingState}` : ""}`) : nothing}
         ${row("raGraphDataConfiguredMargin", finite(configuredMargin) && (!finite(runtimeMargin) || !same(configuredMargin, runtimeMargin)) ? this.format(configuredMargin) : undefined)}
         ${row("roomSensorAssistMaxDelta", temp(this.settings?.room_sensor_assist_max_delta))}
+        ${row("roomSensorAssistMinimumMargin", temp(margin?.configured ?? this.settings?.room_sensor_assist_minimum_margin))}
+        ${row("roomSensorAssistMinimumMarginState", margin && margin.configured > 0
+          ? !confirmed ? this.t("raGraphUnavailable") : !margin.active ? this.t("roomSensorAssistMinimumMarginInactive")
+            : this.t(margin.limited_by ? marginLimitKey : "roomSensorAssistMinimumMarginApplied")
+          : undefined)}
       </dl></section>
       ${offset ? html`<section data-group="preparation"><h4>${this.t("raGraphDataExtra")}</h4><dl>
         ${row("raGraphBase", baseValue !== undefined && (output === undefined || !same(baseValue, output)) ? this.formatValue(baseValue) : undefined)}

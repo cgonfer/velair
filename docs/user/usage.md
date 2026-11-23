@@ -1245,9 +1245,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v28 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v28 exports; use a version that supports
-v28 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v29 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v29 exports; use a version that supports
+v29 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -1502,20 +1502,24 @@ Boost is exposed through Home Assistant services, scripts, automations, and dash
 - boost from a voice assistant;
 - boost with a preferred HVAC mode.
 
-When a boost expires, Velair resolves the affected zone in this order:
+When a boost expires or is cancelled, Velair resolves the affected zone in this order:
 
 1. If there is an active schedule block with an explicit HVAC mode, Velair applies that scheduled target.
 2. If there is an active schedule block that turns the climate off, Velair turns the climate off.
 3. If there is no active schedule block, Velair restores the state captured before the boost.
-4. If the active schedule block uses `Keep`, Velair also restores the state captured before the boost, because `Keep` does not define a new HVAC mode to apply after the temporary override.
+4. If the active temperature block uses `Keep`, Velair applies that block's current temperature or complete range using the HVAC mode saved before the boost. Saved device options are restored unless the current block selects a different value. If the saved mode was off, Keep uses its usual first compatible non-off mode. Incompatible or missing saved modes are reported as delivery errors rather than guessed.
 
-This means a boost should not cause Velair to invent a new heating or cooling target when the current schedule does not explicitly define one.
+For example, a climate in Cool at 24 °C can temporarily Boost in Heat at 22 °C. If the active block is Keep at 20 °C when the Boost ends, Velair returns to Cool at 20 °C, without first sending the old 24 °C. Temperature-only, explicit-mode, mode-only, option-only and Off blocks retain their normal behavior. This return-specific rule does not change Keep during ordinary schedule application.
+
+Velair saves a pending return before removing the Boost. If Home Assistant restarts before delivery is confirmed, that return resumes using the block then in effect, even when **Apply active schedule after startup** is disabled. This completes an already-started return; it does not reactivate the Boost or apply every zone's schedule. Temporary device unavailability uses the existing delivery recovery. New manual control, a Boost, a pause, a Profile or Velair mode change, or disabling/reassigning the zone supersedes the old return.
 
 ## Startup Behavior
 
 By default, Velair restores its stored scheduler state after Home Assistant starts but does not force climate devices to a schedule target.
 
 From Settings, you can enable **Apply active schedule after startup**. When enabled, Velair applies the current active schedule block to managed climates after Home Assistant starts, as long as the scheduler is in automatic mode. A block that started on an earlier day still counts as the active block until the next weekly block starts. Active boosts are respected.
+
+An unfinished Boost return is recovered independently of this setting, as described under [Boost](#boost).
 
 ## Automation Blueprints
 
@@ -1557,10 +1561,11 @@ The file can contain:
 - climate profile definitions.
 - mode definitions.
 
-Current model 28 exports preserve both template link types, preset references,
+Current model 29 exports preserve both template link types, preset references,
 Preconditioning master relationships, target-format and reference policies,
 room-group ownership and shared configuration. Zone settings also retain optional
-Room Assist sensor schedules and the selected braking level, independently of
+Room Assist sensor schedules, the selected braking level and the minimum control
+margin, independently of
 thermal schedules and Profiles.
 Accepted master execution anchors
 remain local and are not exported. Exporting schedules or Profiles includes
@@ -1569,7 +1574,7 @@ data is involved, required room groups, schedules and Profiles are also included
 even when starting from a learning export. Imports validate the combined configuration, including existing
 consumers of replaced shared resources. Presets merge by stable key: matching keys
 are replaced, while local presets absent from the file remain. Existing backups
-remain importable; older Velair versions cannot import model 28 files. Keep a
+remain importable; older Velair versions cannot import model 29 files. Keep a
 backup from the previous version if you might need to downgrade. See
 [the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 
@@ -1769,7 +1774,7 @@ A range Boost uses `target_temp_low` and `target_temp_high` in place of
 
 ### `velair.cancel_boost`
 
-Cancel an active boost early. This always uses the same return behavior as normal expiration: Velair applies the active explicit schedule target when one exists; otherwise, including a `Keep` block, it restores the saved climate state, including supported device options. Calling it when no boost is active has no effect.
+Cancel an active boost early. This uses the same return behavior as normal expiration: a temperature block using `Keep` combines its current target with the pre-Boost HVAC mode, while explicit blocks retain their normal behavior. Without an applicable schedule block, Velair restores the saved climate state, including supported device options. Calling it when no boost is active has no effect.
 
 ```yaml
 action: velair.cancel_boost

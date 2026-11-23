@@ -61,7 +61,8 @@ an old corrected target over the new intent.
    lower than the target gap the thermostat may need to stop heating or
    cooling.
 7. Optionally choose **Braking: Moderate** or **High** for stronger demand withdrawal. These levels require a Room Assist deadband greater than zero. **Default** preserves the existing behavior.
-8. Adjust Refresh delay if sensor updates feel too slow or too chatty.
+8. Optionally set **Minimum control margin** if small corrections do not make the thermostat respond. Increase Maximum assist delta first if necessary; the margin cannot exceed it. Leave the margin at `0` to preserve the existing behavior.
+9. Adjust Refresh delay if sensor updates feel too slow or too chatty.
 
 Only the selected option is shown. When **Fixed sensor** is already the saved mode, changing its sensor saves immediately. Switching between **Fixed sensor** and **By schedule** changes a draft: **Save** applies the mode and its settings, and **Cancel** restores the saved configuration. Switching options retains the fixed sensor and the saved schedule; it does not activate both at once.
 
@@ -123,9 +124,78 @@ and thermal inertia can still cause overshoot. This setting does not learn
 cycles or withdraw demand before the scheduled target. Validate it with real
 heating and cooling cycles before relying on a level for a particular room.
 
-Portable exports use model **28** to preserve braking and preparation offsets. Keep a backup
+Portable exports use model **29** to preserve braking, preparation offsets and the minimum control margin. Keep a backup
 from the earlier version if you need to downgrade; older Velair versions cannot
-import model 28 exports.
+import model 29 exports.
+
+### Minimum control margin
+
+Some thermostats need a substantial gap between their internal temperature and
+the requested setpoint before they respond. A radiator-mounted sensor can read
+several degrees above the room while the external room sensor still asks for
+heat. **Minimum control margin** requests at least this gap during an applicable
+Room Assist correction. It is optional and defaults to `0`.
+
+These settings have different purposes:
+
+| Setting | Purpose |
+| --- | --- |
+| Room Assist deadband | Determines the external-room switching or neutral band. |
+| Minimum control margin | Strengthens an applicable correction relative to the thermostat's internal reading. |
+| Maximum assist delta | Caps that correction; raising the maximum alone does not request a larger correction. |
+| Braking | Changes demand-withdrawal thresholds and adds a scheduled-target protection. |
+
+The margin supports `0–10 °C` (`0–18 °F`) and cannot exceed Maximum assist delta.
+If the settings conflict, Velair asks you to increase the maximum first or reduce
+the margin. It does not change either setting automatically. The input increments
+follow the equipment's effective target step.
+
+For example, configure a `19.5 °C` heating target, `±0.3 °C` deadband, **Default**
+braking, and both margin and maximum at `10 °C`. With an internal reading of
+`21.5 °C` and a compatible `0.5 °C` target step:
+
+| External room sensor | Room Assist phase | Requested equipment setpoint |
+| --- | --- | --- |
+| At or below `19.2 °C` | Request heat towards `19.8 °C` | `31.5 °C`: internal reading + 10 |
+| Rising through the band | Keep requesting heat | Current internal reading + 10 |
+| Reaches `19.8 °C` | Withdraw heat until `19.2 °C` | `11.5 °C`: internal reading − 10 |
+
+The internal reading can change, so subsequent requests use its current value.
+The room target remains `19.5 °C`; the large equipment setpoints do not widen
+the room's comfort band. Moderate or High braking retains its own stop/resume
+thresholds and keeps an existing stronger withdrawal result.
+
+Fixed cooling works in the opposite direction. For a `24 °C` target,
+`±0.3 °C` deadband, internal reading of `26 °C`, and margin/maximum of `10 °C`,
+Room Assist requests `16 °C` while cooling is needed and requests `36 °C` when
+the room reaches `23.7 °C`, before applying device limits. Cooling resumes at
+`24.3 °C`. With zero deadband and no retained phase, only non-zero corrections
+are strengthened; equality stays neutral.
+
+Automatic scalar modes and native **Heat/Cool** ranges strengthen only active
+heating or cooling requests. Inside the room's neutral band they keep the
+existing maintenance behavior. Lowering a setpoint strongly to stop heating
+could otherwise start cooling on a bidirectional device. For native ranges,
+both boundaries move together and retain their original separation. Fixed-mode
+pairs use their configured reference setpoint; unsupported range configurations
+remain unsupported.
+
+Device steps and physical limits can prevent the requested margin. For example,
+with internal reading `21.7 °C`, margin/maximum `10 °C` and a `0.5 °C` grid,
+there is no grid point exactly `10 °C` away. Velair chooses a valid correction
+within the maximum when possible and reports that the step limits the margin.
+With two setpoints, preserving the range width can further restrict movement.
+The live explanation and **Technical data** identify an active or limited margin.
+
+Scheduled-target protection, braking and temporary preparation offsets can
+produce a final displacement larger than Maximum assist delta. That setting
+limits the Room Assist correction rather than every subsequent protection or
+temporary extra. During preparation, the margin follows the current preparation
+direction before its extra is added.
+
+This feature requests a setpoint gap. It does not confirm physical valve
+opening, compressor operation or an immediate stop. Use the lowest margin that
+works for your equipment and check complete real heating or cooling cycles.
 
 ### Optional sensor schedule (beta)
 
@@ -445,12 +515,14 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Setting `3 °C` does not immediately apply a `3 °C` correction. It only
+With Minimum control margin at `0`, setting `3 °C` does not immediately apply a `3 °C` correction. It only
 allows Room Assist to reach that value when the external room difference
 requires it. This setting caps the proportional correction, not the final
 setpoint after scheduled-target protection. Optional braking strengthens that
 protection with its one-step or two-step limit; it does not change Maximum
-assist delta or apply the full maximum on every update.
+assist delta or apply the full maximum on every update. A non-zero
+[Minimum control margin](#minimum-control-margin) can request a larger correction
+even when the external room difference is small.
 
 ### Why Climate target can differ from the calculation
 

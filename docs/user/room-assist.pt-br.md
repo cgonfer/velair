@@ -8,8 +8,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.3-beta.3 |
-| Última sincronização | 2026-11-22 |
+| Versão de referência | 1.9.3-beta.4 |
+| Última sincronização | 2026-11-23 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -53,9 +53,10 @@ Com **Não configurado**, pares em modo fixo são entregues sem alteração nem 
 3. Em **Assistente de Sensor de Ambiente**, escolha **Sensor fixo** ou **Por horário**, configure a opção escolhida e salve qualquer mudança de modalidade.
 4. Habilite a assistência com sensor ambiente.
 5. Ajuste a banda morta do Room Assist para os limites inferior e superior em aquecimento ou resfriamento fixo ao redor do alvo escalar ou referência de faixa selecionada, ou a margem neutra em modos automáticos escalares e bandas nativas `heat_cool`.
-6. Ajuste o delta máximo de assistência se o padrão for pequeno ou grande demais para o cômodo.
+6. Ajuste o Delta de assistência máxima se o padrão for pequeno demais para o cômodo ou menor que a diferença de temperatura definida de que o termostato precisa para interromper o aquecimento ou a refrigeração.
 7. Opcionalmente, escolha **Frenagem: Moderada** ou **Alta** para retirar a demanda com mais firmeza. Esses níveis exigem uma zona morta do Room Assist maior que zero. **Padrão** mantém o comportamento existente.
-8. Opcionalmente, ajuste a reavaliação periódica de segurança. Use `0` para desabilitá-la.
+8. Opcionalmente, defina **Margem mínima de controle** se correções pequenas não fizerem o termostato responder. Aumente primeiro o Delta de assistência máxima, se necessário; a margem não pode ultrapassá-lo. Deixe a margem em `0` para manter o comportamento atual.
+9. Ajuste o atraso de atualização se as atualizações do sensor parecerem lentas ou frequentes demais.
 
 Apenas a opção selecionada é mostrada. Quando **Sensor fixo** já é a modalidade salva, a alteração do seu sensor é salva imediatamente. Alternar entre **Sensor fixo** e **Por horário** muda um rascunho: **Salvar** aplica a modalidade e suas configurações, e **Cancelar** restaura a configuração salva. O sensor fixo e a programação salva são mantidos ao alternar; os dois não são ativados ao mesmo tempo.
 
@@ -92,7 +93,84 @@ Os alvos físicos mínimo e máximo podem limitar a frenagem disponível. Com do
 
 A frenagem reduz a solicitação de aquecimento ou refrigeração; não confirma que válvula, compressor ou termostato pararam. O controle do equipamento, os tempos mínimos de funcionamento e a inércia térmica ainda podem causar ultrapassagem. Este ajuste não aprende ciclos nem retira demanda antes do alvo programado. Valide-o com ciclos reais antes de confiar em um nível para um cômodo específico.
 
-As exportações portáveis usam o modelo **28** para preservar a frenagem e os deslocamentos de preparação. Mantenha um backup da versão anterior se precisar voltar a ela; versões antigas do Velair não podem importar o modelo 28.
+As exportações portáveis usam o modelo **29** para preservar a frenagem, os deslocamentos de preparação e a margem mínima de controle. Mantenha um backup da versão anterior se precisar voltar a ela; versões antigas do Velair não podem importar o modelo 29.
+
+<a id="minimum-control-margin"></a>
+### Margem mínima de controle
+
+Alguns termostatos precisam de uma diferença considerável entre a temperatura
+interna e a temperatura definida solicitada antes de responder. Um sensor montado
+no radiador pode indicar vários graus acima do cômodo enquanto o sensor ambiente
+externo ainda solicita calor. **Margem mínima de controle** solicita pelo menos
+essa diferença durante uma correção aplicável do Room Assist. É opcional e seu
+valor padrão é `0`.
+
+Esses ajustes têm funções diferentes:
+
+| Ajuste | Função |
+| --- | --- |
+| Zona morta Room Assist | Determina a banda de comutação ou neutra do sensor ambiente externo. |
+| Margem mínima de controle | Reforça uma correção aplicável em relação à leitura interna do termostato. |
+| Delta de assistência máxima | Limita essa correção; aumentar apenas o máximo não solicita uma correção maior. |
+| Frenagem | Altera os limiares de retirada de demanda e acrescenta proteção do alvo programado. |
+
+A margem aceita `0–10 °C` (`0–18 °F`) e não pode ultrapassar o Delta de
+assistência máxima. Se os ajustes entrarem em conflito, o Velair pede que você
+aumente primeiro o máximo ou reduza a margem. Nenhum dos valores é alterado
+automaticamente. Os incrementos do campo seguem o passo efetivo de temperatura
+definida do equipamento.
+
+Por exemplo, configure um alvo de aquecimento de `19.5 °C`, zona morta de
+`±0.3 °C`, frenagem **Padrão** e margem e máximo em `10 °C`. Com leitura
+interna de `21.5 °C` e passo de temperatura definido compatível de `0.5 °C`:
+
+| Sensor ambiente externo | Fase do Room Assist | Temperatura definida solicitada ao equipamento |
+| --- | --- | --- |
+| Em ou abaixo de `19.2 °C` | Solicitar calor em direção a `19.8 °C` | `31.5 °C`: leitura interna + 10 |
+| Subindo pela banda | Continuar solicitando calor | Leitura interna atual + 10 |
+| Atinge `19.8 °C` | Retirar calor até `19.2 °C` | `11.5 °C`: leitura interna − 10 |
+
+A leitura interna pode mudar, então as solicitações seguintes usam seu valor
+atual. O alvo ambiente continua em `19.5 °C`; as temperaturas elevadas ou baixas
+definidas no equipamento não ampliam a banda de conforto do cômodo. A frenagem
+Moderada ou Alta conserva seus próprios limiares de parada e retomada e mantém
+um resultado de retirada que já seja mais forte.
+
+A refrigeração fixa funciona no sentido oposto. Para alvo de `24 °C`, zona
+morta de `±0.3 °C`, leitura interna de `26 °C` e margem/máximo de `10 °C`,
+o Room Assist solicita `16 °C` enquanto é necessário refrigerar e solicita
+`36 °C` quando o cômodo atinge `23.7 °C`, antes de aplicar os limites do
+dispositivo. A refrigeração é retomada em `24.3 °C`. Com zona morta zero e
+sem fase retida, somente correções diferentes de zero são reforçadas; na
+igualdade, o resultado permanece neutro.
+
+Modos automáticos escalares e faixas nativas de **Aquecimento/Refrigeração**
+reforçam apenas solicitações ativas de aquecimento ou refrigeração. Dentro da
+banda neutra do cômodo, mantêm o comportamento de manutenção existente. Reduzir
+muito a temperatura definida para interromper o aquecimento poderia iniciar a
+refrigeração em um dispositivo bidirecional. Nas faixas nativas, ambos os
+limites se movem juntos e conservam a separação original. Pares em modo fixo
+usam sua temperatura de referência configurada; configurações de faixa sem
+suporte continuam sem suporte.
+
+Os passos e limites físicos do dispositivo podem impedir a margem solicitada.
+Por exemplo, com leitura interna de `21.7 °C`, margem/máximo de `10 °C` e
+grade de `0.5 °C`, não existe um ponto da grade exatamente `10 °C` distante.
+O Velair escolhe uma correção válida dentro do máximo quando possível e informa
+que o passo limita a margem. Com duas temperaturas definidas, preservar a largura
+da faixa pode restringir ainda mais o movimento. A explicação ao vivo e os
+**Dados técnicos** identificam uma margem ativa ou limitada.
+
+A proteção do alvo programado, a frenagem e os deslocamentos temporários de
+preparação podem gerar um deslocamento final maior que o Delta de assistência
+máxima. Esse ajuste limita a correção do Room Assist, não cada proteção ou
+extra temporário aplicado depois. Durante a preparação, a margem segue a
+direção de preparação atual antes de acrescentar o extra.
+
+Este recurso solicita uma diferença de temperatura definida. Não confirma
+abertura física da válvula, operação do compressor ou parada imediata. Use a
+menor margem que funcione no seu equipamento e verifique ciclos reais completos
+de aquecimento ou refrigeração.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -292,9 +370,9 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Definir `3 °C` não aplica imediatamente uma correção de `3 °C`. Apenas permite atingir esse valor quando a diferença medida pelo sensor ambiente separado exigir.
+Com a Margem mínima de controle em `0`, definir `3 °C` não aplica imediatamente uma correção de `3 °C`. Apenas permite atingir esse valor quando a diferença medida pelo sensor ambiente separado exigir.
 
-Este ajuste limita a correção proporcional, não o alvo final após a proteção do alvo programado. A frenagem opcional reforça essa proteção com seu limite de um ou dois incrementos; não altera o delta máximo de assistência nem aplica todo o máximo em cada atualização.
+Este ajuste limita a correção proporcional, não o alvo final após a proteção do alvo programado. A frenagem opcional reforça essa proteção com seu limite de um ou dois incrementos; não altera o delta máximo de assistência nem aplica todo o máximo em cada atualização. Uma [Margem mínima de controle](#minimum-control-margin) diferente de zero pode solicitar uma correção maior mesmo quando a diferença de temperatura externa é pequena.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Por que o alvo da climatização pode diferir do cálculo

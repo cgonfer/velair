@@ -30,6 +30,7 @@ Room Assist configuration is stored per managed climate together with the climat
   "room_sensor_assist_deadband": 0.3,
   "room_sensor_assist_braking_level": "default",
   "room_sensor_assist_max_delta": 2.0,
+  "room_sensor_assist_minimum_margin": 0.0,
   "room_sensor_assist_debounce_seconds": 20
 }
 ```
@@ -40,10 +41,11 @@ Key meanings:
 - `room_sensor_assist_enabled`: enables runtime target assistance. Selecting a sensor alone does not make it operational.
 - `room_sensor_assist_deadband`: defines the lower and upper runtime-hysteresis limits for fixed `heat` and `cool` around the scalar target or configured range reference, and the neutral margin for scalar automatic modes and native `heat_cool` ranges. A zero value preserves the legacy signed correction without phase state. It is independent from Adaptive Preconditioning's `minimum_delta_temperature`; bounds are `0..5 °C` or `0..9 °F` in `0.1` degree steps.
 - `room_sensor_assist_braking_level`: `default`, `moderate`, or `high`; omission means `default`. Additional braking requires a positive deadband and a fixed heating or cooling mode with a scalar target or selected range reference. Normal settings updates validate the final merged configuration, so a non-default level with zero deadband is rejected. Inconsistent stored combinations retain their settings but suspend additional braking with an explicit runtime reason.
-- `room_sensor_assist_max_delta`: caps the proportional signed correction from the active room limit, not the final setpoint after scheduled-target protection. It must be large enough to permit any known target gap the device may need to stop heating or cooling; the cap is not applied in full unless the external room error requires it. Optional braking strengthens the scheduled-target guard without redefining this proportional cap.
+- `room_sensor_assist_max_delta`: caps the signed Room Assist correction, including a configured minimum margin, not the final setpoint after scheduled-target protection or preparation offsets. With a zero minimum margin the cap is not applied in full unless the external room error requires it. Optional braking strengthens the scheduled-target guard without redefining this cap.
+- `room_sensor_assist_minimum_margin`: optional minimum requested correction magnitude, default `0`, bounded by `0..10 °C` or `0..18 °F` and by `room_sensor_assist_max_delta`. Settings updates and imports validate the final merged configuration; increasing the margin never raises the maximum automatically. See [Minimum control margin](#minimum-control-margin).
 - `room_sensor_assist_debounce_seconds`: waits this many seconds after relevant room sensor or climate state changes before recalculating assistance. The supported range is `0` to `300` seconds.
 
-All runtime targets, readings, steps, limits, signed corrections, and range widths use the managed climate entity's native Home Assistant temperature unit. Only an external sensor that declares a different unit is converted before calculation. Absolute temperatures use offset-and-scale conversion, while the Room Assist deadband and maximum assist delta use scale-only conversion. The maximum assist delta is normalized with a broad bound so Celsius and Fahrenheit installations can both configure useful limits. The frontend should display values using the managed climate's unit.
+All runtime targets, readings, steps, limits, signed corrections, and range widths use the managed climate entity's native Home Assistant temperature unit. Only an external sensor that declares a different unit is converted before calculation. Absolute temperatures use offset-and-scale conversion, while the Room Assist deadband, minimum control margin and maximum assist delta use scale-only conversion. The maximum assist delta is normalized with a broad bound so Celsius and Fahrenheit installations can both configure useful limits. The frontend should display values using the managed climate's unit.
 
 ## Effective Temperature Source
 
@@ -219,7 +221,9 @@ When assistance refreshes during active Adaptive Preconditioning, an already-app
 
 ## Target Calculation
 
-The calculation below describes **Default** braking. Moderate retains its
+The calculation below describes **Default** braking with a zero minimum control
+margin. A positive margin strengthens applicable corrections as described in
+[Minimum control margin](#minimum-control-margin). Moderate retains its
 switching thresholds and strengthens the non-driving scheduled guard. High
 changes the driving-to-non-driving switch to the central target, as described
 in [Optional braking policy](#optional-braking-policy).
@@ -350,7 +354,7 @@ Velair keeps the runtime state and listeners active while the scheduled block re
 
 Runtime Room Assist state is never authoritative for choosing the active schedule block. After any active Adaptive Preconditioning target is resolved, Velair uses the current schedule event. This prevents a delayed sensor or climate callback from restoring a target calculated for an earlier block.
 
-The applied target is bounded by the climate entity's min/max target temperatures and aligned to the effective published, last-reported, manual, or default target step. For heating, Velair rounds the assisted target down to the nearest supported step; for cooling, it rounds up. The rule follows the active HVAC direction on both sides of the scheduled target. During an inverse correction this can increase the final offset by less than one device step, while keeping the target on the conservative side for that mode.
+The applied target is bounded by the climate entity's min/max target temperatures and aligned to the effective published, last-reported, manual, or default target step. With a zero minimum control margin, for heating Velair rounds the assisted target down to the nearest supported step; for cooling, it rounds up. The rule follows the active HVAC direction on both sides of the scheduled target. During an inverse correction this can increase the final offset by less than one device step, while keeping the target on the conservative side for that mode. A positive minimum margin uses the step/cap selection described below.
 
 When a physical target limit changes an applied result, runtime state adds
 `limited_by` (`minimum` or `maximum`), `limit_temperature`, and either
@@ -368,6 +372,46 @@ If the climate does not publish a finite, positive `target_temp_step`, Room Assi
 uses its persisted last-reported step, followed by the manual per-zone fallback.
 Missing fallback data resolves to `1` in the active temperature unit; Settings
 exposes the effective fallback so the user can match the physical device.
+
+### Minimum control margin
+
+Apply the margin to the existing proportional correction before scheduled guards,
+physical limits and any preparation offset. A zero margin takes the unchanged
+legacy path, including its rounding behavior.
+
+For a positive margin M and maximum D, resolve a signed request as follows:
+
+- In fixed scalar hysteresis, use positive sign for `towards_upper` and negative
+  sign for `towards_lower`; request at least M and at most D in that direction.
+- Without a phase, strengthen only a non-zero correction. Scalar automatic
+  holding remains neutral even if the retained state has a heat/cool direction.
+- Native `heat_cool` ranges strengthen only the currently active boundary.
+  Holding keeps its existing stable band. Configured fixed-mode references
+  reuse scalar behavior and shift the complete pair without changing its width.
+- During preparation, the preparation objective and direction take priority
+  over a retained phase. Add the existing temporary offset after this base result.
+
+For an active margin, choose a point on the effective device grid that reaches
+the requested correction without exceeding D when one exists. If the grid and
+cap cannot both satisfy the request, use the nearest valid correction within
+the cap when possible. Physical limits and complete-pair width can further
+reduce the result. Preserve stronger scheduled guards and braking; these and
+preparation offsets can exceed D in the final delivered setpoint.
+
+The additive `minimum_margin` metadata contains `configured` (a runtime-unit
+delta), `active` (applicable to this calculation, not proof of physical demand),
+and `limited_by` (`step`, `minimum`, `maximum`, `range_width`, or `null`). Carry
+this detached metadata through committed state, calculation evidence and update
+events. Preserve existing meanings of `assist_delta`, `applied_offset`, and
+`range_shift`. Do not infer Supply demand from the sign of the final offset.
+
+Changing only the margin recalculates after a successful save while retaining
+a valid hysteresis phase. Failed saves or failed/superseded deliveries do not
+commit a new demand state. Presentation reads cannot advance the phase.
+
+Storage and export convert the margin as a delta, never an absolute temperature.
+Portable model 29 includes it; older files default to zero. Preserve it through
+unrelated Adaptive Preconditioning resets and group snapshot round trips.
 
 ### Optional braking policy
 

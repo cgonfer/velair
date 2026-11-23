@@ -329,7 +329,8 @@ describe("supported translations", () => {
 
   it("explains maximum Room Assist correction for both heating and cooling", () => {
     expect(en.roomSensorAssistMaxDeltaHelp).toContain("stop heating or cooling");
-    expect(en.roomSensorAssistMaxDeltaHelp).toContain("only used when needed");
+    expect(en.roomSensorAssistMaxDeltaHelp).toContain("does not force a larger correction");
+    expect(en.roomSensorAssistMaxDeltaHelp).toContain("including Minimum control margin");
     expect(en.roomSensorAssistMaxDeltaHelp).not.toContain("valve");
     expect(es.roomSensorAssistMaxDeltaHelp).toContain("dejar de calentar o enfriar");
   });

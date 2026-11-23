@@ -312,7 +312,8 @@ its absence when using an older backend.
         "room_temperature_entity_id": "sensor.living_room_temperature",
         "room_sensor_assist_enabled": false,
         "room_sensor_assist_deadband": 0.3,
-        "room_sensor_assist_max_delta": 2.0
+        "room_sensor_assist_max_delta": 2.0,
+        "room_sensor_assist_minimum_margin": 0.0
       },
       "comfort": {
         "enabled": false,
@@ -449,10 +450,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 28,
+    "portable_model": 29,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.3-beta.3"
+    "integration": "1.9.3-beta.4"
   }
 }
 ```
@@ -1154,7 +1155,8 @@ await hass.connection.sendMessagePromise({
     room_temperature_entity_id: "sensor.living_room_temperature",
     room_sensor_assist_enabled: true,
     room_sensor_assist_deadband: 0.3,
-    room_sensor_assist_max_delta: 2.0
+    room_sensor_assist_max_delta: 2.0,
+    room_sensor_assist_minimum_margin: 0.0
   }
 });
 ```
@@ -1280,7 +1282,21 @@ Outdoor temperature context is optional and local. In the Preconditioning tab, `
 
 Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. For fixed `heat` and `cool` with a scalar target or configured range reference, a non-zero `room_sensor_assist_deadband` defines a runtime hysteresis cycle between the scalar target or selected reference minus and plus that value; `room_sensor_assist_max_delta` caps correction relative to the active edge. A zero deadband preserves legacy signed correction. Scalar automatic modes retain their neutral deadband, while native `heat_cool` ranges retain their stable holding margin. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native `heat_cool` holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
 
+The optional `room_sensor_assist_minimum_margin` defaults to zero and strengthens
+applicable corrections without changing those switching thresholds. It accepts
+0..10 Celsius / 0..18 Fahrenheit deltas and cannot exceed
+`room_sensor_assist_max_delta` in the final merged settings. Invalid updates or
+imports are rejected rather than raising the maximum automatically. Fixed phases
+strengthen activation and withdrawal; automatic holding stays neutral. See
+[Minimum control margin](room-assist.md#minimum-control-margin).
+
 `room_sensor_assist` in the schedule response is runtime-only status. It is derived from Home Assistant state and scheduler state when the response is built; it is not persisted as history.
+
+Its additive `minimum_margin` descriptor exposes `configured`, `active`, and
+nullable `limited_by` (`step`, `minimum`, `maximum`, or `range_width`). Activity
+means the margin applies to the accepted calculation, not that equipment has
+physically opened or started. Step/cap incompatibility can prevent an exact
+request; existing requested/applied targets expose the delivered result.
 
 Its optional `control_intent` object exposes validated committed demand for
 read-only presentation: `active`, `valid`, nullable `demand` and `direction`,
@@ -1776,7 +1792,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 28,
+  "model_version": 29,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1785,8 +1801,11 @@ Returns a versioned portable JSON payload:
 
 ## Import Data
 
-Model 28 preserves optional Room Assist sensor schedules, the selected
-Room Assist braking level and separate preparation offsets in zone configuration.
+Model 29 preserves optional Room Assist sensor schedules, the selected
+Room Assist braking level, minimum control margin and separate preparation offsets
+in zone configuration. The margin is a canonical Celsius delta, defaults to zero
+for older files and cannot exceed Maximum assist delta. Updates and imports
+validate the final configuration without changing another tuning value.
 Each exported learning direction includes `setpoint_offset`, a positive magnitude
 derived from confirmed configuration. Older models or an absent tag mean zero.
 Import converts this delta before matching it with the resulting zone configuration
@@ -1796,7 +1815,7 @@ Zones-only imports clear retained learning only for changed offset directions;
 combined imports retain compatible supplied history. Internal predictor/sample
 schemas and selection rules are unchanged.
 Existing supported backups remain importable; older Velair versions reject new
-model 28 exports, including exports created without an enabled sensor schedule
+model 29 exports, including exports created without an enabled sensor schedule
 or non-default braking level.
 
 ```ts

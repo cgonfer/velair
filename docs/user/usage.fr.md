@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.3-beta.3 |
-| Dernière synchronisation | 2026-11-22 |
+| Version de référence | 1.9.3-beta.4 |
+| Dernière synchronisation | 2026-11-23 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -1171,9 +1171,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v28 conservent les valeurs brutes et
+Les exports actuels du format portable v29 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v28 ; utilisez une version prenant en charge v28 pour les
+les exports v29 ; utilisez une version prenant en charge v29 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1517,18 +1517,17 @@ programmations tout en permettant des automatisations avancées comme :
 - activer un forçage depuis un assistant vocal ;
 - activer un forçage avec un mode HVAC préféré.
 
-Lorsqu’un forçage expire, Velair résout la zone concernée dans cet ordre :
+Lorsqu’un forçage expire ou est annulé, Velair résout la zone concernée dans cet ordre :
 
 1. Si un bloc actif définit explicitement un mode HVAC, Velair applique cette
    consigne programmée.
 2. Si un bloc actif éteint l’appareil, Velair l’éteint.
 3. Si aucun bloc n’est actif, Velair rétablit l’état capturé avant le forçage.
-4. Si le bloc actif utilise `Conserver`, Velair rétablit aussi l’état capturé
-   avant le forçage, car `Conserver` ne définit pas de nouveau mode HVAC à
-   appliquer après la dérogation temporaire.
+4. Si le bloc de température actif utilise `Keep`, Velair applique sa température actuelle ou sa plage complète avec le mode HVAC enregistré avant le forçage. Les options enregistrées de l’appareil sont rétablies, sauf si le bloc actuel choisit une autre valeur. Si le mode enregistré était Arrêt, Keep utilise, comme d’habitude, le premier mode compatible autre qu’Arrêt. Les modes enregistrés incompatibles ou absents sont signalés comme erreurs de livraison plutôt que devinés.
 
-Un forçage ne doit donc pas amener Velair à inventer une nouvelle consigne de
-chauffage ou refroidissement lorsque la programmation ne la définit pas explicitement.
+Par exemple, un appareil en Refroidissement à 24 °C peut temporairement effectuer un forçage en Chauffage à 22 °C. Si le bloc actif utilise Conserver le mode actuel à 20 °C lorsque le forçage se termine, Velair revient en Refroidissement à 20 °C, sans envoyer d’abord les anciens 24 °C. Les blocs de température seule, de mode explicite, de mode seul, d’options seules et d’arrêt conservent leur fonctionnement habituel. Cette règle propre au retour ne modifie pas Keep lors de l’application ordinaire du programme.
+
+Velair enregistre un retour en attente avant de retirer le forçage. Si Home Assistant redémarre avant confirmation de la livraison, ce retour reprend avec le bloc alors en vigueur, même si **Appliquer le programme actif au démarrage** est désactivé. Cela termine un retour déjà engagé ; le forçage n’est pas réactivé et le programme de toutes les zones n’est pas appliqué. Une indisponibilité temporaire de l’appareil utilise la récupération de livraison existante. Une nouvelle commande manuelle, un forçage, une pause, un changement de Profil ou de Mode Velair, ou la désactivation ou réaffectation de la zone remplace l’ancien retour.
 
 <a id="startup-behavior"></a>
 ## Comportement au démarrage
@@ -1541,6 +1540,8 @@ le démarrage**. Velair applique alors le bloc actuellement actif aux appareils
 gérés après le démarrage de Home Assistant si le planificateur est automatique.
 Un bloc commencé un jour précédent reste actif jusqu’au bloc hebdomadaire
 suivant. Les forçages actifs sont respectés.
+
+Un retour de forçage inachevé est récupéré indépendamment de ce réglage, comme décrit sous [Forçage](#boost).
 
 <a id="automation-blueprints"></a>
 ## Blueprints d’automatisation
@@ -1587,7 +1588,7 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Les exports actuels du modèle 28 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist et le niveau de freinage sélectionné, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 28. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+Les exports actuels du modèle 29 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist, le niveau de freinage sélectionné et la marge minimale de commande, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 29. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin
@@ -1819,11 +1820,7 @@ de `temperature`, selon les mêmes règles que `velair.set_temperature`.
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Annule un forçage actif avant son expiration. Le retour est toujours le même
-qu’à l’expiration normale : Velair applique la consigne explicite active
-lorsqu’elle existe ; sinon, y compris avec un bloc `Conserver`, il rétablit
-l’état climatique enregistré, y compris les options prises en charge par
-l’appareil. L’appel n’a aucun effet si aucun forçage n’est actif.
+Annule un forçage actif avant son expiration. Le retour suit le même fonctionnement qu’à l’expiration normale : un bloc de température utilisant `Keep` combine sa cible actuelle avec le mode HVAC antérieur au forçage, tandis que les blocs explicites conservent leur fonctionnement habituel. Sans bloc programmé applicable, Velair rétablit l’état enregistré de l’appareil, y compris les options prises en charge. L’appel n’a aucun effet si aucun forçage n’est actif.
 
 ```yaml
 action: velair.cancel_boost

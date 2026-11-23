@@ -23,6 +23,7 @@ const TOPIC_COPY: Record<DocumentationTopic, { title: TranslationKey; summary: T
   preconditioningMaster: { title: "preconditioningMaster", summary: "preconditioningMasterHelp" },
   plannedReturn: { title: "plannedReturn", summary: "plannedReturnPreparationHelp" },
   roomAssist: { title: "roomSensorIntroTitle", summary: "roomSensorIntroDetail" },
+  roomAssistMinimumMargin: { title: "roomSensorAssistMinimumMargin", summary: "roomSensorAssistMinimumMarginHelp" },
   comfort: { title: "comfortIntroTitle", summary: "comfortIntroDetail" },
   diagnostics: { title: "diagnostics", summary: "diagnosticsDescription" },
   troubleshooting: { title: "diagnostics", summary: "diagnosticsDescription" },

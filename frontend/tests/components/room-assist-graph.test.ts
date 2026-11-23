@@ -59,6 +59,21 @@ describe("Room Assist display geometry", () => {
 });
 describe("Room Assist graph", () => {
   const dataRows = (element: VelairRoomAssistGraph, group: string) => [...element.shadowRoot!.querySelectorAll(`[data-group="${group}"] dt`)].map(label => ({ label: label.textContent!.trim(), value: label.nextElementSibling!.textContent!.trim() }));
+  it("explains a limited minimum margin from confirmed backend evidence", async () => {
+    const element = await graph(runtime({ minimum_margin: { configured: 10, active: true, limited_by: "step" } }));
+    expect(dataRows(element, "control")).toContainEqual({ label: "Minimum control margin", value: "10 °C" });
+    expect(dataRows(element, "control")).toContainEqual({ label: "Control margin state", value: "Limited by equipment step" });
+    expect(element.shadowRoot!.querySelector(".human-explanation")!.textContent).toContain("does not confirm physical equipment activity");
+    expect(element.shadowRoot!.querySelector(".human-explanation")!.textContent).toContain("Equipment steps or limits constrain the requested control margin.");
+  });
+  it("does not present a configured margin as applied during neutral holding or unconfirmed delivery", async () => {
+    const element = await graph(runtime({ status: "holding", minimum_margin: { configured: 10, active: false, limited_by: null } }));
+    expect(dataRows(element, "control")).toContainEqual({ label: "Control margin state", value: "Not applied during neutral holding or while Room Assist is inactive." });
+    element.status = runtime({ minimum_margin: { configured: 10, active: true, limited_by: null }, control_intent: { valid: false, active: true, demand: null, direction: null } });
+    await element.updateComplete;
+    expect(dataRows(element, "control")).toContainEqual({ label: "Control margin state", value: "Unavailable" });
+    expect(element.shadowRoot!.querySelector(".human-explanation")!.textContent).not.toContain("minimum control margin strengthens");
+  });
   it("groups equivalent setpoint stages once without repeating graph readings", async () => {
     const element = await graph(runtime({ calculated_temperature: 24, requested_temperature: 24, applied_temperature: 24 }));
     expect(dataRows(element, "command")).toEqual([{ label: "Calculated · Requested · Applied", value: "24 °C" }, { label: "Equipment step", value: "0.5 °C" }]);
