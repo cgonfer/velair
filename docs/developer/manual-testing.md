@@ -212,7 +212,14 @@ Home Assistant installation before treating physical-device recovery as verified
    or cooling at T + H. Include equality, crossing the center and repeated
    identical readings. Before withdrawal, assistance must remain unchanged.
 2. Check the non-driving equipment target: Moderate uses a heating ceiling
-   T − S or cooling floor T + S; High uses two steps. Existing stronger inverse
+   T − S or cooling floor T + S; High uses two steps by default. In Settings,
+   configure three High steps for one zone and retain two for another. Verify
+   the equivalent difference (for example, 1.5 °C for three 0.5 °C steps or
+   3 °F for three 1 °F steps), and confirm the Room Assist selector and status
+   reflect the saved value without changing switching thresholds. Count-only
+   saves must retain a still-valid hysteresis phase and recalculate its guard;
+   unrelated Adaptive Preconditioning resets must preserve the saved count.
+   Existing stronger inverse
    corrections must remain unchanged, and repeated updates must not accumulate
    more braking. Test physical min/max limits and fixed-mode ranges with a
    selected reference; preserve pair width and show requested/applied limits.
@@ -220,8 +227,11 @@ Home Assistant installation before treating physical-device recovery as verified
    Default before saving band zero. Fail a settings write and confirm the saved
    level and phase remain authoritative. Level changes reset phase; H-only
    changes reset Moderate/High while Default retains its established phase
-   behavior. Reload and round-trip portable model v29, including missing-level
-   older data that defaults to Default and opposite-unit imports.
+   behavior. Reject non-integer High step counts, booleans and values outside
+   2–10; a failed save must preserve the committed setting and calculation.
+   Reload and round-trip portable model v30, including missing-level older data
+   that defaults to Default, missing High counts that default to two, and
+   opposite-unit imports that retain the count without temperature conversion.
 4. Compare the panel, narrow Room Assist card, shared graph and Supply live
    demand. Nominal band limits remain centered on T; High's effective stop and
    both levels' resume temperatures must match the committed backend phase.

@@ -730,8 +730,8 @@ unique id and expected revision under a lock, converts all thermal scopes, and
 persists before replacing runtime data. An exact retry is a no-op and a failed
 write leaves the original runtime untouched.
 
-Model 29 includes optional Room Assist reference schedules, braking levels,
-minimum control margin and separate heating/cooling preparation offsets in zone
+Model 30 includes optional Room Assist reference schedules, braking levels,
+per-zone High braking step counts, minimum control margin and separate heating/cooling preparation offsets in zone
 configuration. The margin uses canonical delta conversion and defaults to zero
 for earlier payloads. Exported
 learning directions carry a `setpoint_offset` compatibility tag from confirmed
@@ -741,14 +741,14 @@ untagged learning belongs to offset zero. Changing a configured offset atomicall
 clears only that direction's retained history; combined imports install compatible
 supplied learning after clearing incompatible retained history.
 This does not change the internal storage version. Earlier supported portable
-models remain importable; older Velair versions cannot import model 29 exports.
+models remain importable; older Velair versions cannot import model 30 exports.
 
 The current export format is:
 
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 29,
+  "model_version": 30,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {

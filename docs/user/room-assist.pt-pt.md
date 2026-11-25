@@ -8,8 +8,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.3-beta.4 |
-| Última sincronização | 2026-11-23 |
+| Versão de referência | 1.9.3-beta.5 |
+| Última sincronização | 2026-11-25 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -75,13 +75,20 @@ A travagem altera o alvo enviado ao equipamento, mantendo a temperatura programa
 | Moderada | A T + H | A T − H | A T − H | A T + H |
 | Elevada | A T | A T − H | A T | A T + H |
 
-Durante a retirada, **Moderada** limita o alvo de aquecimento a um máximo de **T − S**, ou o de arrefecimento a um mínimo de **T + S**. **Elevada** utiliza **dois incrementos**. Se o cálculo existente já retira mais procura, o Velair mantém esse resultado mais forte. São limites fixos enquanto a travagem está ativa: as atualizações do sensor não continuam a somar ou subtrair outro incremento.
+Durante a retirada, **Moderada** limita o alvo de aquecimento a um máximo de **T − S**, ou o de arrefecimento a um mínimo de **T + S**. **Elevada** utiliza **dois incrementos** por predefinição. Se o cálculo existente já retira mais procura, o Velair mantém esse resultado mais forte. São limites fixos enquanto a travagem está ativa: as atualizações do sensor não continuam a somar ou subtrair outro incremento.
+
+Para alterar a intensidade da travagem Elevada numa zona, abra **Definições → Dispositivos de climatização e grupos** e ajuste **Passos da travagem Elevada** para esse dispositivo ou grupo. A definição aceita números inteiros de `2` a `10` e apresenta a diferença de temperatura equivalente utilizando o passo efetivo da temperatura definida do equipamento e a unidade atual. É guardada de forma independente para cada zona e aplica-se apenas quando **Elevada** está selecionada no Room Assist. **Predefinida** e **Moderada** não utilizam esta definição.
+
+Por exemplo, `3` passos de `0.5 °C` cada equivalem a uma diferença de `1.5 °C`. Três passos de `1 °F` cada equivalem a `3 °F`. O número de passos não é uma temperatura e não muda na conversão entre Celsius e Fahrenheit; a diferença equivalente acompanha o passo efetivo do equipamento. O Room Assist mantém o seletor existente e apresenta o número configurado e a diferença equivalente.
 
 Por exemplo, com alvo de aquecimento de `20.5 °C`, zona morta de `0.5 °C` e incremento do equipamento de `0.5 °C`:
 
 - **Moderada** retira a procura a `21 °C`, com alvo do equipamento não superior a `20 °C`.
-- **Elevada** retira a procura a `20.5 °C`, com alvo não superior a `19.5 °C`.
+- **Elevada**, com os dois passos predefinidos, retira a procura a `20.5 °C`, com alvo não superior a `19.5 °C`.
+- Com **Passos da travagem Elevada** em `3`, Elevada continua a retirar a procura a `20.5 °C`, mas o alvo do equipamento não ultrapassa `19 °C`.
 - Ambas voltam a pedir calor quando o sensor externo atinge `20 °C`.
+
+Alterar o número de passos de Elevada muda o limite da temperatura definida, sem alterar a temperatura de retirada ou reativação. No arrefecimento, o limite correspondente fica acima do alvo programado, em vez de abaixo dele. O ajuste é fixo e não aumenta progressivamente enquanto a temperatura da divisão permanece fora do intervalo.
 
 Antes da retirada, o cálculo de assistência existente mantém-se inalterado. A travagem permanece ativa até atingir o limite de reativação, mesmo quando a divisão cruza o alvo central. Se a assistência começa ou recomeça com a divisão já dentro do intervalo, mantém a inicialização prudente existente sem iniciar deliberadamente um ciclo de climatização.
 
@@ -93,7 +100,7 @@ Os alvos físicos mínimo e máximo podem limitar a travagem disponível. Com do
 
 A travagem reduz o pedido de aquecimento ou arrefecimento; não confirma que a válvula, o compressor ou o termóstato pararam. O controlo do equipamento, os tempos mínimos de funcionamento e a inércia térmica podem continuar a causar ultrapassagens. Esta definição não aprende ciclos nem retira a procura antes do alvo programado. Valide-a com ciclos reais antes de confiar num nível para uma divisão específica.
 
-As exportações portáveis utilizam o modelo **29** para preservar a travagem, os deslocamentos de preparação e a margem mínima de controlo. Mantenha uma cópia de segurança da versão anterior se precisar de regressar a ela; versões antigas do Velair não podem importar o modelo 29.
+As exportações portáveis utilizam o modelo **30** para preservar o número de passos da travagem Elevada, o nível de travagem, os deslocamentos de preparação e a margem mínima de controlo. Importações antigas suportadas sem um número de passos de Elevada utilizam `2`. Mantenha uma cópia de segurança da versão anterior se precisar de regressar a ela; versões antigas do Velair não podem importar o modelo 30.
 
 <a id="minimum-control-margin"></a>
 ### Margem mínima de controlo

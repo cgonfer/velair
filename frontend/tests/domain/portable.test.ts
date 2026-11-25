@@ -156,7 +156,7 @@ describe("portable preconditioning learning", () => {
     };
     const roundTrip = JSON.parse(JSON.stringify(current)) as VelairPortablePayload;
 
-    expect(PORTABLE_MODEL_VERSION).toBe(29);
+    expect(PORTABLE_MODEL_VERSION).toBe(30);
     expect(validatePortablePayload(roundTrip)).toEqual({ ok: true, sections: ["zones"] });
     expect(roundTrip.sections.zones).toEqual(current.sections.zones);
     expect(validatePortablePayload({ ...roundTrip, model_version: 13 })).toEqual({ ok: true, sections: ["zones"] });

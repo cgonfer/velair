@@ -181,7 +181,7 @@ class MarginPortabilityTest(unittest.TestCase):
         config = runtime["storage"].data["zones"]["climate.salon"]["preconditioning"]
         config.update(room_sensor_assist_minimum_margin=10, room_sensor_assist_max_delta=10)
         payload = api_module._build_export_payload(runtime, ["zones"])
-        self.assertEqual(payload["model_version"], 29)
+        self.assertEqual(payload["model_version"], 30)
         imported = api_module._build_import_data(fixture._runtime(api_module.FAHRENHEIT), payload, ["zones"])
         self.assertEqual(imported["zones"]["climate.salon"]["preconditioning"]["room_sensor_assist_minimum_margin"], 18)
         old = deepcopy(payload)

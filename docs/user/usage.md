@@ -1245,9 +1245,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v29 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v29 exports; use a version that supports
-v29 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v30 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v30 exports; use a version that supports
+v30 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -1561,11 +1561,11 @@ The file can contain:
 - climate profile definitions.
 - mode definitions.
 
-Current model 29 exports preserve both template link types, preset references,
+Current model 30 exports preserve both template link types, preset references,
 Preconditioning master relationships, target-format and reference policies,
 room-group ownership and shared configuration. Zone settings also retain optional
-Room Assist sensor schedules, the selected braking level and the minimum control
-margin, independently of
+Room Assist sensor schedules, the selected braking level, per-zone High braking
+step count and the minimum control margin, independently of
 thermal schedules and Profiles.
 Accepted master execution anchors
 remain local and are not exported. Exporting schedules or Profiles includes
@@ -1574,7 +1574,7 @@ data is involved, required room groups, schedules and Profiles are also included
 even when starting from a learning export. Imports validate the combined configuration, including existing
 consumers of replaced shared resources. Presets merge by stable key: matching keys
 are replaced, while local presets absent from the file remain. Existing backups
-remain importable; older Velair versions cannot import model 29 files. Keep a
+remain importable; older Velair versions cannot import model 30 files. Keep a
 backup from the previous version if you might need to downgrade. See
 [the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 

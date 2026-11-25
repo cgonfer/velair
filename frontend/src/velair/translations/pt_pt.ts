@@ -1,4 +1,12 @@
 export const pt_pt = {
+  "highBrakingSteps": "Passos da travagem Elevada",
+  "highBrakingStepsUnit": "passos",
+  "highBrakingStepsHelp": "Número de passos da temperatura definida do equipamento utilizados pela travagem Elevada nesta zona (2–10; predefinição 2). Utilizado apenas quando Elevada está selecionada no Room Assist. No aquecimento, reduz a temperatura definida; no arrefecimento, aumenta-a. Moderada continua a utilizar um passo. Os limites físicos podem reduzir o efeito e são mantidas as correções existentes mais fortes. A travagem é fixa, sem ajuste progressivo.",
+  "highBrakingStepsEquivalent": "Equivale a {value}. Aplica-se apenas à travagem Elevada.",
+  "highBrakingStepsUnknown": "A temperatura equivalente será apresentada quando o passo do equipamento estiver disponível. Aplica-se apenas à travagem Elevada.",
+  "roomSensorAssistHighBrakingDepth": "Elevada utiliza {steps} passos ({value}), configurados para esta zona em Definições.",
+  "roomSensorAssistHighBrakingSteps": "Elevada utiliza {steps} passos, configurados para esta zona em Definições.",
+  "roomSensorAssistBrakingConfigurableHelp": "Predefinida mantém a regulação existente. Moderada trava no limite exterior do Room Assist utilizando um passo da temperatura definida do equipamento. Elevada trava no alvo programado utilizando o número de passos configurado para esta zona em Definições (dois por predefinição). Ambas retomam a procura no limite oposto existente. A travagem é fixa, não cumulativa, e preserva correções mais fortes. Aplica-se a Aquecimento ou Arrefecimento fixos, incluindo intervalos com uma referência selecionada. O controlo do equipamento e a inércia térmica ainda podem causar ultrapassagens.",
   "sensorIdsReview": "Rever IDs de entidade dos sensores",
   "sensorIdsDescription": "Identifique mais facilmente os IDs dos sensores pelo equipamento de climatização. Reveja as propostas antes de aplicar alterações.",
   "sensorIdsWarning": "Selecione apenas os IDs de entidade dos sensores que pretende alterar. As referências em automatizações, painéis e modelos podem precisar de atualização posteriormente; a atualização automática não é garantida.",

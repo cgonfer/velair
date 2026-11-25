@@ -872,7 +872,7 @@ class RoomSensorSchedulePortabilityTest(unittest.TestCase):
         config = schedule(period("22:00", "02:00", days=["sunday"]), default="sensor.bedroom")
         runtime["storage"].data["zones"]["climate.salon"]["preconditioning"]["room_sensor_schedule"] = config
         payload = api._build_export_payload(runtime, ["zones"])
-        self.assertEqual(payload["model_version"], 29)
+        self.assertEqual(payload["model_version"], 30)
         imported = api._build_import_data(runtime, payload, ["zones"])
         self.assertEqual(imported["zones"]["climate.salon"]["preconditioning"]["room_sensor_schedule"], config)
         before = deepcopy(runtime["storage"].data)

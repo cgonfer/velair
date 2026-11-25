@@ -255,7 +255,7 @@ class BrakingPortabilityTest(unittest.TestCase):
         config = runtime["storage"].data["zones"]["climate.salon"]["preconditioning"]
         config.update(room_sensor_assist_braking_level="high", room_sensor_assist_deadband=.5)
         payload = api_module._build_export_payload(runtime, ["zones"])
-        self.assertEqual(payload["model_version"], 29)
+        self.assertEqual(payload["model_version"], 30)
         imported = api_module._build_import_data(fixture._runtime(api_module.FAHRENHEIT), payload, ["zones"])
         restored = imported["zones"]["climate.salon"]["preconditioning"]
         self.assertEqual(restored["room_sensor_assist_braking_level"], "high")

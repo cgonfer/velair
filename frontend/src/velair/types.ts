@@ -389,6 +389,7 @@ export type PreconditioningSettings = {
   room_sensor_assist_enabled: boolean;
   room_sensor_assist_deadband: number;
   room_sensor_assist_braking_level?: RoomAssistBrakingLevel;
+  room_sensor_assist_high_braking_steps?: number;
   room_sensor_assist_max_delta: number;
   room_sensor_assist_minimum_margin?: number;
   room_sensor_assist_debounce_seconds: number;
@@ -689,6 +690,9 @@ export type RoomSensorAssistStatus = {
   };
   preconditioning_offset?: PreconditioningOffsetStatus;
   braking?: {
+    high_steps?: number;
+    steps?: number;
+    temperature_delta?: number | null;
     configured_level: RoomAssistBrakingLevel;
     effective_level: RoomAssistBrakingLevel;
     active: boolean;

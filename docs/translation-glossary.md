@@ -15,6 +15,14 @@ use the maintained panel translations; the Spanish and French labels are:
 | Moderate | Moderado | Modéré |
 | High | Alto | Élevé |
 
+**High braking steps** is the per-zone Settings count used by High braking;
+it is dimensionless. The temperature equivalent follows the equipment's step
+in the active Celsius or Fahrenheit unit. Match these panel labels:
+
+| English | Spanish | French |
+| --- | --- | --- |
+| High braking steps | Pasos de frenado Alto | Pas de freinage Élevé |
+
 The Room Assist **Minimum control margin** sets a minimum requested gap from
 the equipment's internal reading. It does not widen the room's deadband or
 change braking thresholds. Match the maintained panel label in translated guides:

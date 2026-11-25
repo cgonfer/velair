@@ -1,5 +1,11 @@
 import type { RoomSensorAssistStatus } from "../types";
 
+/** A delta in the effective equipment unit: never apply an absolute conversion. */
+export function brakingStepEquivalent(steps: number, step: number | undefined, unit: string): string | undefined {
+  if (step === undefined || !Number.isFinite(step) || step <= 0) return undefined;
+  return `${Number((steps * step).toFixed(6))} ${unit}`;
+}
+
 export type RoomAssistTemperatureRange = {
   low: number;
   high: number;

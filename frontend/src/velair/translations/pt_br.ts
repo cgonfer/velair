@@ -1,4 +1,12 @@
 export const pt_br = {
+  "highBrakingSteps": "Passos da frenagem Alta",
+  "highBrakingStepsUnit": "passos",
+  "highBrakingStepsHelp": "Número de passos da temperatura definida do equipamento usados pela frenagem Alta nesta zona (2–10; padrão 2). Usado somente quando Alta está selecionada no Room Assist. No aquecimento, reduz a temperatura definida; na refrigeração, aumenta. Moderada continua usando um passo. Os limites físicos podem reduzir o efeito, e correções existentes mais fortes são mantidas. A frenagem é fixa, sem ajuste progressivo.",
+  "highBrakingStepsEquivalent": "Equivale a {value}. Aplica-se somente à frenagem Alta.",
+  "highBrakingStepsUnknown": "A temperatura equivalente aparecerá quando o passo do equipamento estiver disponível. Aplica-se somente à frenagem Alta.",
+  "roomSensorAssistHighBrakingDepth": "Alta usa {steps} passos ({value}), configurados para esta zona em Configurações.",
+  "roomSensorAssistHighBrakingSteps": "Alta usa {steps} passos, configurados para esta zona em Configurações.",
+  "roomSensorAssistBrakingConfigurableHelp": "Padrão mantém a regulação existente. Moderada freia no limite externo do Room Assist usando um passo da temperatura definida do equipamento. Alta freia no alvo programado usando o número de passos configurado para esta zona em Configurações (dois por padrão). Ambas retomam a demanda no limite oposto existente. A frenagem é fixa, não cumulativa, e preserva correções mais fortes. Aplica-se a Aquecimento ou Refrigeração fixos, incluindo faixas com uma referência selecionada. O controle do equipamento e a inércia térmica ainda podem causar ultrapassagens.",
   "sensorIdsReview": "Revisar IDs de entidade dos sensores",
   "sensorIdsDescription": "Identifique mais facilmente os IDs dos sensores pelo dispositivo de climatização. Revise as propostas antes de aplicar alterações.",
   "sensorIdsWarning": "Selecione apenas os IDs de entidade dos sensores que deseja alterar. As referências em automações, painéis e modelos podem precisar de atualização depois; a atualização automática não é garantida.",

@@ -9,8 +9,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.3-beta.4 |
-| Dernière synchronisation | 2026-11-23 |
+| Version de référence | 1.9.3-beta.5 |
+| Dernière synchronisation | 2026-11-25 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -76,13 +76,20 @@ Le freinage modifie la consigne envoyée à l’équipement tout en conservant l
 | Modéré | À T + H | À T − H | À T − H | À T + H |
 | Élevé | À T | À T − H | À T | À T + H |
 
-Pendant le retrait, **Modéré** limite la consigne de chauffage à **T − S** au maximum ou celle de refroidissement à **T + S** au minimum. **Élevé** utilise **deux pas**. Si le calcul existant retire déjà davantage de demande, Velair conserve ce résultat plus fort. Ces limites restent fixes pendant le freinage : les mises à jour du capteur n’ajoutent ni ne retranchent un pas supplémentaire à chaque fois.
+Pendant le retrait, **Modéré** limite la consigne de chauffage à **T − S** au maximum ou celle de refroidissement à **T + S** au minimum. **Élevé** utilise **deux pas** par défaut. Si le calcul existant retire déjà davantage de demande, Velair conserve ce résultat plus fort. Ces limites restent fixes pendant le freinage : les mises à jour du capteur n’ajoutent ni ne retranchent un pas supplémentaire à chaque fois.
+
+Pour modifier l’intensité du freinage Élevé dans une zone, ouvrez **Réglages → Équipements et groupes** et définissez **Pas de freinage Élevé** pour cet équipement ou groupe. Ce réglage accepte des nombres entiers de `2` à `10` et affiche l’écart de température équivalent selon le pas effectif de consigne de l’appareil et son unité actuelle. Il est enregistré indépendamment pour chaque zone et s’applique uniquement lorsque **Élevé** est sélectionné dans Room Assist. **Par défaut** et **Modéré** n’utilisent pas ce réglage.
+
+Par exemple, `3` pas de `0.5 °C` représentent un écart de `1.5 °C`. Trois pas de `1 °F` représentent un écart de `3 °F`. Le nombre de pas n’est pas une température et ne change pas lors d’une conversion Celsius/Fahrenheit ; l’écart équivalent suit le pas effectif de l’appareil. Room Assist conserve son sélecteur et affiche le nombre de pas configuré et l’écart équivalent.
 
 Par exemple, avec une cible de chauffage de `20.5 °C`, une bande morte de `0.5 °C` et un pas de l’équipement de `0.5 °C` :
 
 - **Modéré** retire la demande à `21 °C`, avec une consigne de l’équipement ne dépassant pas `20 °C`.
-- **Élevé** retire la demande à `20.5 °C`, avec une consigne ne dépassant pas `19.5 °C`.
+- **Élevé**, avec ses deux pas par défaut, retire la demande à `20.5 °C`, avec une consigne ne dépassant pas `19.5 °C`.
+- Avec **Pas de freinage Élevé** réglé sur `3`, Élevé retire toujours la demande à `20.5 °C`, mais la consigne de l’appareil ne dépasse pas `19 °C`.
 - Les deux redemandent du chauffage lorsque le capteur externe atteint `20 °C`.
+
+Modifier le nombre de pas du freinage Élevé change la limite de consigne, pas les températures de retrait ou de réactivation. En refroidissement, la limite correspondante se situe au-dessus de la cible programmée plutôt qu’en dessous. Cet ajustement est fixe : il n’augmente pas progressivement tant que la pièce reste hors de la bande.
 
 Avant le retrait, le calcul d’assistance existant reste inchangé. Le freinage reste actif jusqu’à la limite de réactivation, même lorsque la pièce traverse la cible centrale. Si l’assistance démarre ou redémarre dans la bande, elle conserve l’initialisation prudente existante sans lancer délibérément un cycle de chauffage ou refroidissement.
 
@@ -94,7 +101,7 @@ Les consignes physiques minimale et maximale peuvent limiter le freinage disponi
 
 Le freinage réduit la demande de chauffage ou refroidissement ; il ne confirme pas l’arrêt de la vanne, du compresseur ou du thermostat. Le contrôle de l’équipement, ses durées minimales de fonctionnement et l’inertie thermique peuvent toujours provoquer un dépassement. Ce réglage n’apprend pas les cycles et ne retire pas la demande avant la cible programmée. Validez-le avec des cycles réels avant de vous fier à un niveau pour une pièce donnée.
 
-Les exports portables utilisent le modèle **29** pour conserver le freinage, les décalages de préparation et la marge minimale de commande. Gardez une sauvegarde de la version précédente pour un éventuel retour en arrière ; les anciennes versions de Velair ne peuvent pas importer les exports du modèle 29.
+Les exports portables utilisent le modèle **30** pour conserver le nombre de pas du freinage Élevé, le niveau de freinage, les décalages de préparation et la marge minimale de commande. Les imports anciens compatibles sans nombre de pas Élevé utilisent `2`. Gardez une sauvegarde de la version précédente pour un éventuel retour en arrière ; les anciennes versions de Velair ne peuvent pas importer les exports du modèle 30.
 
 <a id="minimum-control-margin"></a>
 

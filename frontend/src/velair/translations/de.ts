@@ -1,4 +1,12 @@
 export const de = {
+  "highBrakingSteps": "Bremsschritte für Stark",
+  "highBrakingStepsUnit": "Schritte",
+  "highBrakingStepsHelp": "Anzahl der Gerätesollwertschritte für die Bremsstufe Stark in dieser Zone (2–10; Standard 2). Wird nur verwendet, wenn in Room Assist Stark ausgewählt ist. Beim Heizen wird der Sollwert gesenkt, beim Kühlen erhöht. Moderat verwendet weiterhin einen Schritt. Physische Grenzen können die Wirkung verringern; stärkere bestehende Korrekturen bleiben erhalten. Die Bremsung ist fest und wird nicht schrittweise verstärkt.",
+  "highBrakingStepsEquivalent": "Entspricht {value}. Gilt nur für die Bremsstufe Stark.",
+  "highBrakingStepsUnknown": "Der entsprechende Temperaturabstand wird angezeigt, sobald die Geräteschrittweite verfügbar ist. Gilt nur für die Bremsstufe Stark.",
+  "roomSensorAssistHighBrakingDepth": "Stark verwendet {steps} Schritte ({value}), die für diese Zone in den Einstellungen festgelegt sind.",
+  "roomSensorAssistHighBrakingSteps": "Stark verwendet {steps} Schritte, die für diese Zone in den Einstellungen festgelegt sind.",
+  "roomSensorAssistBrakingConfigurableHelp": "Standard behält die bestehende Regelung bei. Moderat bremst an der äußeren Grenze von Room Assist mit einem Gerätesollwertschritt. Stark bremst am geplanten Ziel mit der für diese Zone in den Einstellungen festgelegten Schrittzahl (standardmäßig zwei). Beide fordern an der bestehenden gegenüberliegenden Grenze erneut Leistung an. Die Bremsung ist fest, nicht kumulativ, und behält stärkere Korrekturen bei. Sie gilt im festen Heiz- oder Kühlmodus, einschließlich Bereichen mit ausgewählter Referenz. Gerätesteuerung und thermische Trägheit können weiterhin ein Überschwingen verursachen.",
   "raGraphDataCommand": "Gerätesollwert",
   "raGraphDataControl": "Regelgrenzen",
   "raGraphDataOrigin": "Quelle und Zeitangaben",

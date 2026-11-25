@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.3-beta.4 |
-| Letzte Synchronisierung | 2026-11-23 |
+| Referenzversion | 1.9.3-beta.5 |
+| Letzte Synchronisierung | 2026-11-25 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -572,7 +572,7 @@ Zeitpläne, Vorlagen, aktuelle und vorherige Übersteuerungssollwerte, Komfortgr
 
 Das einmalige Upgrade früher veröffentlichter, ausschließlich Celsius unterstützender Velair-Daten ist anders. Verwendet Home Assistant bereits Fahrenheit, nimmt Velair für die Altdaten ohne Rückfrage Celsius an, hält den Zeitplaner gestoppt und verweist auf **Velair zurücksetzen**. Dies verwirft die alte Konfiguration und erstellt atomar neue Fahrenheit-Standardwerte. Spätere Home-Assistant-Einheitenwechsel nach diesem Upgrade verwenden die vollständige ausdrückliche Umrechnung oben und erhalten Daten.
 
-Aktuelle Exporte des portablen Modells v29 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v29 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
+Aktuelle Exporte des portablen Modells v30 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v30 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
 
 War eine Klimaentität bei Migration oder Import nicht verfügbar, prüft Velair ihre Grenzen und wirksame Temperaturschrittweite. Ein gültiges, aktuell von Home Assistant veröffentlichtes `target_temp_step` hat Vorrang vor der zuletzt gemeldeten Schrittweite und danach dem manuellen Zonen-Fallback. Das Panel warnt bei nicht mehr kompatiblen gespeicherten Zeitplansollwerten, damit du sie vor der Nutzung korrigieren kannst.
 
@@ -760,7 +760,7 @@ Die Einstellungen können eine versionierte JSON-Datei exportieren und importier
 - Klimaprofildefinitionen;
 - Modusdefinitionen.
 
-Aktuelle Exporte des Modells 29 erhalten beide Vorlagenverknüpfungen, Presetreferenzen, Vorkonditionierungs-Masterbeziehungen, Zielformat- und Referenzrichtlinien sowie Raumgruppenzuständigkeit und gemeinsame Konfiguration. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne und die gewählte Bremsstufe und den Mindestregelabstand, unabhängig von Temperaturzeitplänen und Profilen. Akzeptierte Master-Ausführungsanker bleiben lokal. Zeitplan- oder Profilexporte enthalten benötigte Vorlagen und Presets als zusätzliche Auswahl. Sind Gruppen beteiligt, werden erforderliche Raumgruppen, Zeitpläne und Profile ebenfalls eingeschlossen, auch bei einem Lernexport. Importe prüfen die Gesamtkonfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden nach stabilem Schlüssel zusammengeführt: passende ersetzt, nicht enthaltene lokale erhalten. Alte Sicherungen bleiben importierbar; ältere Velair-Versionen können Modell 29 nicht importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
+Aktuelle Exporte des Modells 30 erhalten beide Vorlagenverknüpfungen, Presetreferenzen, Vorkonditionierungs-Masterbeziehungen, Zielformat- und Referenzrichtlinien sowie Raumgruppenzuständigkeit und gemeinsame Konfiguration. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne, die gewählte Bremsstufe, die zonenspezifische Schrittzahl für Stark und den Mindestregelabstand, unabhängig von Temperaturzeitplänen und Profilen. Akzeptierte Master-Ausführungsanker bleiben lokal. Zeitplan- oder Profilexporte enthalten benötigte Vorlagen und Presets als zusätzliche Auswahl. Sind Gruppen beteiligt, werden erforderliche Raumgruppen, Zeitpläne und Profile ebenfalls eingeschlossen, auch bei einem Lernexport. Importe prüfen die Gesamtkonfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden nach stabilem Schlüssel zusammengeführt: passende ersetzt, nicht enthaltene lokale erhalten. Alte Sicherungen bleiben importierbar; ältere Velair-Versionen können Modell 30 nicht importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
 
 Beim Import wählst du die zu überschreibenden Bereiche. Ausgewählte Daten werden ersetzt; exportiere vorher, wenn ein Wiederherstellungspunkt nötig ist. Profil- und Modusdefinitionen sind portabel, ihre aktive Auswahl nicht. Velair behält aktive Profil-IDs, die noch existieren, und kehrt nur dann zu Standardzeitplänen zurück, wenn keine übrig bleiben.
 

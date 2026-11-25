@@ -1,4 +1,12 @@
 export const it = {
+  "highBrakingSteps": "Passi di frenata Alto",
+  "highBrakingStepsUnit": "passi",
+  "highBrakingStepsHelp": "Numero di passi del setpoint del dispositivo usati dalla frenata Alto in questa zona (2–10; 2 per impostazione predefinita). Si applica solo quando Alto è selezionato in Room Assist. In riscaldamento abbassa il setpoint e in raffreddamento lo alza. Moderato continua a usare un passo. I limiti fisici possono ridurne l’effetto e le correzioni esistenti più forti vengono conservate. È una frenata fissa, non una regolazione progressiva.",
+  "highBrakingStepsEquivalent": "Equivale a {value}. Si applica solo alla frenata Alto.",
+  "highBrakingStepsUnknown": "L’equivalente in temperatura apparirà quando il passo del dispositivo sarà disponibile. Si applica solo alla frenata Alto.",
+  "roomSensorAssistHighBrakingDepth": "Alto usa {steps} passi ({value}), configurati per questa zona in Impostazioni.",
+  "roomSensorAssistHighBrakingSteps": "Alto usa {steps} passi, configurati per questa zona in Impostazioni.",
+  "roomSensorAssistBrakingConfigurableHelp": "Predefinito mantiene la regolazione esistente. Moderato frena al limite esterno di Room Assist usando un passo del setpoint del dispositivo. Alto frena all’obiettivo pianificato usando il numero di passi configurato per questa zona in Impostazioni (due per impostazione predefinita). Entrambi riprendono la richiesta al limite opposto esistente. La frenata è fissa, non cumulativa, e conserva le correzioni più forti. Si applica nelle modalità fisse Riscaldamento o Raffreddamento, inclusi gli intervalli con un riferimento selezionato. Il controllo del dispositivo e l’inerzia termica possono comunque causare un superamento dell’obiettivo.",
   "raGraphDataCommand": "Temperatura impostata sul dispositivo",
   "raGraphDataControl": "Limiti di controllo",
   "raGraphDataOrigin": "Origine e tempi",

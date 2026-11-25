@@ -79,6 +79,7 @@ export function preconditioningSettings(
     room_temperature_entity_id: value?.room_temperature_entity_id ?? null,
     room_sensor_assist_enabled: value?.room_sensor_assist_enabled ?? false,
     room_sensor_assist_braking_level: value?.room_sensor_assist_braking_level ?? "default",
+    room_sensor_assist_high_braking_steps: value?.room_sensor_assist_high_braking_steps ?? 2,
     room_sensor_assist_deadband: Number(
       value?.room_sensor_assist_deadband
       ?? value?.minimum_delta_temperature

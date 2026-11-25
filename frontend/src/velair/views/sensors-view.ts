@@ -1,7 +1,7 @@
 import { renderRoomAssistGraph } from "../components/room-assist-graph-element";
 import { html, nothing } from "lit";
 import "../components/room-sensor-schedule-element";
-import { hasRoomAssistScheduledTarget } from "../domain/room-assist";
+import { brakingStepEquivalent, hasRoomAssistScheduledTarget } from "../domain/room-assist";
 import { temperatureMatchesStep } from "../domain/climate";
 import { preconditioningSettings } from "../domain/preconditioning";
 import { temperatureDeltaMaximum, temperatureDeltaMinimum } from "../domain/temperature-units";
@@ -293,6 +293,9 @@ function renderBrakingConfiguration(host: SensorsViewHost, entityId: string, set
   const disabled = host._settingsSaving || inactive;
   const inputId = `room-sensor-${entityId.replace(/[^a-zA-Z0-9_-]/g, "-")}-braking`;
   const braking = host._data?.room_sensor_assist?.[entityId]?.braking;
+  const highSteps = settings.room_sensor_assist_high_braking_steps ?? 2;
+  const step = host._entityTemperatureStep(entityId);
+  const equivalent = brakingStepEquivalent(highSteps, step, host._temperatureUnit(entityId));
   return html`
     <div class=${`sensor-config-row sensor-braking-row ${inactive ? "inactive" : ""}`}>
       ${renderSensorLabel(host, "roomSensorAssistBraking", { inputId, showHelp: false })}
@@ -317,7 +320,10 @@ function renderBrakingConfiguration(host: SensorsViewHost, entityId: string, set
       </span>
       <small class="sensor-field-description" id=${`${inputId}-description`}>
         ${host._t("roomSensorAssistBrakingDescription")}
-        <span class="sensor-braking-explanation">${host._t("roomSensorAssistBrakingHelp")}</span>
+        <span class="sensor-braking-explanation">${host._t("roomSensorAssistBrakingConfigurableHelp")}</span>
+        ${level === "high" ? html`<span class="sensor-braking-depth">${equivalent !== undefined
+          ? host._t("roomSensorAssistHighBrakingDepth", { steps: highSteps, value: equivalent })
+          : host._t("roomSensorAssistHighBrakingSteps", { steps: highSteps })}</span>` : nothing}
         ${settings.room_sensor_assist_deadband <= 0 || level !== "default"
           ? html`<span class="sensor-braking-requirement">${host._t("roomSensorAssistBrakingRequiresBand")}</span>` : nothing}
         ${braking?.reason && braking.configured_level !== "default"

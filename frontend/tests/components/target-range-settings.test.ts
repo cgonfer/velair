@@ -597,7 +597,7 @@ describe("target format Settings review", () => {
     expect(view.shadowRoot.querySelector('.settings-external-policy select').value).toBe("for_duration");
     expect(view.shadowRoot.querySelector('.settings-policy-duration input').value).toBe("10080");
     const configuration = view.shadowRoot.querySelector('.settings-zone-configuration');
-    expect([...configuration.children].filter((child: any) => child.tagName === "DIV")).toHaveLength(3);
+    expect(configuration.querySelector('.settings-high-braking-steps input')?.value).toBe("2");
     expect(configuration.querySelector('.settings-external-policy .settings-policy-controls .settings-policy-duration')).not.toBeNull();
     const dropdown = configuration.querySelector('.target-range-dropdown');
     expect(dropdown.classList.contains('select-wrap')).toBe(true);

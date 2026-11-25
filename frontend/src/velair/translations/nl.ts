@@ -1,4 +1,12 @@
 export const nl = {
+  "highBrakingSteps": "Afremstappen voor Hoog",
+  "highBrakingStepsUnit": "stappen",
+  "highBrakingStepsHelp": "Aantal instelstappen van het apparaat voor afremniveau Hoog in deze zone (2–10; standaard 2). Alleen gebruikt wanneer Hoog is geselecteerd in Room Assist. Verwarmen verlaagt het instelpunt en koelen verhoogt het. Gemiddeld gebruikt nog steeds één stap. Fysieke grenzen kunnen het effect beperken; bestaande sterkere correcties blijven behouden. Dit is vaste afremming, geen geleidelijke aanpassing.",
+  "highBrakingStepsEquivalent": "Komt overeen met {value}. Alleen van toepassing bij afremniveau Hoog.",
+  "highBrakingStepsUnknown": "Het temperatuurequivalent verschijnt zodra de apparaatstap beschikbaar is. Alleen van toepassing bij afremniveau Hoog.",
+  "roomSensorAssistHighBrakingDepth": "Hoog gebruikt {steps} stappen ({value}), voor deze zone ingesteld in Instellingen.",
+  "roomSensorAssistHighBrakingSteps": "Hoog gebruikt {steps} stappen, voor deze zone ingesteld in Instellingen.",
+  "roomSensorAssistBrakingConfigurableHelp": "Standaard behoudt de bestaande regeling. Gemiddeld remt af bij de buitenste Room Assist-grens met één instelstap van het apparaat. Hoog remt af bij het geplande doel met het aantal stappen dat voor deze zone is ingesteld in Instellingen (standaard twee). Beide hervatten de vraag bij de bestaande tegenoverliggende grens. De afremming is vast, niet cumulatief, en behoudt sterkere correcties. Dit geldt bij vast Verwarmen of Koelen, ook voor bereiken met een geselecteerde referentie. De apparaatregeling en thermische traagheid kunnen nog steeds tot overschrijding leiden.",
   "raGraphDataCommand": "Instelpunt van het apparaat",
   "raGraphDataControl": "Regelgrenzen",
   "raGraphDataOrigin": "Bron en tijdgegevens",

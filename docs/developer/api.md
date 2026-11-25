@@ -312,6 +312,7 @@ its absence when using an older backend.
         "room_temperature_entity_id": "sensor.living_room_temperature",
         "room_sensor_assist_enabled": false,
         "room_sensor_assist_deadband": 0.3,
+        "room_sensor_assist_high_braking_steps": 2,
         "room_sensor_assist_max_delta": 2.0,
         "room_sensor_assist_minimum_margin": 0.0
       },
@@ -450,10 +451,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 29,
+    "portable_model": 30,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.3-beta.4"
+    "integration": "1.9.3-beta.5"
   }
 }
 ```
@@ -1155,6 +1156,7 @@ await hass.connection.sendMessagePromise({
     room_temperature_entity_id: "sensor.living_room_temperature",
     room_sensor_assist_enabled: true,
     room_sensor_assist_deadband: 0.3,
+    room_sensor_assist_high_braking_steps: 2,
     room_sensor_assist_max_delta: 2.0,
     room_sensor_assist_minimum_margin: 0.0
   }
@@ -1282,6 +1284,14 @@ Outdoor temperature context is optional and local. In the Preconditioning tab, `
 
 Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. For fixed `heat` and `cool` with a scalar target or configured range reference, a non-zero `room_sensor_assist_deadband` defines a runtime hysteresis cycle between the scalar target or selected reference minus and plus that value; `room_sensor_assist_max_delta` caps correction relative to the active edge. A zero deadband preserves legacy signed correction. Scalar automatic modes retain their neutral deadband, while native `heat_cool` ranges retain their stable holding margin. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native `heat_cool` holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
 
+`room_sensor_assist_high_braking_steps` is a per-zone integer from 2 through 10,
+defaulting to 2. It changes only the fixed High setpoint guard: heating uses a
+ceiling below the scheduled target and cooling a floor above it, each separated
+by the configured count times the effective equipment step. It does not change
+the High stop/resume thresholds or Moderate's single-step guard. Count-only
+saves recalculate the guard while retaining a valid hysteresis phase. The count
+is dimensionless and survives temperature-unit conversion unchanged.
+
 The optional `room_sensor_assist_minimum_margin` defaults to zero and strengthens
 applicable corrections without changing those switching thresholds. It accepts
 0..10 Celsius / 0..18 Fahrenheit deltas and cannot exceed
@@ -1291,6 +1301,12 @@ strengthen activation and withdrawal; automatic holding stays neutral. See
 [Minimum control margin](room-assist.md#minimum-control-margin).
 
 `room_sensor_assist` in the schedule response is runtime-only status. It is derived from Home Assistant state and scheduler state when the response is built; it is not persisted as history.
+
+Its additive `braking` fields include `high_steps` (saved High count), `steps`
+(effective count: High's saved count, Moderate's one, or Default's zero), and
+`temperature_delta` (the positive equivalent difference in the runtime climate
+unit, or `null` when no effective step is available). These describe configured
+and effective bounds, not confirmed physical heating or cooling activity.
 
 Its additive `minimum_margin` descriptor exposes `configured`, `active`, and
 nullable `limited_by` (`step`, `minimum`, `maximum`, or `range_width`). Activity
@@ -1792,7 +1808,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 29,
+  "model_version": 30,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1801,11 +1817,14 @@ Returns a versioned portable JSON payload:
 
 ## Import Data
 
-Model 29 preserves optional Room Assist sensor schedules, the selected
-Room Assist braking level, minimum control margin and separate preparation offsets
+Model 30 preserves optional Room Assist sensor schedules, the selected
+Room Assist braking level, per-zone High braking step count, minimum control margin and separate preparation offsets
 in zone configuration. The margin is a canonical Celsius delta, defaults to zero
 for older files and cannot exceed Maximum assist delta. Updates and imports
 validate the final configuration without changing another tuning value.
+`room_sensor_assist_high_braking_steps` is an integer from 2 through 10 and
+defaults to 2 for older imports. It is a dimensionless count and is never
+converted as a temperature or delta.
 Each exported learning direction includes `setpoint_offset`, a positive magnitude
 derived from confirmed configuration. Older models or an absent tag mean zero.
 Import converts this delta before matching it with the resulting zone configuration
@@ -1815,7 +1834,7 @@ Zones-only imports clear retained learning only for changed offset directions;
 combined imports retain compatible supplied history. Internal predictor/sample
 schemas and selection rules are unchanged.
 Existing supported backups remain importable; older Velair versions reject new
-model 29 exports, including exports created without an enabled sensor schedule
+model 30 exports, including exports created without an enabled sensor schedule
 or non-default braking level.
 
 ```ts

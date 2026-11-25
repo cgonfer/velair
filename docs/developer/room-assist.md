@@ -29,6 +29,7 @@ Room Assist configuration is stored per managed climate together with the climat
   "room_sensor_assist_enabled": true,
   "room_sensor_assist_deadband": 0.3,
   "room_sensor_assist_braking_level": "default",
+  "room_sensor_assist_high_braking_steps": 2,
   "room_sensor_assist_max_delta": 2.0,
   "room_sensor_assist_minimum_margin": 0.0,
   "room_sensor_assist_debounce_seconds": 20
@@ -410,7 +411,7 @@ a valid hysteresis phase. Failed saves or failed/superseded deliveries do not
 commit a new demand state. Presentation reads cannot advance the phase.
 
 Storage and export convert the margin as a delta, never an absolute temperature.
-Portable model 29 includes it; older files default to zero. Preserve it through
+Portable models from 29 onward include it; older files default to zero. Preserve it through
 unrelated Adaptive Preconditioning resets and group snapshot round trips.
 
 ### Optional braking policy
@@ -420,13 +421,30 @@ deadband, effective target step and committed phase. Use it in scalar control,
 fixed-mode range adaptation, runtime presentation and Supply threshold reporting.
 Do not duplicate switching comparisons in the frontend.
 
-With target **T**, deadband **H** and step **S**:
+With target **T**, deadband **H**, effective equipment step **S** and configured
+High step count **N** (default 2):
 
 | Level | Heat stop / resume | Cool stop / resume | Non-driving setpoint guard |
 | --- | --- | --- | --- |
 | Default | Existing T + H / T − H | Existing T − H / T + H | Existing scheduled guard |
 | Moderate | T + H / T − H | T − H / T + H | Heat ceiling T − S; cool floor T + S |
-| High | T / T − H | T / T + H | Heat ceiling T − 2S; cool floor T + 2S |
+| High | T / T − H | T / T + H | Heat ceiling T − NS; cool floor T + NS |
+
+Persist `room_sensor_assist_high_braking_steps` in each zone's preconditioning
+configuration. Accept integers from 2 through 10; old configurations default to
+2. Reject booleans, fractional values and out-of-range values in updates and
+imports. The setting is a dimensionless count: unit conversion preserves it,
+while the equivalent delta is N times the effective step in the climate's unit.
+Settings exposes the count beside the zone's existing technical controls and
+shows that delta. Room Assist retains its level selector and displays the saved
+High count and equivalent delta. Moderate always uses one step.
+
+Count-only saves recalculate the guard while retaining a valid hysteresis phase;
+failed writes leave the committed count and state unchanged. Unrelated
+Adaptive Preconditioning resets retain the count. Additive braking metadata
+contains `high_steps` (saved count), `steps` (effective count), and
+`temperature_delta` (positive runtime-unit equivalent, or `null` without an
+effective step). Presentation reads remain detached from control state.
 
 Equality completes a phase. High changes only the stop threshold, not the
 driving error target: heat still calculates assistance towards the original
@@ -452,15 +470,16 @@ Default, scalar automatic modes and native bidirectional ranges retain their
 existing behavior. Invalid stored zero-band/non-default combinations keep the
 saved level, expose an inactivity reason and use the legacy zero-band path.
 
-Physical clamping can prevent a one-step or two-step guard from being reached;
+Physical clamping can prevent the configured guard from being reached;
 the existing requested/applied limit metadata must report that outcome. Braking
 does not inspect `hvac_action`, guarantee a physical stop, anticipate residual
 temperature rise before the target, learn cycles, or add a recovery controller.
 
-Portable model 27 carries `room_sensor_assist_braking_level`; older imports
-default it when absent. The Home Assistant storage helper version is unchanged.
-Older portable-model consumers reject model 27 rather than silently losing the
-saved policy.
+Portable model 30 carries `room_sensor_assist_braking_level` and
+`room_sensor_assist_high_braking_steps`; older supported imports default the
+level and use two High steps when absent. The Home Assistant storage helper
+version is unchanged. Older portable-model consumers reject model 30 rather
+than silently losing the saved policy.
 
 ### Native Range Calculation
 

@@ -36,7 +36,7 @@ from .planned_return import PlannedReturnRuntime
 from .runtime_projection import RuntimeScheduleProjection, capability_state_signature
 from .prepared_configuration import PreparedConfiguration
 from .comfort_projection import ComfortProjection
-from .delivery_guard import DeliverySuperseded, check_delivery, delivery_guard, delivery_guard_active
+from .delivery_guard import DeliverySuperseded, accepted_temperature_target, check_delivery, delivery_guard, delivery_guard_active
 from .preconditioning_dependencies import resolve_dependencies, occurrence_id
 from .preconditioning_offset import displace_target
 from .climate_manager import ClimateManager
@@ -101,7 +101,7 @@ from .schedule_resources import (
     referenced_resource, updated_preset_config,
 )
 from .template_assignments import allocate_template_update, destination_identity
-from .room_assist_braking import LEVEL_KEY, braking_policy, validate_braking_settings
+from .room_assist_braking import HIGH_STEPS_KEY, LEVEL_KEY, braking_policy, validate_braking_settings, validate_high_braking_steps
 from .room_assist_margin import margin_correction, margin_step_temperature, margin_status, validate_minimum_margin
 from .models import (
     validate_preconditioning_dependencies,
@@ -261,6 +261,24 @@ class _ReentrantAsyncLock:
     def locked(self) -> bool:
         """Return whether any task owns the lock."""
         return self._lock.locked()
+
+
+@dataclass(frozen=True, slots=True)
+class _ClimateLogbookRequest:
+    """Per-attempt explanatory data; never a control or learning target."""
+
+    target: dict[str, float]
+    extra: float | None
+    limited: bool
+
+    @classmethod
+    def from_delivery(cls, entity_id, target, offset):
+        # Physical receipts include adapter rounding. Groups have no owner
+        # receipt: their existing grid validation guarantees a lossless target
+        # round trip to every delivered member, in the logical owner's unit.
+        return cls(accepted_temperature_target(entity_id) or dict(target),
+                   offset["applied"] if offset is not None else None,
+                   bool(offset and offset.get("limited_by")))
 
 
 @dataclass(frozen=True, slots=True)
@@ -3009,6 +3027,8 @@ class VelairScheduler:
         """Reject explicitly supplied thermal tuning outside runtime-unit bounds."""
         if LEVEL_KEY in preconditioning and preconditioning[LEVEL_KEY] not in ("default", "moderate", "high"):
             raise ValueError("Room Assist braking must be default, moderate, or high")
+        if HIGH_STEPS_KEY in preconditioning:
+            validate_high_braking_steps(preconditioning[HIGH_STEPS_KEY])
         if "room_sensor_schedule" in preconditioning:
             normalize_room_sensor_schedule(preconditioning["room_sensor_schedule"])
         unit_getter = getattr(self._climate_manager, "temperature_unit", None)
@@ -3581,9 +3601,11 @@ class VelairScheduler:
                 hvac_mode=current.get("hvac_mode"),
                 **_climate_options_from_mapping(current),
             )
+            logbook_request = None
 
             async def apply() -> None:
-                await self._async_apply_resolved_event_call(
+                nonlocal logbook_request
+                logbook_request = await self._async_apply_resolved_event_call(
                     event,
                     hvac_mode=event.hvac_mode,
                     source="boost",
@@ -3596,6 +3618,7 @@ class VelairScheduler:
                     hvac_mode=event.hvac_mode,
                     source="boost",
                     is_current=is_current,
+                    logbook_request=logbook_request,
                 )
                 if announced or not is_current():
                     return
@@ -5348,10 +5371,10 @@ class VelairScheduler:
                 ("heat", "heating_setpoint_offset"), ("cool", "cooling_setpoint_offset")
             ) if previous_preconditioning[key] != next_preconditioning[key]
         }
-        margin_keys = {"room_sensor_assist_minimum_margin", "room_sensor_assist_max_delta"}
-        only_margin_changed = (any(previous_preconditioning[key] != next_preconditioning[key] for key in margin_keys)
-            and {key: value for key, value in previous_preconditioning.items() if key not in margin_keys}
-            == {key: value for key, value in next_preconditioning.items() if key not in margin_keys})
+        control_tuning_keys = {"room_sensor_assist_minimum_margin", "room_sensor_assist_max_delta", HIGH_STEPS_KEY}
+        only_control_tuning_changed = (any(previous_preconditioning[key] != next_preconditioning[key] for key in control_tuning_keys)
+            and {key: value for key, value in previous_preconditioning.items() if key not in control_tuning_keys}
+            == {key: value for key, value in next_preconditioning.items() if key not in control_tuning_keys})
         offset_keys = {"heating_setpoint_offset", "cooling_setpoint_offset"}
         only_offsets_changed = bool(offset_directions) and (
             {key: value for key, value in previous_preconditioning.items() if key not in offset_keys}
@@ -5360,7 +5383,7 @@ class VelairScheduler:
         active_offset_keys = {
             key for key, marker in self._applied_preconditioning_targets.items()
             if key.startswith(f"{entity_id}|") and marker.offset is not None and not marker.retired
-            and not only_margin_changed
+            and not only_control_tuning_changed
             and (not only_offsets_changed or marker.direction in offset_directions)
         }
         reconcile_offset = bool(active_offset_keys)
@@ -5384,7 +5407,7 @@ class VelairScheduler:
                 coherent_opposite_anchors = {
                     key for key, value in previous_anchors.items()
                     if value.get("entity_id") == entity_id
-                    and (only_margin_changed or (only_offsets_changed
+                    and (only_control_tuning_changed or (only_offsets_changed
                          and value.get("direction") in {"heat", "cool"} - offset_directions))
                     and value.get("context") == self._compute_dependency_context(entity_id, value.get("episode"))
                 }
@@ -5447,7 +5470,7 @@ class VelairScheduler:
         session = self._preconditioning_sessions.get(entity_id)
         if session is not None and session.direction in offset_directions:
             self._discard_preconditioning_session(entity_id)
-        if only_margin_changed:
+        if only_control_tuning_changed:
             for key, marker in list(self._applied_preconditioning_targets.items()):
                 if key.startswith(f"{entity_id}|"):
                     self._applied_preconditioning_targets[key] = replace(
@@ -5483,7 +5506,7 @@ class VelairScheduler:
             and previous_preconditioning.get("master_entity_id") != next_preconditioning.get("master_entity_id")
         )
         has_active_marker = any(key.startswith(f"{entity_id}|") and value.target_when > dt_util.now() for key, value in self._applied_preconditioning_targets.items())
-        if not only_offsets_changed and not only_margin_changed and not (only_relation_changed and has_active_marker):
+        if not only_offsets_changed and not only_control_tuning_changed and not (only_relation_changed and has_active_marker):
             self._clear_applied_preconditioning_targets_for_entity(entity_id)
         self._clear_room_sensor_assist_timer()
         if (not next_preconditioning["enabled"]
@@ -5828,6 +5851,7 @@ class VelairScheduler:
             "room_sensor_assist_deadband"
         ]
         defaults["room_sensor_assist_minimum_margin"] = current["room_sensor_assist_minimum_margin"]
+        defaults[HIGH_STEPS_KEY] = current[HIGH_STEPS_KEY]
         defaults["room_sensor_assist_max_delta"] = current[
             "room_sensor_assist_max_delta"
         ]
@@ -7515,9 +7539,11 @@ class VelairScheduler:
             restored_event = self._resolve_authoritative_delivery_event(entity_id)
             if restored_event is None:
                 return None
+            logbook_request = None
 
             async def apply() -> None:
-                await self._async_apply_resolved_event_call(
+                nonlocal logbook_request
+                logbook_request = await self._async_apply_resolved_event_call(
                     restored_event,
                     hvac_mode=restored_event.hvac_mode,
                     source="mutation_rollback",
@@ -7529,6 +7555,7 @@ class VelairScheduler:
                     hvac_mode=restored_event.hvac_mode,
                     source="mutation_rollback",
                     is_current=is_current,
+                    logbook_request=logbook_request,
                 )
 
             return Delivery(apply, commit)
@@ -8007,9 +8034,11 @@ class VelairScheduler:
                     self._climate_manager)
                 return_preparation = self._planned_return.preparation_for_delivery(current_event)
                 return_episode = self._dependency_episode()
+                logbook_request = None
                 async def apply_current() -> None:
+                    nonlocal logbook_request
                     await self._async_retire_boost_return_mode(current_event)
-                    await self._async_apply_resolved_event_call(
+                    logbook_request = await self._async_apply_resolved_event_call(
                         effective,
                         hvac_mode=effective.hvac_mode,
                         source="boost_ended",
@@ -8021,6 +8050,7 @@ class VelairScheduler:
                         hvac_mode=effective.hvac_mode,
                         source="boost_ended",
                         is_current=is_current,
+                        logbook_request=logbook_request,
                     )
                     if return_preparation is not None:
                         self._planned_return.preparation_accepted(current_event, return_episode, is_current)
@@ -9420,11 +9450,12 @@ class VelairScheduler:
             return_preparation = self._planned_return.preparation_for_delivery(resolved)
             return_episode = self._dependency_episode()
             acceptance = None
+            logbook_request = None
 
             async def apply() -> None:
-                nonlocal acceptance
+                nonlocal acceptance, logbook_request
                 await self._async_retire_boost_return_mode(resolved)
-                await self._async_apply_resolved_event_call(
+                logbook_request = await self._async_apply_resolved_event_call(
                     effective,
                     hvac_mode=mode_override or effective.hvac_mode,
                     source=source,
@@ -9442,6 +9473,7 @@ class VelairScheduler:
                     applied_at=applied_at,
                     is_current=is_current,
                     acceptance=acceptance,
+                    logbook_request=logbook_request,
                 )
                 if return_preparation is not None:
                     self._planned_return.preparation_accepted(resolved, return_episode, is_current)
@@ -9609,7 +9641,7 @@ class VelairScheduler:
         *,
         hvac_mode: str | None = None,
         source: str,
-    ) -> None:
+    ) -> _ClimateLogbookRequest | None:
         """Apply the physical call sequence without publishing success effects."""
         if self._temperature_migration_blocked or self._stopped:
             return
@@ -9688,7 +9720,16 @@ class VelairScheduler:
                 delivery_event=event,
             )
             if result == "handled":
-                return
+                state = self._room_sensor_assist_states.get(event.entity_id)
+                if state is not None:
+                    target = ({"target_temp_low": state.applied_target_temp_low,
+                               "target_temp_high": state.applied_target_temp_high}
+                              if state.applied_target_temp_low is not None
+                              and state.applied_target_temp_high is not None else
+                              {"temperature": state.applied_temperature})
+                    return _ClimateLogbookRequest.from_delivery(
+                        event.entity_id, target, state.preconditioning_offset)
+                return None
             if result == "superseded":
                 raise DeliverySuperseded
         # Inapplicable assistance must not restore the preceding block before
@@ -9739,6 +9780,7 @@ class VelairScheduler:
             )
 
         self._preconditioning_offset_delivery_receipts[event.entity_id] = (event, offset_receipt)
+        return _ClimateLogbookRequest.from_delivery(event.entity_id, physical_target, offset_receipt)
 
     async def _async_commit_resolved_event(
         self,
@@ -9749,6 +9791,7 @@ class VelairScheduler:
         applied_at: datetime | None = None,
         is_current: CurrentGuard,
         acceptance: tuple[datetime, float | None] | None = None,
+        logbook_request: _ClimateLogbookRequest | None = None,
     ) -> None:
         """Publish effects only after the complete physical call succeeds."""
         def delivery_is_current() -> bool:
@@ -9837,26 +9880,18 @@ class VelairScheduler:
             if not delivery_is_current():
                 return
 
-        is_range = (
-            event.target_temp_low is not None and event.target_temp_high is not None
-        )
         target_mode = None if event.temperature_only else hvac_mode or event.hvac_mode
-        if is_range:
-            await self._async_log_climate_temperature(
-                event.entity_id,
-                None,
-                target_temp_low=event.target_temp_low,
-                target_temp_high=event.target_temp_high,
-                hvac_mode=target_mode,
-                scheduled=True,
-            )
-        else:
-            await self._async_log_climate_temperature(
-                event.entity_id,
-                event.temperature,
-                hvac_mode=target_mode,
-                scheduled=True,
-            )
+        await self._async_log_climate_temperature(
+            event.entity_id,
+            None if event.target_temp_low is not None and event.target_temp_high is not None else event.temperature,
+            target_temp_low=event.target_temp_low,
+            target_temp_high=event.target_temp_high,
+            hvac_mode=target_mode,
+            scheduled=True,
+            request=logbook_request,
+            preparing=event.target_when is not None,
+            extra_removed=source == "preconditioning_offset_retired",
+        )
         if not delivery_is_current():
             return
         self._async_fire_climate_target_applied(
@@ -15795,6 +15830,9 @@ class VelairScheduler:
         target_temp_high: float | None = None,
         hvac_mode: str | None = None,
         scheduled: bool,
+        request: _ClimateLogbookRequest | None = None,
+        preparing: bool = False,
+        extra_removed: bool = False,
     ) -> None:
         """Write an applied climate target to the Home Assistant logbook."""
         target = self._format_temperature_target(
@@ -15814,6 +15852,34 @@ class VelairScheduler:
         else:
             english = f"Set {self._friendly_entity_name(entity_id)} to {target}{mode}"
             spanish = f"Configurado {self._friendly_entity_name(entity_id)} a {target}{mode}"
+
+        if scheduled and request is not None:
+            equipment = self._format_temperature_target(
+                entity_id, request.target.get("temperature"),
+                target_temp_low=request.target.get("target_temp_low"),
+                target_temp_high=request.target.get("target_temp_high"))
+            if equipment != target or request.extra is not None or extra_removed:
+                name = self._friendly_entity_name(entity_id)
+                if extra_removed:
+                    english = f"Preparation extra removed for {name}"
+                    spanish = f"Extra de preparación retirado de {name}"
+                elif preparing:
+                    english = f"Preparing {name}"
+                    spanish = f"Preparando {name}"
+                else:
+                    english = f"Adjusted {name}"
+                    spanish = f"Ajustado {name}"
+                english += f": room target {target}; requested from equipment {equipment}{mode}"
+                spanish += f": objetivo {target}; solicitado al equipo {equipment}{mode}"
+                if request.extra is not None:
+                    extra = self._format_temperature(entity_id, request.extra)
+                    if request.extra > 0:
+                        extra = f"+{extra}"
+                    english += f"; preparation extra {extra}"
+                    spanish += f"; extra de preparación {extra}"
+                    if request.limited:
+                        english += " (limited by device limits or step)"
+                        spanish += " (limitado por los límites o el paso del equipo)"
 
         await self._async_logbook(
             self._message(english, spanish),

@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](room-assist.md) · [Español](room-assist.es.
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.3-beta.4 |
-| Ultima sincronizzazione | 2026-11-23 |
+| Versione di riferimento | 1.9.3-beta.5 |
+| Ultima sincronizzazione | 2026-11-25 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -76,13 +76,20 @@ La frenata modifica il setpoint inviato al dispositivo mantenendo la temperatura
 | Moderato | A T + H | A T − H | A T − H | A T + H |
 | Alto | A T | A T − H | A T | A T + H |
 
-Durante la riduzione della richiesta, **Moderato** limita il setpoint di riscaldamento a un massimo di **T − S**, oppure quello di raffreddamento a un minimo di **T + S**. **Alto** usa **due passi**. Se il calcolo esistente riduce già maggiormente la richiesta, Velair mantiene quel risultato più incisivo. Sono limiti fissi finché la frenata è attiva: ogni aggiornamento del sensore non aggiunge o sottrae un altro passo.
+Durante la riduzione della richiesta, **Moderato** limita il setpoint di riscaldamento a un massimo di **T − S**, oppure quello di raffreddamento a un minimo di **T + S**. **Alto** usa **due passi** per impostazione predefinita. Se il calcolo esistente riduce già maggiormente la richiesta, Velair mantiene quel risultato più incisivo. Sono limiti fissi finché la frenata è attiva: ogni aggiornamento del sensore non aggiunge o sottrae un altro passo.
+
+Per modificare l’intensità della frenata Alto in una zona, apri **Impostazioni → Dispositivi e gruppi** e imposta **Passi di frenata Alto** per quel dispositivo o gruppo. L’impostazione accetta numeri interi da `2` a `10` e mostra la differenza di temperatura equivalente usando il passo effettivo del setpoint del dispositivo e la sua unità attuale. Viene salvata indipendentemente per ogni zona e si applica solo quando **Alto** è selezionato in Room Assist. **Predefinito** e **Moderato** non usano questa impostazione.
+
+Per esempio, `3` passi da `0.5 °C` equivalgono a una differenza di `1.5 °C`. Tre passi da `1 °F` equivalgono a `3 °F`. Il numero di passi non è una temperatura e non cambia durante la conversione Celsius/Fahrenheit; la differenza equivalente segue il passo effettivo del dispositivo. Room Assist conserva il selettore esistente e mostra il numero configurato e la differenza equivalente.
 
 Per esempio, con obiettivo di riscaldamento `20.5 °C`, tolleranza `0.5 °C` e passo del dispositivo `0.5 °C`:
 
 - **Moderato** riduce la richiesta a `21 °C`, con un setpoint del dispositivo non superiore a `20 °C`.
-- **Alto** riduce la richiesta a `20.5 °C`, con un setpoint non superiore a `19.5 °C`.
+- **Alto**, con i due passi predefiniti, riduce la richiesta a `20.5 °C`, con un setpoint non superiore a `19.5 °C`.
+- Con **Passi di frenata Alto** impostato su `3`, Alto continua a ridurre la richiesta a `20.5 °C`, ma il setpoint del dispositivo non supera `19 °C`.
 - Entrambi richiedono nuovamente calore quando il sensore esterno raggiunge `20 °C`.
+
+Cambiare il numero di passi di Alto modifica il limite del setpoint, non le temperature di riduzione o riattivazione della richiesta. In raffreddamento, il limite corrispondente si trova sopra l’obiettivo programmato anziché sotto. È una regolazione fissa: non aumenta progressivamente mentre la stanza rimane fuori dalla fascia.
 
 Prima della riduzione, il calcolo di assistenza esistente rimane invariato. La frenata resta attiva fino al limite di riattivazione, anche quando la stanza attraversa l’obiettivo centrale. Se l’assistenza si avvia o riparte con la stanza già nella fascia, mantiene l’inizializzazione prudente esistente senza avviare intenzionalmente un ciclo di climatizzazione.
 
@@ -94,7 +101,7 @@ I setpoint fisici minimo e massimo possono limitare la frenata disponibile. Con 
 
 La frenata riduce la richiesta di riscaldamento o raffreddamento; non conferma l’arresto di valvola, compressore o termostato. Il controllo del dispositivo, i tempi minimi di funzionamento e l’inerzia termica possono comunque causare un superamento. Questa impostazione non apprende i cicli e non riduce la richiesta prima dell’obiettivo programmato. Verificala con cicli reali prima di affidarti a un livello per una stanza specifica.
 
-Le esportazioni portabili usano il modello **29** per conservare frenata, scostamenti di preparazione e margine minimo di controllo. Mantieni un backup della versione precedente se devi tornare indietro; le vecchie versioni di Velair non possono importare il modello 29.
+Le esportazioni portabili usano il modello **30** per conservare il numero di passi di frenata Alto, il livello di frenata, gli scostamenti di preparazione e il margine minimo di controllo. Le importazioni precedenti compatibili senza un numero di passi di Alto usano `2`. Mantieni un backup della versione precedente se devi tornare indietro; le vecchie versioni di Velair non possono importare il modello 30.
 
 <a id="minimum-control-margin"></a>
 

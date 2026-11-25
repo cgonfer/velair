@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.3-beta.4 |
-| Última sincronización | 2026-11-23 |
+| Versión de referencia | 1.9.3-beta.5 |
+| Última sincronización | 2026-11-25 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -78,13 +78,20 @@ El frenado modifica la consigna enviada al equipo y conserva la temperatura prog
 | Moderado | A T + H | A T − H | A T − H | A T + H |
 | Alto | A T | A T − H | A T | A T + H |
 
-Durante la retirada de demanda, **Moderado** limita la consigna de calefacción a un máximo de **T − S**, o la de refrigeración a un mínimo de **T + S**. **Alto** utiliza **dos pasos**. Si el cálculo existente ya retira más demanda, Velair conserva ese resultado más intenso. Son límites fijos mientras el frenado está activo: las actualizaciones del sensor no restan ni suman otro paso cada vez.
+Durante la retirada de demanda, **Moderado** limita la consigna de calefacción a un máximo de **T − S**, o la de refrigeración a un mínimo de **T + S**. **Alto** utiliza **dos pasos** por defecto. Si el cálculo existente ya retira más demanda, Velair conserva ese resultado más intenso. Son límites fijos mientras el frenado está activo: las actualizaciones del sensor no restan ni suman otro paso cada vez.
+
+Para cambiar la intensidad de Alto en una zona, abre **Ajustes → Equipos y grupos** y configura **Pasos de frenado Alto** para ese equipo o grupo. El ajuste acepta números enteros de `2` a `10` y muestra la diferencia de temperatura equivalente según el paso efectivo de consigna del equipo y su unidad actual. Se guarda de forma independiente por zona y solo se aplica al seleccionar **Alto** en Room Assist. **Predeterminado** y **Moderado** no utilizan este ajuste.
+
+Por ejemplo, `3` pasos de `0.5 °C` equivalen a una diferencia de `1.5 °C`. Tres pasos de `1 °F` equivalen a `3 °F`. El número de pasos no es una temperatura y no cambia al convertir entre Celsius y Fahrenheit; la diferencia equivalente sigue el paso efectivo del equipo. Room Assist conserva su selector y muestra el número configurado y la diferencia equivalente.
 
 Por ejemplo, con un objetivo de calefacción de `20.5 °C`, una banda muerta de `0.5 °C` y un paso del equipo de `0.5 °C`:
 
 - **Moderado** retira demanda a `21 °C`, con una consigna del equipo no superior a `20 °C`.
-- **Alto** retira demanda a `20.5 °C`, con una consigna del equipo no superior a `19.5 °C`.
+- **Alto**, con sus dos pasos predeterminados, retira demanda a `20.5 °C`, con una consigna del equipo no superior a `19.5 °C`.
+- Con **Pasos de frenado Alto** en `3`, Alto sigue retirando demanda a `20.5 °C`, pero la consigna del equipo no supera `19 °C`.
 - Ambos vuelven a pedir calor cuando el sensor externo alcanza `20 °C`.
+
+Cambiar el número de pasos de Alto modifica el límite de consigna, no las temperaturas de retirada o reactivación. En refrigeración, el límite correspondiente se sitúa por encima del objetivo programado en lugar de por debajo. Es un ajuste fijo: no aumenta progresivamente mientras la habitación permanece fuera de la banda.
 
 Antes de retirar demanda, el cálculo de asistencia existente no cambia. El frenado permanece activo hasta alcanzar el límite de reactivación, incluso al cruzar el objetivo central. Si la asistencia se inicia o reinicia con la habitación dentro de su banda, conserva la inicialización prudente existente sin iniciar deliberadamente un ciclo de climatización.
 
@@ -96,7 +103,7 @@ Las consignas físicas mínima y máxima pueden limitar el frenado disponible. C
 
 El frenado reduce la demanda de calor o frío; no confirma que la válvula, el compresor o el termostato se hayan detenido. El control del equipo, sus tiempos mínimos de funcionamiento y la inercia térmica pueden seguir causando sobrepasos. Este ajuste no aprende ciclos ni retira demanda antes del objetivo programado. Valídalo con ciclos reales de calefacción y refrigeración antes de confiar en un nivel para una habitación concreta.
 
-Las exportaciones portables utilizan el modelo **29** para conservar el frenado, las compensaciones de preparación y el margen mínimo de control. Guarda una copia de la versión anterior si necesitas volver a ella; las versiones antiguas de Velair no pueden importar archivos del modelo 29.
+Las exportaciones portables utilizan el modelo **30** para conservar el número de pasos de frenado Alto, el nivel de frenado, las compensaciones de preparación y el margen mínimo de control. Las importaciones antiguas compatibles sin un número de pasos de Alto utilizan `2`. Guarda una copia de la versión anterior si necesitas volver a ella; las versiones antiguas de Velair no pueden importar archivos del modelo 30.
 
 <a id="minimum-control-margin"></a>
 

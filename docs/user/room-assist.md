@@ -83,19 +83,39 @@ equipment's effective target step:
 | High | At T | At T − H | At T | At T + H |
 
 During withdrawal, **Moderate** limits the heating setpoint to at most **T − S**
-or the cooling setpoint to at least **T + S**. **High** uses **two steps** instead.
+or the cooling setpoint to at least **T + S**. **High** uses **two steps** by default.
 If the existing calculation already withdraws more demand, Velair keeps that
 stronger result. These are fixed limits while braking is active: sensor updates
 do not keep subtracting or adding another step.
+
+To change High's depth for one zone, open **Settings → Climates and groups**
+and set **High braking steps** for that climate or group. The setting accepts
+whole numbers from `2` through `10` and shows the equivalent temperature
+difference using the equipment's effective target step and current unit. It is
+saved independently for each zone; it applies only when **High** is selected in
+Room Assist. **Default** and **Moderate** do not use this setting.
+
+For example, `3` steps at `0.5 °C` each equal a `1.5 °C` difference. Three steps
+at `1 °F` each equal a `3 °F` difference. The step count is not a temperature and
+does not change during Celsius/Fahrenheit conversion; the equivalent difference
+follows the effective equipment step. Room Assist keeps its existing selector
+and displays the configured count and equivalent difference.
 
 For example, with a `20.5 °C` heating target, `0.5 °C` deadband and `0.5 °C`
 equipment step:
 
 - **Moderate** withdraws demand at `21 °C`, with an equipment setpoint no higher
   than `20 °C`.
-- **High** withdraws demand at `20.5 °C`, with an equipment setpoint no higher
+- **High** with its default two steps withdraws demand at `20.5 °C`, with an equipment setpoint no higher
   than `19.5 °C`.
+- With **High braking steps** set to `3`, High still withdraws at `20.5 °C`,
+  but its equipment setpoint is no higher than `19 °C`.
 - Both request heat again when the external sensor reaches `20 °C`.
+
+Changing High's step count changes the setpoint limit, not the withdrawal or
+reactivation temperature. In cooling, the corresponding limit is above the
+scheduled target instead of below it. This is a fixed adjustment; it does not
+increase progressively while the room remains outside the band.
 
 Before withdrawal begins, the existing assistance calculation is unchanged.
 Braking remains active until the reactivation limit is reached, even when the
@@ -124,9 +144,11 @@ and thermal inertia can still cause overshoot. This setting does not learn
 cycles or withdraw demand before the scheduled target. Validate it with real
 heating and cooling cycles before relying on a level for a particular room.
 
-Portable exports use model **29** to preserve braking, preparation offsets and the minimum control margin. Keep a backup
+Portable exports use model **30** to preserve the High braking step count,
+braking level, preparation offsets and the minimum control margin. Older
+supported imports without a High step count use `2`. Keep a backup
 from the earlier version if you need to downgrade; older Velair versions cannot
-import model 29 exports.
+import model 30 exports.
 
 ### Minimum control margin
 

@@ -1,4 +1,12 @@
 export const es = {
+  "highBrakingSteps": "Pasos de frenado Alto",
+  "highBrakingStepsUnit": "pasos",
+  "highBrakingStepsHelp": "Número de pasos de consigna del equipo que utiliza el frenado Alto en esta zona (2–10; 2 por defecto). Solo se aplica al seleccionar Alto en Room Assist. En calefacción baja la consigna y en refrigeración la sube. Moderado sigue utilizando un paso. Los límites físicos pueden reducir el efecto y se conservan las correcciones existentes más fuertes. Es un frenado fijo, no un ajuste progresivo.",
+  "highBrakingStepsEquivalent": "Equivale a {value}. Solo se aplica con frenado Alto.",
+  "highBrakingStepsUnknown": "La temperatura equivalente aparecerá cuando esté disponible el paso del equipo. Solo se aplica con frenado Alto.",
+  "roomSensorAssistHighBrakingDepth": "Alto utiliza {steps} pasos ({value}), configurados para esta zona en Ajustes.",
+  "roomSensorAssistHighBrakingSteps": "Alto utiliza {steps} pasos, configurados para esta zona en Ajustes.",
+  "roomSensorAssistBrakingConfigurableHelp": "Predeterminado mantiene la regulación existente. Moderado frena al alcanzar el límite exterior de Room Assist usando un paso de consigna del equipo. Alto frena al alcanzar la consigna programada usando el número de pasos configurado para esta zona en Ajustes (dos por defecto). Ambos reanudan la demanda en el límite opuesto existente. El frenado es fijo, no acumulativo, y conserva las correcciones más fuertes. Se aplica en Calor o Frío fijos, incluidos los rangos con una referencia seleccionada. El control del equipo y la inercia térmica aún pueden provocar sobrepasos.",
   "raGraphDataCommand": "Consigna del equipo",
   "raGraphDataControl": "Límites de control",
   "raGraphDataOrigin": "Origen y momento",

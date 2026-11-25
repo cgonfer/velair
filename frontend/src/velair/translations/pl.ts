@@ -1,4 +1,12 @@
 export const pl = {
+  "highBrakingSteps": "Kroki silnego hamowania",
+  "highBrakingStepsUnit": "kroki",
+  "highBrakingStepsHelp": "Liczba kroków nastawy urządzenia używana przy hamowaniu Silne w tej strefie (2–10; domyślnie 2). Ma zastosowanie tylko po wybraniu Silne w Room Assist. Ogrzewanie obniża nastawę, a chłodzenie ją podwyższa. Umiarkowane nadal używa jednego kroku. Fizyczne limity mogą ograniczyć efekt, a silniejsze dotychczasowe korekty pozostają zachowane. Jest to hamowanie o stałej wartości, a nie stopniowe dostosowywanie.",
+  "highBrakingStepsEquivalent": "Odpowiada różnicy {value}. Dotyczy tylko hamowania Silne.",
+  "highBrakingStepsUnknown": "Odpowiednia różnica temperatury pojawi się, gdy krok urządzenia będzie dostępny. Dotyczy tylko hamowania Silne.",
+  "roomSensorAssistHighBrakingDepth": "Silne używa liczby kroków {steps} ({value}), skonfigurowanej dla tej strefy w Ustawieniach.",
+  "roomSensorAssistHighBrakingSteps": "Silne używa liczby kroków {steps}, skonfigurowanej dla tej strefy w Ustawieniach.",
+  "roomSensorAssistBrakingConfigurableHelp": "Domyślne zachowuje dotychczasową regulację. Umiarkowane rozpoczyna hamowanie na zewnętrznej granicy Room Assist, używając jednego kroku nastawy urządzenia. Silne rozpoczyna hamowanie przy zaplanowanej temperaturze docelowej, używając liczby kroków skonfigurowanej dla tej strefy w Ustawieniach (domyślnie dwóch). Oba poziomy wznawiają zapotrzebowanie na istniejącej przeciwnej granicy. Hamowanie ma stałą wartość, nie kumuluje się i zachowuje silniejsze korekty. Działa w stałym trybie Ogrzewanie lub Chłodzenie, także dla zakresów z wybranym punktem odniesienia. Sterowanie urządzeniem i bezwładność cieplna nadal mogą powodować przekroczenie temperatury docelowej.",
   "raGraphDataCommand": "Nastawa urządzenia",
   "raGraphDataControl": "Granice regulacji",
   "raGraphDataOrigin": "Źródło i czas",

@@ -11,6 +11,8 @@ from copy import deepcopy
 from uuid import uuid4
 from typing import Any, Literal, NotRequired, TypedDict
 
+from .room_assist_braking import normalize_high_braking_steps
+
 from .const import (
     ACTION_SET_CLIMATE_OPTIONS,
     ACTION_SET_HVAC_MODE,
@@ -216,6 +218,7 @@ class PreconditioningData(TypedDict):
     room_sensor_assist_enabled: bool
     room_sensor_assist_deadband: float
     room_sensor_assist_braking_level: str
+    room_sensor_assist_high_braking_steps: int
     room_sensor_assist_minimum_margin: float
     room_sensor_assist_max_delta: float
     room_sensor_assist_debounce_seconds: int
@@ -2018,6 +2021,9 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         ),
         "room_sensor_assist_deadband": _normalize_room_sensor_assist_deadband(
             data.get("room_sensor_assist_deadband")
+        ),
+        "room_sensor_assist_high_braking_steps": normalize_high_braking_steps(
+            data.get("room_sensor_assist_high_braking_steps", 2)
         ),
         "room_sensor_assist_minimum_margin": _normalize_float(
             data.get("room_sensor_assist_minimum_margin"), 0.0, minimum=0.0, maximum=18.0,

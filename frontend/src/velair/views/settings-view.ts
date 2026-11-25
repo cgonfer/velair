@@ -10,6 +10,7 @@ import {
 } from "../constants";
 import { portableImportRemovedProfileOverrides, unmatchedPreconditioningLearningEntities } from "../domain/portable";
 import { entityTemperatureStep } from "../domain/climate";
+import { brakingStepEquivalent } from "../domain/room-assist";
 import type { VelairViewHost } from "../host-types";
 import { renderInlineHelp } from "./inline-help";
 import { COMMUNITY_LINKS, documentationDestination } from "../domain/documentation";
@@ -615,11 +616,50 @@ export function renderSettingsZoneOrderRow(
       <div class="settings-zone-configuration">
         ${renderSettingsExternalChangePolicy(host, entityId, Boolean(disabled))}
         ${renderSettingsTargetTempStep(host, entityId, Boolean(disabled))}
+        ${renderSettingsHighBrakingSteps(host, entityId, Boolean(disabled))}
         ${options.control ?? nothing}
       </div>
       ${options.review ?? nothing}
     </div>
   `;
+}
+
+export function renderSettingsHighBrakingSteps(host: SettingsViewHost, entityId: string, disabled = host._settingsSaving) {
+  const zone = host._data?.zones[entityId];
+  if (zone?.execution?.type === "external") return nothing;
+  const steps = zone?.preconditioning?.room_sensor_assist_high_braking_steps ?? 2;
+  const step = host._entityTemperatureStep(entityId);
+  const equivalent = brakingStepEquivalent(steps, step, host._temperatureUnit(entityId));
+  const key = entityId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const inputId = `high-braking-steps-${key}`;
+  const descriptionId = `${inputId}-description`;
+  return html`
+    <div class="settings-target-temp-step settings-high-braking-steps">
+      <div class="settings-policy-heading">
+        <label class="label" for=${inputId}>${host._t("highBrakingSteps")}</label>
+        ${renderInlineHelp(`${inputId}-help`, host._t("highBrakingSteps"), host._t("highBrakingStepsHelp"))}
+      </div>
+      <div class="settings-high-braking-content">
+        <span class="settings-target-temp-step-control">
+          <input id=${inputId} type="number" inputmode="numeric" min="2" max="10" step="1" required
+            aria-describedby=${descriptionId} .value=${String(steps)} ?disabled=${disabled}
+            @change=${(event: Event) => {
+              const input = event.currentTarget as HTMLInputElement;
+              const value = Number(input.value);
+              if (!input.reportValidity() || !Number.isInteger(value) || value < 2 || value > 10) {
+                input.value = String(steps);
+                return;
+              }
+              input.value = String(steps);
+              if (value !== steps) void host._saveZonePreconditioning(entityId, { room_sensor_assist_high_braking_steps: value });
+            }} />
+          <span>${host._t("highBrakingStepsUnit")}</span>
+        </span>
+        <small id=${descriptionId} class="settings-high-braking-equivalent">${equivalent !== undefined
+          ? host._t("highBrakingStepsEquivalent", { value: equivalent })
+          : host._t("highBrakingStepsUnknown")}</small>
+      </div>
+    </div>`;
 }
 
 export function renderSettingsTargetTempStep(host: SettingsViewHost, entityId: string, disabled = host._settingsSaving) {

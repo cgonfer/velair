@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.3-beta.4 |
-| Ostatnia synchronizacja | 2026-11-23 |
+| Wersja odniesienia | 1.9.3-beta.5 |
+| Ostatnia synchronizacja | 2026-11-25 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -87,13 +87,20 @@ Hamowanie zmienia nastawę wysyłaną do urządzenia, zachowując zaplanowaną t
 | Umiarkowane | Przy T + H | Przy T − H | Przy T − H | Przy T + H |
 | Silne | Przy T | Przy T − H | Przy T | Przy T + H |
 
-Podczas ograniczania zapotrzebowania **Umiarkowane** ogranicza nastawę ogrzewania do najwyżej **T − S**, a chłodzenia do co najmniej **T + S**. **Silne** wykorzystuje **dwa kroki**. Jeżeli dotychczasowe obliczenie ogranicza zapotrzebowanie jeszcze bardziej, Velair zachowuje ten silniejszy wynik. Są to stałe ograniczenia podczas aktywnego hamowania: każda aktualizacja czujnika nie dodaje ani nie odejmuje kolejnego kroku.
+Podczas ograniczania zapotrzebowania **Umiarkowane** ogranicza nastawę ogrzewania do najwyżej **T − S**, a chłodzenia do co najmniej **T + S**. **Silne** domyślnie wykorzystuje **dwa kroki**. Jeżeli dotychczasowe obliczenie ogranicza zapotrzebowanie jeszcze bardziej, Velair zachowuje ten silniejszy wynik. Są to stałe ograniczenia podczas aktywnego hamowania: każda aktualizacja czujnika nie dodaje ani nie odejmuje kolejnego kroku.
+
+Aby zmienić siłę hamowania Silne dla jednej strefy, otwórz **Ustawienia → Urządzenia klimatyczne i grupy** i ustaw **Kroki silnego hamowania** dla danego urządzenia lub grupy. Ustawienie przyjmuje liczby całkowite od `2` do `10` i pokazuje odpowiadającą im różnicę temperatury, obliczoną z efektywnego kroku nastawy urządzenia w jego bieżącej jednostce. Wartość jest zapisywana niezależnie dla każdej strefy i działa tylko po wybraniu **Silne** w Room Assist. **Domyślne** i **Umiarkowane** nie korzystają z tego ustawienia.
+
+Na przykład `3` kroki po `0.5 °C` odpowiadają różnicy `1.5 °C`. Trzy kroki po `1 °F` odpowiadają różnicy `3 °F`. Liczba kroków nie jest temperaturą i nie zmienia się przy przeliczaniu między Celsjuszem a Fahrenheitem; odpowiednia różnica zależy od efektywnego kroku urządzenia. Room Assist zachowuje dotychczasowy selektor i wyświetla skonfigurowaną liczbę oraz odpowiadającą jej różnicę.
 
 Przykład dla temperatury ogrzewania `20.5 °C`, strefy nieczułości `0.5 °C` i kroku urządzenia `0.5 °C`:
 
 - **Umiarkowane** ogranicza zapotrzebowanie przy `21 °C`, przy nastawie urządzenia nie wyższej niż `20 °C`.
-- **Silne** ogranicza je przy `20.5 °C`, przy nastawie nie wyższej niż `19.5 °C`.
+- **Silne** z domyślnymi dwoma krokami ogranicza je przy `20.5 °C`, przy nastawie nie wyższej niż `19.5 °C`.
+- Po ustawieniu **Kroki silnego hamowania** na `3` poziom Silne nadal ogranicza zapotrzebowanie przy `20.5 °C`, ale nastawa urządzenia nie przekracza `19 °C`.
 - Oba poziomy ponownie żądają ciepła, gdy zewnętrzny czujnik osiągnie `20 °C`.
+
+Zmiana liczby kroków hamowania Silne zmienia limit nastawy, a nie temperaturę ograniczenia lub wznowienia zapotrzebowania. W chłodzeniu odpowiedni limit znajduje się powyżej zaplanowanej temperatury docelowej zamiast poniżej niej. Jest to stała korekta; nie narasta stopniowo, gdy temperatura pomieszczenia pozostaje poza pasmem.
 
 Przed ograniczeniem zapotrzebowania dotychczasowe obliczanie wspomagania nie zmienia się. Hamowanie trwa do osiągnięcia granicy ponownej aktywacji, również po przekroczeniu centralnej temperatury. Jeśli wspomaganie startuje lub uruchamia się ponownie, gdy temperatura jest już w paśmie, zachowuje dotychczasową ostrożną inicjalizację bez celowego rozpoczynania cyklu ogrzewania lub chłodzenia.
 
@@ -105,7 +112,7 @@ Fizyczna minimalna i maksymalna nastawa mogą ograniczyć dostępne hamowanie. P
 
 Hamowanie zmniejsza żądanie ogrzewania lub chłodzenia; nie potwierdza zatrzymania zaworu, sprężarki ani termostatu. Sterowanie urządzeniem, minimalne czasy pracy i bezwładność cieplna nadal mogą powodować przekroczenie temperatury. Ta opcja nie uczy się cykli ani nie ogranicza zapotrzebowania przed zaplanowaną temperaturą. Sprawdź ją w rzeczywistych cyklach, zanim zaczniesz polegać na danym poziomie w konkretnym pomieszczeniu.
 
-Przenośne eksporty używają modelu **29**, aby zachować hamowanie, przesunięcia przygotowania i minimalny margines sterowania. Zachowaj kopię z poprzedniej wersji, jeśli potrzebujesz możliwości powrotu; starsze wersje Velair nie importują modelu 29.
+Przenośne eksporty używają modelu **30**, aby zachować liczbę kroków silnego hamowania, poziom hamowania, przesunięcia przygotowania i minimalny margines sterowania. Starsze obsługiwane importy bez liczby kroków silnego hamowania używają wartości `2`. Zachowaj kopię z poprzedniej wersji, jeśli potrzebujesz możliwości powrotu; starsze wersje Velair nie importują modelu 30.
 
 <a id="minimum-control-margin"></a>
 ### Minimalny margines sterowania

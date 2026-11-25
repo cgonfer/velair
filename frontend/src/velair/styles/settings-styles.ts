@@ -550,6 +550,8 @@ export const settingsStyles = css`
 }
 
 .settings-target-temp-step { display: grid; gap: 4px; min-width: 0; }
+.settings-high-braking-content { display: grid; gap: 4px; min-width: 0; }
+.settings-high-braking-equivalent { color: var(--secondary-text-color); font-size: 12px; overflow-wrap: anywhere; }
 
 .target-range-dropdown.select-wrap { margin: 0; min-width: 0; }
 .target-range-dropdown > .target-range-trigger {

@@ -1,4 +1,12 @@
 export const fr = {
+  "highBrakingSteps": "Pas de freinage Élevé",
+  "highBrakingStepsUnit": "pas",
+  "highBrakingStepsHelp": "Nombre de pas de consigne de l’appareil utilisés par le freinage Élevé dans cette zone (2–10 ; 2 par défaut). S’applique uniquement lorsque Élevé est sélectionné dans Room Assist. Le chauffage abaisse la consigne et le refroidissement l’augmente. Modéré utilise toujours un pas. Les limites physiques peuvent réduire l’effet et les corrections existantes plus fortes sont conservées. Il s’agit d’un freinage fixe, pas d’un ajustement progressif.",
+  "highBrakingStepsEquivalent": "Équivaut à {value}. S’applique uniquement au freinage Élevé.",
+  "highBrakingStepsUnknown": "L’équivalent en température apparaîtra lorsque le pas de l’appareil sera disponible. S’applique uniquement au freinage Élevé.",
+  "roomSensorAssistHighBrakingDepth": "Élevé utilise {steps} pas ({value}), configurés pour cette zone dans Réglages.",
+  "roomSensorAssistHighBrakingSteps": "Élevé utilise {steps} pas, configurés pour cette zone dans Réglages.",
+  "roomSensorAssistBrakingConfigurableHelp": "Par défaut conserve la régulation existante. Modéré freine à la limite extérieure de Room Assist en utilisant un pas de consigne de l’appareil. Élevé freine à la consigne planifiée en utilisant le nombre de pas configuré pour cette zone dans Réglages (deux par défaut). Les deux reprennent la demande à la limite opposée existante. Le freinage est fixe, non cumulatif, et conserve les corrections plus fortes. Il s’applique en Chauffage ou Refroidissement fixe, y compris aux plages avec une référence sélectionnée. La régulation de l’appareil et l’inertie thermique peuvent encore provoquer un dépassement.",
   "raGraphDataCommand": "Consigne de l’appareil",
   "raGraphDataControl": "Limites de régulation",
   "raGraphDataOrigin": "Origine et horaires",

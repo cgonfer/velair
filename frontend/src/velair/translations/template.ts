@@ -1,5 +1,13 @@
 import type { TranslationDictionary } from "./types";
 export const translationTemplate = {
+  "highBrakingSteps": "",
+  "roomSensorAssistBrakingConfigurableHelp": "",
+  "highBrakingStepsUnit": "",
+  "highBrakingStepsHelp": "",
+  "highBrakingStepsEquivalent": "",
+  "highBrakingStepsUnknown": "",
+  "roomSensorAssistHighBrakingDepth": "",
+  "roomSensorAssistHighBrakingSteps": "",
   "roomSensorAssistMinimumMargin": "",
   "roomSensorAssistMinimumMarginDescription": "",
   "roomSensorAssistMinimumMarginHelp": "",

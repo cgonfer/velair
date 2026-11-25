@@ -12,6 +12,7 @@ import type { RoomAssistBrakingLevel, RoomSensorAssistStatus } from "../../src/v
 
 function host(options: {
   brakingLevel?: RoomAssistBrakingLevel;
+  highBrakingSteps?: number;
   braking?: RoomSensorAssistStatus["braking"];
   activeFrom?: string | null;
   appliedOffset?: number | null;
@@ -63,6 +64,7 @@ function host(options: {
             room_sensor_assist_enabled: options.assistEnabled ?? false,
             room_sensor_assist_deadband: options.deadband ?? 0.3,
             room_sensor_assist_braking_level: options.brakingLevel,
+            room_sensor_assist_high_braking_steps: options.highBrakingSteps,
             room_sensor_assist_max_delta: options.maxDelta ?? 5,
             room_sensor_assist_minimum_margin: options.minimumMargin ?? 0,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
@@ -76,6 +78,7 @@ function host(options: {
             room_sensor_assist_enabled: true,
             room_sensor_assist_deadband: options.deadband ?? 0.3,
             room_sensor_assist_braking_level: options.brakingLevel,
+            room_sensor_assist_high_braking_steps: options.highBrakingSteps,
             room_sensor_assist_max_delta: options.maxDelta ?? 2,
             room_sensor_assist_minimum_margin: options.minimumMargin ?? 0,
             room_sensor_assist_debounce_seconds: options.debounceSeconds ?? 20,
@@ -174,6 +177,7 @@ function host(options: {
     _shortWeekdayName: (day: string) => day.slice(0, 3),
     _temperatureUnit: () => options.temperatureUnit ?? "°C",
     _temperatureStep: () => options.temperatureStep ?? 1,
+    _entityTemperatureStep: () => options.temperatureStep ?? 1,
     _togglePreconditioningZone: togglePreconditioningZone,
   } as unknown as VelairViewHost;
 
@@ -185,6 +189,15 @@ function host(options: {
 }
 
 describe("sensors view", () => {
+  it.each([["°C", .5, "1.5 °C"], ["°F", .9, "2.7 °F"]])("shows High's configured count and %s equivalent while retaining the selector", (unit, step, equivalent) => {
+    const { viewHost } = host({ expandedZoneIds: ["climate.second"], brakingLevel: "high", highBrakingSteps: 3, temperatureUnit: unit as string, temperatureStep: step as number });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.second"]), container);
+    const select = container.querySelector<HTMLSelectElement>(".sensor-braking-select")!;
+    expect([...select.options].map(option => option.value)).toEqual(["default", "moderate", "high"]);
+    expect(container.querySelector(".sensor-braking-depth")?.textContent).toContain(`steps=3,value=${equivalent}`);
+    expect(container.querySelector('input[id^="high-braking-steps-"]')).toBeNull();
+  });
   it("saves the minimum margin through the existing flow using the native effective step", () => {
     const { viewHost, saveZonePreconditioning } = host({ expandedZoneIds: ["climate.second"], maxDelta: 18, temperatureUnit: "°F", temperatureStep: .9 });
     const container = document.createElement("div");
@@ -318,7 +331,7 @@ describe("sensors view", () => {
       const description = row.querySelector(".sensor-field-description")!;
       expect(select.getAttribute("aria-describedby")).toBe(description.id);
       expect(description.textContent).toContain("roomSensorAssistBrakingDescription");
-      expect(description.textContent).toContain("roomSensorAssistBrakingHelp");
+      expect(description.textContent).toContain("roomSensorAssistBrakingConfigurableHelp");
       expect(row.querySelector("label")?.htmlFor).toBe(select.id);
       expect(container.querySelector(".sensor-number-fields .sensor-braking-select")).toBeNull();
     } finally {

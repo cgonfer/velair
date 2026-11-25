@@ -8,8 +8,8 @@ Traduções: [Original em inglês](room-assist.md) · [Español](room-assist.es.
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.3-beta.4 |
-| Última sincronização | 2026-11-23 |
+| Versão de referência | 1.9.3-beta.5 |
+| Última sincronização | 2026-11-25 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -75,13 +75,20 @@ A frenagem altera o alvo enviado ao equipamento, mantendo a temperatura programa
 | Moderada | Em T + H | Em T − H | Em T − H | Em T + H |
 | Alta | Em T | Em T − H | Em T | Em T + H |
 
-Durante a retirada, **Moderada** limita o alvo de aquecimento a no máximo **T − S**, ou o de refrigeração a no mínimo **T + S**. **Alta** usa **dois incrementos**. Se o cálculo existente já retira mais demanda, o Velair mantém esse resultado mais forte. São limites fixos enquanto a frenagem está ativa: atualizações do sensor não continuam somando ou subtraindo mais um incremento.
+Durante a retirada, **Moderada** limita o alvo de aquecimento a no máximo **T − S**, ou o de refrigeração a no mínimo **T + S**. **Alta** usa **dois incrementos** por padrão. Se o cálculo existente já retira mais demanda, o Velair mantém esse resultado mais forte. São limites fixos enquanto a frenagem está ativa: atualizações do sensor não continuam somando ou subtraindo mais um incremento.
+
+Para alterar a intensidade da frenagem Alta em uma zona, abra **Configurações → Dispositivos de climatização e grupos** e ajuste **Passos da frenagem Alta** para esse dispositivo ou grupo. O ajuste aceita números inteiros de `2` a `10` e mostra a diferença de temperatura equivalente usando o passo efetivo da temperatura definida do equipamento e a unidade atual. Ele é salvo de forma independente para cada zona e se aplica somente quando **Alta** está selecionada no Room Assist. **Padrão** e **Moderada** não usam esse ajuste.
+
+Por exemplo, `3` passos de `0.5 °C` cada equivalem a uma diferença de `1.5 °C`. Três passos de `1 °F` cada equivalem a `3 °F`. A quantidade de passos não é uma temperatura e não muda na conversão entre Celsius e Fahrenheit; a diferença equivalente acompanha o passo efetivo do equipamento. O Room Assist mantém o seletor existente e mostra a quantidade configurada e a diferença equivalente.
 
 Por exemplo, com alvo de aquecimento de `20.5 °C`, zona morta de `0.5 °C` e incremento do equipamento de `0.5 °C`:
 
 - **Moderada** retira demanda em `21 °C`, com alvo do equipamento não superior a `20 °C`.
-- **Alta** retira demanda em `20.5 °C`, com alvo não superior a `19.5 °C`.
+- **Alta**, com os dois passos padrão, retira demanda em `20.5 °C`, com alvo não superior a `19.5 °C`.
+- Com **Passos da frenagem Alta** em `3`, Alta continua retirando demanda em `20.5 °C`, mas o alvo do equipamento não ultrapassa `19 °C`.
 - Ambas solicitam calor novamente quando o sensor externo atinge `20 °C`.
+
+Alterar a quantidade de passos de Alta muda o limite da temperatura definida, sem alterar a temperatura de retirada ou reativação. Na refrigeração, o limite correspondente fica acima do alvo programado, em vez de abaixo dele. O ajuste é fixo e não aumenta progressivamente enquanto a temperatura do cômodo permanece fora da faixa.
 
 Antes da retirada, o cálculo de assistência existente permanece inalterado. A frenagem continua ativa até atingir o limite de reativação, mesmo quando o cômodo cruza o alvo central. Se a assistência inicia ou reinicia com o cômodo já dentro da faixa, mantém a inicialização prudente existente sem iniciar deliberadamente um ciclo de climatização.
 
@@ -93,7 +100,7 @@ Os alvos físicos mínimo e máximo podem limitar a frenagem disponível. Com do
 
 A frenagem reduz a solicitação de aquecimento ou refrigeração; não confirma que válvula, compressor ou termostato pararam. O controle do equipamento, os tempos mínimos de funcionamento e a inércia térmica ainda podem causar ultrapassagem. Este ajuste não aprende ciclos nem retira demanda antes do alvo programado. Valide-o com ciclos reais antes de confiar em um nível para um cômodo específico.
 
-As exportações portáveis usam o modelo **29** para preservar a frenagem, os deslocamentos de preparação e a margem mínima de controle. Mantenha um backup da versão anterior se precisar voltar a ela; versões antigas do Velair não podem importar o modelo 29.
+As exportações portáveis usam o modelo **30** para preservar a quantidade de passos da frenagem Alta, o nível de frenagem, os deslocamentos de preparação e a margem mínima de controle. Importações antigas compatíveis sem uma quantidade de passos de Alta usam `2`. Mantenha um backup da versão anterior se precisar voltar a ela; versões antigas do Velair não podem importar o modelo 30.
 
 <a id="minimum-control-margin"></a>
 ### Margem mínima de controle

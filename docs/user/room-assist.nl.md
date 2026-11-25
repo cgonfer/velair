@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](room-assist.md) · [Español](room-assist.es.md)
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.3-beta.4 |
-| Laatst gesynchroniseerd | 2026-11-23 |
+| Referentieversie | 1.9.3-beta.5 |
+| Laatst gesynchroniseerd | 2026-11-25 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -87,13 +87,20 @@ Afremming wijzigt het instelpunt dat naar het apparaat wordt gestuurd; de geplan
 | Gemiddeld | Bij T + H | Bij T − H | Bij T − H | Bij T + H |
 | Hoog | Bij T | Bij T − H | Bij T | Bij T + H |
 
-Tijdens het terugnemen beperkt **Gemiddeld** het verwarmingsinstelpunt tot maximaal **T − S**, of het koelinstelpunt tot minimaal **T + S**. **Hoog** gebruikt **twee stappen**. Als de bestaande berekening al meer vraag terugneemt, behoudt Velair dat sterkere resultaat. Dit zijn vaste grenzen zolang afremming actief is: sensorupdates tellen niet telkens nog een stap op of af.
+Tijdens het terugnemen beperkt **Gemiddeld** het verwarmingsinstelpunt tot maximaal **T − S**, of het koelinstelpunt tot minimaal **T + S**. **Hoog** gebruikt standaard **twee stappen**. Als de bestaande berekening al meer vraag terugneemt, behoudt Velair dat sterkere resultaat. Dit zijn vaste grenzen zolang afremming actief is: sensorupdates tellen niet telkens nog een stap op of af.
+
+Om de afremdiepte van Hoog voor één zone te wijzigen, open je **Instellingen → Klimaatapparaten en groepen** en stel je **Afremstappen voor Hoog** in voor dat apparaat of die groep. De instelling accepteert gehele getallen van `2` tot en met `10` en toont het overeenkomstige temperatuurverschil op basis van de effectieve instelpuntstap en huidige eenheid van het apparaat. De waarde wordt per zone opgeslagen en geldt alleen wanneer **Hoog** is geselecteerd in Room Assist. **Standaard** en **Gemiddeld** gebruiken deze instelling niet.
+
+Bijvoorbeeld: `3` stappen van elk `0.5 °C` geven een verschil van `1.5 °C`. Drie stappen van elk `1 °F` geven een verschil van `3 °F`. Het aantal stappen is geen temperatuur en verandert niet bij omzetting tussen Celsius en Fahrenheit; het overeenkomstige verschil volgt de effectieve apparaatstap. Room Assist behoudt de bestaande keuzelijst en toont het ingestelde aantal en het overeenkomstige verschil.
 
 Bijvoorbeeld met een verwarmingsdoel van `20.5 °C`, een dode band van `0.5 °C` en een apparaatstap van `0.5 °C`:
 
 - **Gemiddeld** neemt de vraag terug bij `21 °C`, met een apparaatinstelpunt van maximaal `20 °C`.
-- **Hoog** neemt de vraag terug bij `20.5 °C`, met een instelpunt van maximaal `19.5 °C`.
+- **Hoog** met de standaard twee stappen neemt de vraag terug bij `20.5 °C`, met een instelpunt van maximaal `19.5 °C`.
+- Met **Afremstappen voor Hoog** op `3` neemt Hoog de vraag nog steeds terug bij `20.5 °C`, maar is het apparaatinstelpunt maximaal `19 °C`.
 - Beide vragen opnieuw warmte wanneer de externe sensor `20 °C` bereikt.
+
+Een ander aantal stappen voor Hoog verandert de instelpuntgrens, niet de temperatuur voor het terugnemen of hervatten van de vraag. Bij koeling ligt de overeenkomstige grens boven het geplande doel in plaats van eronder. Dit is een vaste aanpassing; ze wordt niet geleidelijk sterker zolang de kamer buiten de band blijft.
 
 Vóór het terugnemen blijft de bestaande ondersteuningsberekening ongewijzigd. Afremming blijft actief tot de hervattingsgrens, ook wanneer de kamer het centrale doel passeert. Wanneer ondersteuning start of herstart terwijl de kamer al binnen de band ligt, blijft de bestaande voorzichtige initialisatie behouden zonder bewust een verwarmings- of koelcyclus te beginnen.
 
@@ -105,7 +112,7 @@ Fysieke minimum- en maximuminstelpunten kunnen de beschikbare afremming beperken
 
 Afremming vermindert de gevraagde verwarming of koeling; het bevestigt niet dat klep, compressor of thermostaat gestopt is. Apparaatregeling, minimale looptijden en thermische traagheid kunnen nog steeds overschrijding veroorzaken. Deze instelling leert geen cycli en neemt de vraag niet vóór het geplande doel terug. Controleer haar met echte verwarmings- en koelcycli voordat je voor een bepaalde kamer op een niveau vertrouwt.
 
-Draagbare exports gebruiken model **29** om afremming, voorbereidingsverschuivingen en de minimale regelmarge te bewaren. Bewaar een back-up uit de eerdere versie als je wilt kunnen teruggaan; oudere Velair-versies kunnen model 29 niet importeren.
+Draagbare exports gebruiken model **30** om het aantal afremstappen voor Hoog, het afremniveau, voorbereidingsverschuivingen en de minimale regelmarge te bewaren. Oudere ondersteunde imports zonder een aantal stappen voor Hoog gebruiken `2`. Bewaar een back-up uit de eerdere versie als je wilt kunnen teruggaan; oudere Velair-versies kunnen model 30 niet importeren.
 
 <a id="minimum-control-margin"></a>
 ### Minimale regelmarge

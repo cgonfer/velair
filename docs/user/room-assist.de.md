@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.3-beta.4 |
-| Letzte Synchronisierung | 2026-11-23 |
+| Referenzversion | 1.9.3-beta.5 |
+| Letzte Synchronisierung | 2026-11-25 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -87,13 +87,20 @@ Die Bremsung ändert den an das Gerät gesendeten Sollwert; die geplante Tempera
 | Moderat | Bei T + H | Bei T − H | Bei T − H | Bei T + H |
 | Stark | Bei T | Bei T − H | Bei T | Bei T + H |
 
-Während der Rücknahme begrenzt **Moderat** den Heizsollwert auf höchstens **T − S** oder den Kühlsollwert auf mindestens **T + S**. **Stark** verwendet **zwei Schritte**. Nimmt die bestehende Berechnung bereits mehr Anforderung zurück, behält Velair dieses stärkere Ergebnis. Die Grenzen bleiben während der Bremsung fest: Sensoraktualisierungen addieren oder subtrahieren nicht jedes Mal einen weiteren Schritt.
+Während der Rücknahme begrenzt **Moderat** den Heizsollwert auf höchstens **T − S** oder den Kühlsollwert auf mindestens **T + S**. **Stark** verwendet standardmäßig **zwei Schritte**. Nimmt die bestehende Berechnung bereits mehr Anforderung zurück, behält Velair dieses stärkere Ergebnis. Die Grenzen bleiben während der Bremsung fest: Sensoraktualisierungen addieren oder subtrahieren nicht jedes Mal einen weiteren Schritt.
+
+Um die Bremsstärke von Stark für eine Zone zu ändern, öffne **Einstellungen → Klimageräte und Gruppen** und lege **Bremsschritte für Stark** für das Klimagerät oder die Gruppe fest. Die Einstellung akzeptiert ganze Zahlen von `2` bis `10` und zeigt den entsprechenden Temperaturabstand anhand der effektiven Sollwertschrittweite und der aktuellen Einheit des Geräts. Sie wird für jede Zone unabhängig gespeichert und gilt nur, wenn in Room Assist **Stark** ausgewählt ist. **Standard** und **Moderat** verwenden diese Einstellung nicht.
+
+Zum Beispiel entsprechen `3` Schritte zu je `0.5 °C` einem Abstand von `1.5 °C`. Drei Schritte zu je `1 °F` entsprechen `3 °F`. Die Schrittzahl ist keine Temperatur und ändert sich bei einer Celsius/Fahrenheit-Umrechnung nicht; der entsprechende Abstand folgt der effektiven Geräteschrittweite. Room Assist behält die bisherige Auswahl bei und zeigt die konfigurierte Schrittzahl sowie den entsprechenden Abstand.
 
 Beispiel mit Heizungsziel `20.5 °C`, Totband `0.5 °C` und Geräteschrittweite `0.5 °C`:
 
 - **Moderat** nimmt bei `21 °C` die Anforderung zurück; der Gerätesollwert beträgt höchstens `20 °C`.
-- **Stark** nimmt sie bei `20.5 °C` zurück; der Gerätesollwert beträgt höchstens `19.5 °C`.
+- **Stark** mit standardmäßig zwei Schritten nimmt sie bei `20.5 °C` zurück; der Gerätesollwert beträgt höchstens `19.5 °C`.
+- Ist **Bremsschritte für Stark** auf `3` gesetzt, nimmt Stark die Anforderung weiterhin bei `20.5 °C` zurück, begrenzt den Gerätesollwert jedoch auf höchstens `19 °C`.
 - Beide fordern erneut Wärme an, wenn der separate Raumsensor `20 °C` erreicht.
+
+Eine Änderung der Schrittzahl für Stark ändert die Sollwertgrenze, nicht die Rücknahme- oder Wiedereinschalttemperatur. Beim Kühlen liegt die entsprechende Grenze oberhalb statt unterhalb des geplanten Ziels. Dies ist eine feste Anpassung; sie wird nicht schrittweise verstärkt, solange die Raumtemperatur außerhalb des Bandes bleibt.
 
 Vor der Rücknahme bleibt die bestehende Unterstützungsberechnung unverändert. Die Bremsung bleibt bis zur Wiedereinschaltgrenze aktiv, auch beim Überqueren des zentralen Ziels. Startet die Unterstützung innerhalb des Bandes neu, bleibt die bisherige vorsichtige Initialisierung erhalten, ohne absichtlich einen Heiz- oder Kühlzyklus zu starten.
 
@@ -105,7 +112,7 @@ Physische Mindest- und Höchstsollwerte können die Bremsung begrenzen. Bei zwei
 
 Die Bremsung reduziert die Heiz- oder Kühlanforderung; sie bestätigt keinen Stillstand von Ventil, Kompressor oder Thermostat. Gerätesteuerung, Mindestlaufzeiten und thermische Trägheit können weiterhin ein Überschwingen verursachen. Diese Einstellung lernt keine Zyklen und nimmt die Anforderung nicht vor dem geplanten Ziel zurück. Prüfe sie mit echten Heiz- und Kühlzyklen, bevor du dich für einen bestimmten Raum auf eine Stufe verlässt.
 
-Portable Exporte verwenden Modell **29**, um Bremsung, Vorbereitungsversätze und den Mindestregelabstand zu erhalten. Bewahre für ein mögliches Downgrade eine Sicherung der früheren Version auf; ältere Velair-Versionen können Modell 29 nicht importieren.
+Portable Exporte verwenden Modell **30**, um die Schrittzahl für Stark, die Bremsstufe, Vorbereitungsversätze und den Mindestregelabstand zu erhalten. Ältere unterstützte Importe ohne Schrittzahl für Stark verwenden `2`. Bewahre für ein mögliches Downgrade eine Sicherung der früheren Version auf; ältere Velair-Versionen können Modell 30 nicht importieren.
 
 <a id="minimum-control-margin"></a>
 ### Mindestregelabstand

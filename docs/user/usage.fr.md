@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.3-beta.4 |
-| Dernière synchronisation | 2026-11-23 |
+| Version de référence | 1.9.3-beta.5 |
+| Dernière synchronisation | 2026-11-25 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -1171,9 +1171,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v29 conservent les valeurs brutes et
+Les exports actuels du format portable v30 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v29 ; utilisez une version prenant en charge v29 pour les
+les exports v30 ; utilisez une version prenant en charge v30 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1588,7 +1588,7 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Les exports actuels du modèle 29 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist, le niveau de freinage sélectionné et la marge minimale de commande, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 29. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+Les exports actuels du modèle 30 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist, le niveau de freinage sélectionné, le nombre de pas de freinage Élevé par zone et la marge minimale de commande, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 30. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin

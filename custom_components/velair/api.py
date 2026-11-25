@@ -87,6 +87,7 @@ from .models import (
     validate_planned_return,
 )
 from .room_sensor_schedule import normalize_room_sensor_schedule
+from .room_assist_braking import validate_high_braking_steps
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
 from .selection_requests import climate_entity_id, climate_entity_ids, profile_id, profile_ids
 from .room_groups import member_to_unit, normalize_room_groups, control_unit_ids
@@ -105,7 +106,7 @@ from .temperature_migration import (
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 _LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 29
+EXPORT_MODEL_VERSION = 30
 EXPORT_SECTIONS = (
     "member_comfort",
     "room_groups",
@@ -149,6 +150,14 @@ def _room_sensor_assist_deadband(value: Any) -> float:
     if not is_room_sensor_assist_deadband_step_aligned(number):
         raise vol.Invalid("expected 0.1 degree increments")
     return number
+
+
+def _high_braking_steps(value: Any) -> int:
+    """Reject fractional, boolean and out-of-range public step counts."""
+    try:
+        return validate_high_braking_steps(value)
+    except ValueError as err:
+        raise vol.Invalid(str(err)) from err
 
 
 def _sensor_entity_id(value: Any) -> str:
@@ -254,6 +263,7 @@ PRECONDITIONING_SCHEMA = vol.Schema(
         vol.Optional("room_sensor_schedule"): normalize_room_sensor_schedule,
         vol.Optional("room_sensor_assist_enabled"): bool,
         vol.Optional("room_sensor_assist_braking_level"): vol.In(("default", "moderate", "high")),
+        vol.Optional("room_sensor_assist_high_braking_steps"): _high_braking_steps,
         vol.Optional("room_sensor_assist_deadband"): vol.All(
             _room_sensor_assist_deadband,
             vol.Range(min=0, max=9.0),

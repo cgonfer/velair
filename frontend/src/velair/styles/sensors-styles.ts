@@ -299,6 +299,7 @@ export const sensorsStyles = css`
 }
 
 .sensor-braking-explanation,
+.sensor-braking-depth,
 .sensor-braking-requirement,
 .sensor-braking-inactive {
   display: block;
