@@ -7741,7 +7741,8 @@ class VelairScheduler:
         lead_minutes = (
             prediction["recommended_lead_minutes"] if prediction is not None else 0
         )
-        if lead_minutes <= 0:
+        # The prediction has no recommended lead (None) until it has learned enough
+        if lead_minutes is None or lead_minutes <= 0:
             return target_when, None
 
         return (
