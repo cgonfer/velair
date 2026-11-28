@@ -108,7 +108,8 @@ class FutureEventProjectionTest(unittest.IsolatedAsyncioTestCase):
         expired_key = (other, "tuesday", "17:00", NOW - timedelta(hours=1))
         future_key = (other, "tuesday", "19:00", NOW + timedelta(hours=1))
         self.scheduler._attempted_preconditioning_events.update({expired_key, future_key})
-        expired = SimpleNamespace(target_when=NOW - timedelta(hours=1))
+        expired = scheduler_module._AppliedPreconditioningTarget(
+            active_from=NOW - timedelta(hours=2), target_when=NOW - timedelta(hours=1))
         self.scheduler._applied_preconditioning_targets["expired-other-zone"] = expired
         self.scheduler._iter_future_events(NOW, entity_id_filter=self.entities[0], clear_applied=False)
         self.assertIn(expired_key, self.scheduler._attempted_preconditioning_events)

@@ -69,6 +69,17 @@ def record_delivery_receipt(entity_id: str, expected: dict[str, Any]) -> None:
     target.update(fields)
 
 
+def accepted_temperature_target(entity_id: str) -> dict[str, float] | None:
+    """Read this task's accepted target for explanatory output, without I/O."""
+    capture = _current_receipt.get()
+    if capture is None or capture.task is not asyncio.current_task():
+        return None
+    fields = capture.targets.get(entity_id, {})
+    target = {key: fields[key] for key in ("temperature", "target_temp_low", "target_temp_high")
+              if fields.get(key) is not None}
+    return target or None
+
+
 @contextmanager
 def delivery_guard(check: Callable[[], bool]) -> Iterator[None]:
     """Guard only this task; HA listeners can inherit context in new tasks."""

@@ -204,6 +204,7 @@ class PlannedReturnDeliveryTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.climate.calls), 1)
 
     async def test_capability_refresh_reapplies_without_manual_return_wakeup(self):
+        self.hass.states[self.entity].attributes["supported_features"] = 1
         self.hass.states[self.entity].attributes["min_temp"] = 6
         self.assertFalse(self.scheduler._schedule_projection.capabilities_current(self.entity))
         await self.runtime._tick(self.clock[0], self.runtime._generation)

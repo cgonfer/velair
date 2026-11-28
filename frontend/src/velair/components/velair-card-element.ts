@@ -130,6 +130,11 @@ import {
 } from "../controllers/draft-validation";
 import {
   asPortabilityHost,
+  asSensorEntityIdsHost,
+  resetSensorEntityIdsReview,
+  previewSensorEntityIds,
+  applySensorEntityIds,
+  toggleSensorEntityId,
   downloadPortablePayload,
   exportPortableData,
   handlePortableImportFile,
@@ -326,6 +331,7 @@ export class VelairCard extends LitElement {
     );
     this._hass = value;
     if (oldValue?.connection !== value?.connection) {
+      resetSensorEntityIdsReview(asSensorEntityIdsHost(this));
       if (oldValue?.connection) {
         this._diagnosticsSubscriptionGeneration += 1;
         this._subscribingDiagnostics = false;
@@ -790,6 +796,11 @@ export class VelairCard extends LitElement {
   @state() private _diagnosticsExportOpen = false;
   @state() private _diagnosticsRedactEntityIds = true;
   @state() private _temperatureMigrationAction?: "°C" | "°F";
+  @state() private _sensorIdsPreview?: import("../types").SensorEntityIdsPreview;
+  @state() private _sensorIdsResult?: import("../types").SensorEntityIdsResult;
+  @state() private _sensorIdsSelected = new Set<string>();
+  @state() private _sensorIdsAction?: "preview" | "apply";
+  @state() private _sensorIdsError?: string;
   @state() private _maintenanceAction?: "reset";
   @state() private _portabilityAction?: "export" | "import";
   @state() private _exportSections = new Set<PortableSection>(PORTABLE_SECTIONS);
@@ -933,6 +944,7 @@ export class VelairCard extends LitElement {
   }
 
   public disconnectedCallback(): void {
+    resetSensorEntityIdsReview(asSensorEntityIdsHost(this));
     dismissInlineHelpWithin(this);
     this._detachPanelSchedule?.();
     this._detachPanelSchedule = undefined;
@@ -2585,6 +2597,18 @@ export class VelairCard extends LitElement {
 
   private async _importPortableData(): Promise<void> {
     await importPortableData(asPortabilityHost(this));
+  }
+
+  private async _previewSensorEntityIds(): Promise<void> {
+    await previewSensorEntityIds(asSensorEntityIdsHost(this));
+  }
+
+  private async _applySensorEntityIds(): Promise<void> {
+    await applySensorEntityIds(asSensorEntityIdsHost(this));
+  }
+
+  private _toggleSensorEntityId(entityId: string, checked: boolean): void {
+    toggleSensorEntityId(asSensorEntityIdsHost(this), entityId, checked);
   }
 
   private async _resetVelairData(): Promise<void> {

@@ -113,6 +113,18 @@ When an anonymous update during settling cannot be distinguished reliably from
 device convergence, Velair conservatively keeps Automatic control. This avoids
 turning a rejected or delayed Velair command into a false Manual adjustment.
 The settling state is runtime-only and is cleared on restart.
+
+During a recent Velair Off command, a scalar target reset to the device's
+explicitly reported minimum is also recognized as an optional effect of turning
+off. The minimum may arrive before, together with, or after the `off` report,
+including while the command is still running. This exception requires valid
+minimum and maximum limits and Velair's current intent to remain Off; it does
+not hide identifiable user or automation actions. It uses the same bounded
+settling period, and a newer target or HVAC command retires the older evidence.
+The minimum is not commanded or required: a thermostat that retains its previous
+target can still confirm the Off command normally. A minimum report alone does
+not confirm that the thermostat has switched off.
+
 If the climate still differs from the requested value when settling ends,
 Velair keeps Automatic control and records a runtime command-settling warning.
 The next fresh Diagnostics snapshot exposes the warning; its report payload

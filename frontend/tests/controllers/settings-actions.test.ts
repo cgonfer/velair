@@ -54,6 +54,18 @@ function host(externalConfig = false) {
 }
 
 describe("settings actions", () => {
+  it("retains committed braking configuration and exposes a failed save", async () => {
+    const { api, state } = host();
+    state._data = scheduleResponse();
+    state._data.zones["climate.office"].preconditioning = { room_sensor_assist_braking_level: "moderate" };
+    api.updateZonePreconditioning.mockRejectedValueOnce(new Error("Unable to save braking"));
+    await saveZonePreconditioning(state, "climate.office", { room_sensor_assist_braking_level: "high" });
+    expect(api.updateZonePreconditioning).toHaveBeenCalledWith("climate.office", { room_sensor_assist_braking_level: "high" });
+    expect(state._data.zones["climate.office"].preconditioning.room_sensor_assist_braking_level).toBe("moderate");
+    expect(state._applyScheduleData).not.toHaveBeenCalled();
+    expect(state._error).toBe("Unable to save braking");
+    expect(state._settingsSaving).toBe(false);
+  });
   it("persists Comfort for the physical member rather than its shared control owner", async () => {
     const { api, state } = host();
     state._data = { ...scheduleResponse(), member_to_unit: { "climate.office": "group.room" } };

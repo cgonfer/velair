@@ -87,6 +87,7 @@ from .models import (
     validate_planned_return,
 )
 from .room_sensor_schedule import normalize_room_sensor_schedule
+from .room_assist_braking import validate_high_braking_steps
 from .storage import STORAGE_VERSION, convert_portable_temperature_data
 from .selection_requests import climate_entity_id, climate_entity_ids, profile_id, profile_ids
 from .room_groups import member_to_unit, normalize_room_groups, control_unit_ids
@@ -105,7 +106,7 @@ from .temperature_migration import (
 API_REGISTERED = f"{DOMAIN}_websocket_api_registered"
 _LOGGER = logging.getLogger(__name__)
 EXPORT_FORMAT = "velair_portable_data"
-EXPORT_MODEL_VERSION = 26
+EXPORT_MODEL_VERSION = 30
 EXPORT_SECTIONS = (
     "member_comfort",
     "room_groups",
@@ -149,6 +150,14 @@ def _room_sensor_assist_deadband(value: Any) -> float:
     if not is_room_sensor_assist_deadband_step_aligned(number):
         raise vol.Invalid("expected 0.1 degree increments")
     return number
+
+
+def _high_braking_steps(value: Any) -> int:
+    """Reject fractional, boolean and out-of-range public step counts."""
+    try:
+        return validate_high_braking_steps(value)
+    except ValueError as err:
+        raise vol.Invalid(str(err)) from err
 
 
 def _sensor_entity_id(value: Any) -> str:
@@ -213,6 +222,12 @@ PRECONDITIONING_SCHEMA = vol.Schema(
             vol.Coerce(float),
             vol.Range(min=0, max=9),
         ),
+        vol.Optional("heating_setpoint_offset"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=9),
+        ),
+        vol.Optional("cooling_setpoint_offset"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=9),
+        ),
         vol.Optional("learning_history_size"): vol.All(
             vol.Coerce(int),
             vol.Range(min=10, max=500),
@@ -247,9 +262,14 @@ PRECONDITIONING_SCHEMA = vol.Schema(
         vol.Optional("room_temperature_entity_id"): vol.Any(None, cv.entity_id),
         vol.Optional("room_sensor_schedule"): normalize_room_sensor_schedule,
         vol.Optional("room_sensor_assist_enabled"): bool,
+        vol.Optional("room_sensor_assist_braking_level"): vol.In(("default", "moderate", "high")),
+        vol.Optional("room_sensor_assist_high_braking_steps"): _high_braking_steps,
         vol.Optional("room_sensor_assist_deadband"): vol.All(
             _room_sensor_assist_deadband,
             vol.Range(min=0, max=9.0),
+        ),
+        vol.Optional("room_sensor_assist_minimum_margin"): vol.All(
+            vol.Coerce(float), vol.Range(min=0, max=18.0),
         ),
         vol.Optional("room_sensor_assist_max_delta"): vol.All(
             vol.Coerce(float),
@@ -409,7 +429,57 @@ def async_setup_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_import_data)
     websocket_api.async_register_command(hass, ws_reset_data)
     websocket_api.async_register_command(hass, ws_subscribe_updates)
+    websocket_api.async_register_command(hass, ws_preview_sensor_entity_ids)
+    websocket_api.async_register_command(hass, ws_apply_sensor_entity_ids)
     hass.data[API_REGISTERED] = True
+
+
+def _sensor_id_review_runtime(hass, connection, msg):
+    """Authorize registry maintenance without touching scheduler lifecycle."""
+    if not getattr(getattr(connection, "user", None), "is_admin", False):
+        connection.send_error(msg["id"], "unauthorized", "Administrator access is required")
+        return None
+    runtime = _get_runtime(hass, synchronize_blocking=False)
+    if runtime is None:
+        connection.send_error(msg["id"], "not_loaded", "Integration is not loaded")
+        return None
+    if runtime.get("operation_active") or runtime.get("operation_recovery"):
+        _reject_temperature_migration_mutation(runtime, connection, msg)
+        return None
+    return runtime
+
+
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/preview_sensor_entity_ids"})
+@callback
+def ws_preview_sensor_entity_ids(hass, connection, msg) -> None:
+    """Review native sensor ID proposals for the active integration."""
+    from .entity_registry import preview_sensor_entity_ids
+
+    runtime = _sensor_id_review_runtime(hass, connection, msg)
+    if runtime is not None:
+        connection.send_result(msg["id"], preview_sensor_entity_ids(hass, runtime["entry"]))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): f"{DOMAIN}/apply_sensor_entity_ids",
+    vol.Required("preview_id"): str,
+    vol.Required("entity_ids"): [cv.entity_id],
+})
+@callback
+def ws_apply_sensor_entity_ids(hass, connection, msg) -> None:
+    """Apply only explicitly selected, freshly reviewed registry ID changes."""
+    from .entity_registry import apply_sensor_entity_ids
+
+    runtime = _sensor_id_review_runtime(hass, connection, msg)
+    if runtime is None:
+        return
+    try:
+        result = apply_sensor_entity_ids(hass, runtime["entry"], msg["preview_id"], msg["entity_ids"])
+    except ValueError as err:
+        code = str(err)
+        connection.send_error(msg["id"], code, "Review sensor entity IDs again" if code == "sensor_entity_ids_stale" else "Select valid sensor entity IDs from the current review")
+        return
+    connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/subscribe_shared_demand"})
@@ -1903,7 +1973,7 @@ async def ws_import_data(
         if not blocked:
             await scheduler.async_start(apply_current_schedule=False)
     except Exception as err:
-        if persisted:
+        if persisted or getattr(err, "velair_import_persisted", False):
             _mark_operation_recovery(runtime, "portable_import", err)
             connection.send_error(
                 msg["id"],
@@ -2027,7 +2097,7 @@ async def ws_delete_schedule_template(
     connection.send_result(msg["id"], _build_schedule_response(runtime))
 
 
-def _get_runtime(hass: HomeAssistant) -> dict[str, Any] | None:
+def _get_runtime(hass: HomeAssistant, *, synchronize_blocking: bool = True) -> dict[str, Any] | None:
     """Return the active runtime dictionary."""
     entries = hass.data.get(DOMAIN, {})
     entry_runtimes = [
@@ -2036,7 +2106,7 @@ def _get_runtime(hass: HomeAssistant) -> dict[str, Any] | None:
         if isinstance(key, str) and key != API_REGISTERED
     ]
     runtime = entry_runtimes[0] if entry_runtimes else None
-    if runtime is not None:
+    if runtime is not None and synchronize_blocking:
         runtime["scheduler"].set_temperature_migration_blocked(bool(
             runtime["storage"].temperature_migration_required
             or runtime.get("operation_active")
@@ -2795,7 +2865,8 @@ def _build_import_data(
         import_data["preconditioning_learning"] = (
             _normalize_import_preconditioning_learning(
                 payload_sections["preconditioning_learning"],
-                current_zones,
+                import_data.get("zones", current_zones),
+                model_version=payload["model_version"],
             )
         )
     if "profiles" in sections:
@@ -3015,7 +3086,7 @@ def _export_preconditioning_learning(
         list(zones),
         history_sizes,
     )
-    return {
+    exported = {
         entity_id: learning
         for entity_id, learning in normalized.items()
         if any(
@@ -3023,11 +3094,19 @@ def _export_preconditioning_learning(
             for direction in ("heat", "cool")
         )
     }
+    for entity_id, learning in exported.items():
+        config = normalize_preconditioning_data(zones[entity_id].get("preconditioning"))
+        for direction, key in (("heat", "heating_setpoint_offset"),
+                               ("cool", "cooling_setpoint_offset")):
+            learning[direction]["setpoint_offset"] = config[key]
+    return exported
 
 
 def _normalize_import_preconditioning_learning(
     raw_learning: Any,
     current_zones: dict[str, Any],
+    *,
+    model_version: int = EXPORT_MODEL_VERSION,
 ) -> dict[str, Any]:
     """Normalize learning for matching managed climates and ignore the rest."""
     if not isinstance(raw_learning, dict):
@@ -3048,7 +3127,30 @@ def _normalize_import_preconditioning_learning(
         history_sizes,
     )
     for entity_id, learning in normalized.items():
+        config = normalize_preconditioning_data(current_zones[entity_id].get("preconditioning"))
         for direction in ("heat", "cool"):
+            if learning[direction]["observations"]:
+                raw_direction = raw_learning[entity_id].get(direction, {})
+                raw_offset = (
+                    raw_direction.get("setpoint_offset", 0.0)
+                    if model_version >= 28 and isinstance(raw_direction, dict)
+                    else 0.0
+                )
+                try:
+                    offset = float(raw_offset)
+                except (TypeError, ValueError) as err:
+                    raise ValueError("Preconditioning learning offset is not valid") from err
+                key = "heating_setpoint_offset" if direction == "heat" else "cooling_setpoint_offset"
+                if (not math.isfinite(offset) or offset < 0
+                        or not math.isclose(offset, config[key], rel_tol=0, abs_tol=0.000001)):
+                    raise ValueError(
+                        f"Preconditioning learning offset for {entity_id} ({direction}) "
+                        "does not match its configured offset"
+                    )
+                # Carry the rule through the unlocked preview. The scheduler
+                # revalidates it after acquiring its mutation lock, then removes
+                # this portable-only metadata before saving internal learning.
+                learning[direction]["setpoint_offset"] = offset
             for observation in learning[direction]["observations"]:
                 observation["entity_id"] = entity_id
     return {
@@ -3350,6 +3452,21 @@ def _validate_portable_zone_schedules(
                 raise ValueError(
                     f"Room Assist deadband for {entity_id} must be between 0 and {maximum:g}"
                 )
+        if isinstance(preconditioning, dict):
+            maximum = 9.0 if temperature_unit == FAHRENHEIT else 5.0
+            for key in ("heating_setpoint_offset", "cooling_setpoint_offset"):
+                if key not in preconditioning:
+                    continue
+                try:
+                    offset = float(preconditioning[key])
+                except (TypeError, ValueError) as err:
+                    raise ValueError(f"{key} for {entity_id} is not valid") from err
+                if not math.isfinite(offset) or not 0 <= offset <= maximum:
+                    raise ValueError(f"{key} for {entity_id} must be between 0 and {maximum:g}")
+            from .room_assist_braking import validate_braking_settings
+            validate_braking_settings(preconditioning)
+            from .room_assist_margin import validate_minimum_margin
+            validate_minimum_margin(preconditioning, 18.0 if temperature_unit == FAHRENHEIT else 10.0)
         comfort = zone.get("comfort")
         if comfort is not None and not isinstance(comfort, dict):
             raise ValueError(f"Comfort settings for {entity_id} are not valid")

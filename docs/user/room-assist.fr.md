@@ -9,8 +9,8 @@ Traductions: [Original en anglais](room-assist.md) · [Español](room-assist.es.
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.10 |
-| Dernière synchronisation | 2026-11-05 |
+| Version de référence | 1.9.3-beta.5 |
+| Dernière synchronisation | 2026-11-25 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -34,7 +34,7 @@ Room Assist fonctionne localement et par événements. Velair n’interroge pas 
 
 Velair conserve la consigne programmée comme véritable objectif de l’utilisateur, mais ajuste temporairement la consigne envoyée à l’entité à partir du capteur ambiant externe et de la mesure propre de l’appareil.
 
-Pour une consigne unique en `heat` ou `cool` fixe, une bande morte non nulle crée deux limites de commutation. Room Assist mémorise la limite visée et change de direction seulement lorsque le capteur externe atteint la limite opposée. Cela crée un véritable cycle d’hystérésis avec le capteur externe, plutôt que de laisser le capteur interne relancer un cycle près de la consigne centrale. Le décalage maximal d’assistance limite la correction signée calculée depuis la limite active.
+Pour une consigne unique en `heat` ou `cool` fixe, une bande morte non nulle crée deux limites de commutation. Avec le freinage **Par défaut**, Room Assist mémorise la limite visée et change de direction seulement lorsque le capteur externe atteint la limite opposée. Cela crée un véritable cycle d’hystérésis avec le capteur externe, plutôt que de laisser le capteur interne relancer un cycle près de la consigne centrale. Le décalage maximal d’assistance limite la correction signée calculée depuis la limite active. Les niveaux facultatifs de freinage retirent la demande plus fermement ; **Élevé** commence ce retrait à la cible programmée plutôt qu’à la limite de commutation éloignée.
 
 Les consignes uniques `auto` et `heat_cool`, ainsi que les plages natives `heat_cool`, conservent leur comportement neutre ou leurs marges de plage. Velair ne force pas ces modes à alterner entre chauffage et refroidissement actifs selon un cycle d’hystérésis à consigne unique.
 
@@ -42,7 +42,7 @@ L’entité climatique reste l’actionneur. Velair ne crée pas d’entité cli
 
 Pour deux consignes en `heat` ou `cool` fixe, sélectionnez d’abord **Consigne de référence** pour cet équipement et ce mode dans **Paramètres → Équipements et groupes**. Choisissez **Consigne basse** ou **Consigne haute** selon la valeur réellement utilisée ; Velair ne la déduit pas de la capacité à gérer des plages. Le préconditionnement adaptatif partage ce choix.
 
-Room Assist utilise la limite choisie comme cible fixe de chauffage ou de refroidissement, avec le cycle d’hystérésis à cible unique et la protection de la cible programmée. Il déplace les deux consignes du même écart, conservant leur séparation. Les deux limites doivent respecter le pas et les limites physiques de l’équipement ; l’autre limite peut donc restreindre la correction disponible. Les avertissements existants restent applicables.
+Room Assist utilise la limite choisie comme cible fixe de chauffage ou de refroidissement, avec le cycle d’hystérésis à cible unique et la protection de la cible programmée. Il déplace les deux consignes du même écart, conservant leur séparation. Les deux limites doivent respecter le pas et les limites physiques de l’équipement ; l’autre limite peut donc restreindre la correction disponible. Les informations sur les limites physiques restent disponibles dans le graphique et **Données techniques**.
 
 Avec **Non configurée**, les paires en mode fixe sont envoyées sans modification ni correction Room Assist. Les plages `auto` restent incompatibles avec l’assistance ; les bandes natives `heat_cool` conservent leur comportement. Les réglages enregistrés restent conservés. Changer de référence ou de mode efface l’assistance obsolète sans rétablir une ancienne cible corrigée sur la nouvelle intention.
 
@@ -55,10 +55,90 @@ Avec **Non configurée**, les paires en mode fixe sont envoyées sans modificati
 4. Activez **Assistance du capteur ambiant**.
 5. Réglez la bande morte de Room Assist pour définir les limites basse et haute du chauffage ou refroidissement fixe autour de la cible unique ou de la référence de plage choisie, ou la marge neutre des modes automatiques à cible unique et des bandes natives `heat_cool`.
 6. Ajustez **Écart d’assistance maximal** si la valeur par défaut est trop faible pour la pièce ou inférieure à l’écart de consigne dont le thermostat peut avoir besoin pour arrêter de chauffer ou refroidir.
-7. Ajustez **Délai d’actualisation** si les mises à jour semblent trop lentes ou trop fréquentes.
+7. Choisissez éventuellement **Freinage : Modéré** ou **Élevé** pour retirer la demande plus fermement. Ces niveaux nécessitent une bande morte Room Assist supérieure à zéro. **Par défaut** conserve le fonctionnement existant.
+8. Configurez éventuellement **Marge minimale de commande** si les petites corrections ne font pas réagir le thermostat. Augmentez d’abord l’Écart d’assistance maximal si nécessaire ; la marge ne peut pas le dépasser. Laissez-la à `0` pour conserver le comportement existant.
+9. Ajustez **Délai d’actualisation** si les mises à jour semblent trop lentes ou trop fréquentes.
 
 Seule l’option sélectionnée est affichée. Lorsque **Capteur fixe** est déjà le mode enregistré, changer son capteur est enregistré immédiatement. Passer de **Capteur fixe** à **Selon les horaires**, ou inversement, modifie un brouillon : **Enregistrer** applique le mode et ses réglages, et **Annuler** rétablit la configuration enregistrée. Le capteur fixe et la programmation enregistrée sont conservés lors du changement ; les deux ne sont pas activés en même temps.
 
+
+<a id="optional-braking"></a>
+
+### Freinage facultatif
+
+Le freinage modifie la consigne envoyée à l’équipement tout en conservant la température programmée comme véritable objectif de la pièce. Il est disponible en **Chauffage** et **Refroidissement** fixes, y compris pour les appareils à deux consignes avec une consigne de référence configurée. Il ne modifie pas les modes automatiques à consigne unique ni les bandes natives `heat_cool`.
+
+**T** est la cible programmée, **H** la bande morte Room Assist et **S** le pas effectif de consigne de l’équipement :
+
+| Freinage | Chauffage : retirer la demande | Chauffage : redemander du chauffage | Refroidissement : retirer la demande | Refroidissement : redemander du refroidissement |
+| --- | --- | --- | --- | --- |
+| Par défaut | Fonctionnement existant | Fonctionnement existant | Fonctionnement existant | Fonctionnement existant |
+| Modéré | À T + H | À T − H | À T − H | À T + H |
+| Élevé | À T | À T − H | À T | À T + H |
+
+Pendant le retrait, **Modéré** limite la consigne de chauffage à **T − S** au maximum ou celle de refroidissement à **T + S** au minimum. **Élevé** utilise **deux pas** par défaut. Si le calcul existant retire déjà davantage de demande, Velair conserve ce résultat plus fort. Ces limites restent fixes pendant le freinage : les mises à jour du capteur n’ajoutent ni ne retranchent un pas supplémentaire à chaque fois.
+
+Pour modifier l’intensité du freinage Élevé dans une zone, ouvrez **Réglages → Équipements et groupes** et définissez **Pas de freinage Élevé** pour cet équipement ou groupe. Ce réglage accepte des nombres entiers de `2` à `10` et affiche l’écart de température équivalent selon le pas effectif de consigne de l’appareil et son unité actuelle. Il est enregistré indépendamment pour chaque zone et s’applique uniquement lorsque **Élevé** est sélectionné dans Room Assist. **Par défaut** et **Modéré** n’utilisent pas ce réglage.
+
+Par exemple, `3` pas de `0.5 °C` représentent un écart de `1.5 °C`. Trois pas de `1 °F` représentent un écart de `3 °F`. Le nombre de pas n’est pas une température et ne change pas lors d’une conversion Celsius/Fahrenheit ; l’écart équivalent suit le pas effectif de l’appareil. Room Assist conserve son sélecteur et affiche le nombre de pas configuré et l’écart équivalent.
+
+Par exemple, avec une cible de chauffage de `20.5 °C`, une bande morte de `0.5 °C` et un pas de l’équipement de `0.5 °C` :
+
+- **Modéré** retire la demande à `21 °C`, avec une consigne de l’équipement ne dépassant pas `20 °C`.
+- **Élevé**, avec ses deux pas par défaut, retire la demande à `20.5 °C`, avec une consigne ne dépassant pas `19.5 °C`.
+- Avec **Pas de freinage Élevé** réglé sur `3`, Élevé retire toujours la demande à `20.5 °C`, mais la consigne de l’appareil ne dépasse pas `19 °C`.
+- Les deux redemandent du chauffage lorsque le capteur externe atteint `20 °C`.
+
+Modifier le nombre de pas du freinage Élevé change la limite de consigne, pas les températures de retrait ou de réactivation. En refroidissement, la limite correspondante se situe au-dessus de la cible programmée plutôt qu’en dessous. Cet ajustement est fixe : il n’augmente pas progressivement tant que la pièce reste hors de la bande.
+
+Avant le retrait, le calcul d’assistance existant reste inchangé. Le freinage reste actif jusqu’à la limite de réactivation, même lorsque la pièce traverse la cible centrale. Si l’assistance démarre ou redémarre dans la bande, elle conserve l’initialisation prudente existante sans lancer délibérément un cycle de chauffage ou refroidissement.
+
+L’état en direct indique les températures effectives de retrait et de réactivation. Le graphique conserve la bande morte nominale et distingue les seuils effectifs de freinage. La demande de l’alimentation partagée suit la même phase confirmée.
+
+Choisissez **Par défaut** avant de régler la bande morte à zéro. Le niveau enregistré est conservé lorsque le mode ou la référence de température ne permet pas de l’utiliser ; l’état explique pourquoi le freinage supplémentaire est inactif. Une combinaison enregistrée invalide suspend ce freinage sans modifier discrètement la bande morte.
+
+Les consignes physiques minimale et maximale peuvent limiter le freinage disponible. Avec deux consignes, toute la paire se déplace ensemble et chaque limite peut restreindre le décalage. **Données techniques** distingue le résultat demandé du résultat appliqué et le graphique identifie la limite atteinte.
+
+Le freinage réduit la demande de chauffage ou refroidissement ; il ne confirme pas l’arrêt de la vanne, du compresseur ou du thermostat. Le contrôle de l’équipement, ses durées minimales de fonctionnement et l’inertie thermique peuvent toujours provoquer un dépassement. Ce réglage n’apprend pas les cycles et ne retire pas la demande avant la cible programmée. Validez-le avec des cycles réels avant de vous fier à un niveau pour une pièce donnée.
+
+Les exports portables utilisent le modèle **30** pour conserver le nombre de pas du freinage Élevé, le niveau de freinage, les décalages de préparation et la marge minimale de commande. Les imports anciens compatibles sans nombre de pas Élevé utilisent `2`. Gardez une sauvegarde de la version précédente pour un éventuel retour en arrière ; les anciennes versions de Velair ne peuvent pas importer les exports du modèle 30.
+
+<a id="minimum-control-margin"></a>
+
+### Marge minimale de commande
+
+Certains thermostats ont besoin d’un écart important entre leur température interne et la consigne demandée avant de réagir. Un capteur fixé au radiateur peut mesurer plusieurs degrés de plus que la pièce alors que le capteur externe demande encore du chauffage. **Marge minimale de commande** demande au moins cet écart pendant une correction Room Assist à laquelle elle peut s’appliquer. Elle est facultative et vaut `0` par défaut.
+
+Ces réglages ont des fonctions différentes :
+
+| Réglage | Fonction |
+| --- | --- |
+| Zone morte de Room Assist | Détermine la bande de commutation ou neutre du capteur externe de la pièce. |
+| Marge minimale de commande | Renforce une correction applicable par rapport à la mesure interne du thermostat. |
+| Écart d’assistance maximal | Plafonne cette correction ; augmenter seulement le maximum ne demande pas une correction plus forte. |
+| Freinage | Modifie les seuils de retrait de la demande et ajoute une protection de la consigne programmée. |
+
+La marge accepte `0–10 °C` (`0–18 °F`) et ne peut pas dépasser l’Écart d’assistance maximal. Si les réglages sont incompatibles, Velair demande d’augmenter d’abord le maximum ou de réduire la marge. Il ne modifie aucun des deux automatiquement. Les incréments du champ suivent le pas effectif de consigne de l’appareil.
+
+Par exemple, configurez une cible de chauffage de `19.5 °C`, une zone morte de `±0.3 °C`, le freinage **Par défaut**, et la marge ainsi que le maximum à `10 °C`. Avec une mesure interne de `21.5 °C` et un pas de consigne compatible de `0.5 °C` :
+
+| Capteur externe de la pièce | Phase Room Assist | Consigne demandée à l’appareil |
+| --- | --- | --- |
+| À `19.2 °C` ou en dessous | Demander du chauffage vers `19.8 °C` | `31.5 °C` : mesure interne + 10 |
+| Monte à travers la bande | Continuer à demander du chauffage | Mesure interne actuelle + 10 |
+| Atteint `19.8 °C` | Retirer la demande de chauffage jusqu’à `19.2 °C` | `11.5 °C` : mesure interne − 10 |
+
+La mesure interne peut varier ; les demandes suivantes utilisent donc sa valeur actuelle. La cible de la pièce reste `19.5 °C` ; les grandes variations de consigne de l’appareil n’élargissent pas sa bande de confort. Le freinage Modéré ou Élevé conserve ses propres seuils d’arrêt et de reprise et maintient un résultat existant qui retire davantage de demande.
+
+Le refroidissement fixe fonctionne en sens inverse. Pour une cible de `24 °C`, une zone morte de `±0.3 °C`, une mesure interne de `26 °C` et une marge/un maximum de `10 °C`, Room Assist demande `16 °C` tant que le refroidissement est nécessaire et `36 °C` lorsque la pièce atteint `23.7 °C`, avant d’appliquer les limites de l’appareil. Le refroidissement reprend à `24.3 °C`. Avec une zone morte nulle et aucune phase conservée, seules les corrections non nulles sont renforcées ; l’égalité reste neutre.
+
+Les modes automatiques à consigne unique et les plages natives **Chauffage/climatisation** renforcent uniquement les demandes actives de chauffage ou de refroidissement. Dans la bande neutre de la pièce, ils conservent le maintien existant. Abaisser fortement une consigne pour arrêter le chauffage pourrait sinon déclencher le refroidissement sur un appareil bidirectionnel. Pour les plages natives, les deux limites se déplacent ensemble et gardent leur séparation d’origine. Les paires en mode fixe utilisent leur consigne de référence configurée ; les configurations de plage non prises en charge restent non prises en charge.
+
+Le pas et les limites physiques peuvent empêcher d’atteindre la marge demandée. Par exemple, avec une mesure interne de `21.7 °C`, une marge/un maximum de `10 °C` et une grille de `0.5 °C`, aucun point valide ne se trouve exactement à `10 °C` d’écart. Velair choisit une correction valide dans le maximum lorsque c’est possible et indique que le pas limite la marge. Avec deux consignes, préserver la largeur de la plage peut encore restreindre le déplacement. L’explication en direct et les **Données techniques** indiquent une marge active ou limitée.
+
+La protection de la consigne programmée, le freinage et les décalages temporaires de préparation peuvent produire un déplacement final supérieur à l’Écart d’assistance maximal. Ce réglage limite la correction Room Assist, et non chaque protection ou supplément temporaire appliqué ensuite. Pendant la préparation, la marge suit sa direction actuelle avant l’ajout du supplément.
+
+Cette fonction demande un écart de consigne. Elle ne confirme ni l’ouverture physique de la vanne, ni le fonctionnement du compresseur, ni un arrêt immédiat. Utilisez la plus petite marge efficace pour votre équipement et vérifiez des cycles réels complets de chauffage ou de refroidissement.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -93,7 +173,7 @@ Le délai d’actualisation est la temporisation de regroupement après un chang
 
 La bande morte Room Assist est indépendante de l’écart minimal du préconditionnement adaptatif. Elle vaut `0.3 °C` ou `1 °F` par défaut, accepte `0` pour la désactiver et se règle par pas de `0.1` degré jusqu’à `5 °C` ou `9 °F`. L’enregistrer pendant que Room Assist est actif actualise immédiatement la consigne assistée.
 
-L’échelle de température en direct dessine la bande morte comme une bande neutre hachurée. Pour une consigne unique fixe, ses bords sont les limites de commutation ; l’état indique celle que Room Assist vise. Pour les modes automatiques à consigne unique, elle reste une marge neutre. Pour une plage native `heat_cool`, elle va de la limite basse moins la bande morte à la limite haute plus la bande morte. L’échelle s’élargit pour garder les deux bords visibles. La légende traduite complète reste centrée sur la bande réelle, même lorsque celle-ci est plus étroite que son texte : le sens ne dépend pas de la largeur du graphique. L’explication complète reste accessible aux technologies d’assistance et au survol. Avec une bande morte de `0`, aucune surface n’est dessinée et la légende statique indique explicitement son absence. Le graphique et sa légende utilisent la valeur backend enregistrée ; masquer `show_room_assist_deadband` dans une carte Lovelace Room Assist masque ensemble le réglage, la bande et la légende.
+Le graphique en direct dessine la bande morte nominale sous forme d'une fine bande hachurée immédiatement au-dessus de l'axe de température, avec une légende correspondante dessous. Les seuils effectifs d'arrêt et de reprise viennent de l'état de contrôle confirmé : **Élevé** peut donc arrêter la demande à la cible tout en gardant la bande nominale entière visible. Pour les modes automatiques à consigne unique, cette bande représente la marge neutre. Les plages natives `heat_cool` ne hachurent que les marges extérieures à côté de la bande nominale, avec une légende **Marge extérieure**. Une bande morte nulle ne dessine aucune zone hachurée ; la légende affiche la marge nulle configurée. Ces indicateurs décrivent des limites configurées, pas l'évolution du capteur. Masquer `show_room_assist_deadband` dans une carte Lovelace Room Assist masque ensemble le réglage, la bande et la légende.
 
 Lors d’une mise à niveau depuis une version où Room Assist partageait l’écart minimal du préconditionnement adaptatif, Velair copie une fois la valeur existante dans la nouvelle bande morte Room Assist. Cela préserve la largeur configurée, y compris une ancienne valeur non alignée sur le nouveau pas de saisie de 0.1 degré ; les modes fixes `heat` et `cool` utilisent ensuite cette valeur pour le cycle décrit ci-dessous.
 
@@ -115,12 +195,12 @@ L’onglet Room Assist indique ce que Velair peut faire pour chaque appareil gé
 | **Bloqué** | Une pause, un forçage, un état manuel ou un autre état du planificateur a priorité. |
 | **Indisponible** | L’appareil ou la capacité de consigne nécessaire ne peut pas être utilisé. L’interface affiche la raison lorsqu’elle est connue. |
 
-Lorsque Room Assist est actif, Vue d’ensemble résume ces informations par une direction vers la limite basse ou haute, un état actif, de maintien ou de protection de programmation, selon le cas, avec les valeurs programmées et appliquées. Un minimum ou maximum du thermostat diffère de la protection de programmation : l’onglet affiche un avertissement avec les valeurs demandées, appliquées et prises en charge, et Home Assistant reçoit une seule notification persistante jusqu’à la fin de cette limitation physique.
+Lorsque Room Assist est actif, Vue d’ensemble résume ces informations par une direction vers la limite basse ou haute, un état actif, de maintien ou de protection de programmation, selon le cas, avec les valeurs programmées et appliquées. Un minimum ou maximum du thermostat diffère de la protection de programmation : le graphique identifie la limite physique atteinte, **Données techniques** sépare les valeurs demandées et appliquées, et Home Assistant reçoit une seule notification persistante jusqu’à la fin de cette limitation physique.
 
 <a id="fixed-heating-hysteresis-example"></a>
 ## Exemple d’hystérésis en chauffage fixe
 
-Scénario :
+Scénario avec le freinage **Par défaut** :
 
 - Bloc programmé : `21 °C`, `heat`
 - Bande morte Room Assist : `±0.3 °C`
@@ -155,7 +235,7 @@ La consigne visible reste `21 °C`. La consigne temporaire est seulement la vale
 
 La phase du mode fixe existe seulement pendant l’exécution. Un nouveau bloc, une nouvelle consigne ou un nouveau mode HVAC, l’effacement de Room Assist ou le rechargement de Velair relance un cycle. Si un nouveau cycle `heat` commence dans la bande, il vise la limite basse pour ne pas demander immédiatement du chauffage.
 
-Lorsque cette protection modifie le résultat, l’état en direct explique les deux valeurs : consigne calculée et consigne réellement conservée par Velair. Vue d’ensemble affiche un état compact de protection de programmation. C’est un comportement protecteur normal, pas une erreur de thermostat ; aucune notification persistante n’est créée. Les limites physiques du thermostat conservent leur avertissement et notification distincts.
+Lorsque cette protection modifie le résultat, l’état en direct explique les deux valeurs : consigne calculée et consigne réellement conservée par Velair. Vue d’ensemble affiche un état compact de protection de programmation. C’est un comportement protecteur normal, pas une erreur de thermostat ; aucune notification persistante n’est créée. Les limites physiques du thermostat restent identifiées dans le graphique et **Données techniques**, avec leur notification distincte.
 
 L’appareil reste responsable de la protection du compresseur, des durées minimales de fonctionnement et de sa réponse physique. Le cycle donne à Velair une stratégie de consigne plus robuste, sans garantir l’instant exact où le relais, la vanne ou le compresseur change d’état.
 
@@ -190,7 +270,7 @@ Cela évite d’envoyer des consignes irréalistes au thermostat tout en le main
 <a id="fixed-cooling-hysteresis-example"></a>
 ## Exemple d’hystérésis en refroidissement fixe
 
-Scénario :
+Scénario avec le freinage **Par défaut** :
 
 - Bloc programmé : `24 °C`, `cool`
 - Bande morte Room Assist : `±0.5 °C`
@@ -260,14 +340,16 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Régler `3 °C` n’applique pas immédiatement une correction de `3 °C`. Cela autorise seulement Room Assist à l’atteindre lorsque l’écart externe le nécessite.
+Avec Marge minimale de commande à `0`, régler `3 °C` n’applique pas immédiatement une correction de `3 °C`. Cela autorise seulement Room Assist à l’atteindre lorsque l’écart externe le nécessite.
+
+Ce réglage limite la correction proportionnelle, pas la consigne finale après protection de la cible programmée. Le freinage facultatif renforce cette protection avec sa limite d’un ou deux pas ; il ne modifie pas l’Écart d’assistance maximal et n’applique pas tout le maximum à chaque mise à jour. Une [Marge minimale de commande](#minimum-control-margin) non nulle peut demander une correction plus forte même lorsque l’écart de température externe est faible.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 ### Pourquoi la consigne de l’appareil peut différer du calcul
 
-La **Consigne du thermostat** est celle que l’entité signale lorsque Room Assist est prêt ou bloqué. Pendant une correction active ou le maintien d’une consigne unique appliquée, elle montre plutôt la consigne temporaire envoyée par Velair. Aucune des deux n’est la consigne ambiante programmée ou la limite d’hystérésis active. L’appareil accepte des consignes sur sa propre grille ; Velair peut devoir aligner la valeur finale sur son pas effectif publié, dernier signalé, manuel ou par défaut.
+La **Consigne** est celle que l’entité signale lorsque Room Assist est prêt ou bloqué. Pendant une correction active ou le maintien d’une consigne unique appliquée, elle montre plutôt la consigne temporaire envoyée par Velair. Aucune des deux n’est la consigne ambiante programmée ou la limite d’hystérésis active. L’appareil accepte des consignes sur sa propre grille ; Velair peut devoir aligner la valeur finale sur son pas effectif publié, dernier signalé, manuel ou par défaut.
 
-En refroidissement fixe, Room Assist peut calculer `23.9 °C` pour un appareil acceptant des pas de `0.5 °C`. Velair applique `24.0 °C` : l’arrondi vers le haut évite un refroidissement plus fort que le calcul. Le chauffage fixe est arrondi vers le bas, tandis que les modes automatiques à consigne unique utilisent le pas le plus proche. Le bouton d’information près de la consigne de l’appareil adapte son explication à la valeur affichée et, si l’alignement a réellement modifié la consigne appliquée, présente le calcul, le pas effectif et la valeur appliquée. Les limites physiques et la protection de programmation sont signalées séparément, sans être décrites comme un alignement au pas.
+En refroidissement fixe, Room Assist peut calculer `23.9 °C` pour un appareil acceptant des pas de `0.5 °C`. Velair applique `24.0 °C` : l'arrondi vers le haut évite un refroidissement plus fort que le calcul. Le chauffage fixe est arrondi vers le bas, tandis que les modes automatiques à consigne unique utilisent le pas le plus proche. Développez la pastille **Consigne** ou ouvrez **Données techniques** pour examiner la valeur affichée et toute information disponible sur le calcul, le pas effectif et la valeur appliquée. Lorsque l'alignement a modifié la consigne confirmée, **Données techniques** montre aussi la valeur avant alignement au pas. Les limites physiques minimale ou maximale et la protection de la cible programmée sont signalées séparément, sans être décrites comme un alignement au pas.
 
 <a id="heatcool-range-example"></a>
 ## Exemple de plage chauffage/refroidissement
@@ -292,7 +374,7 @@ L’appareil mesure `22 °C`, donc sous la limite basse appliquée, et peut dema
 
 La plage appliquée est toujours alignée sur le pas de l’appareil et déplacée dans son ensemble lorsque les limites physiques sont atteintes. Velair n’ajuste jamais Min et Max indépendamment.
 
-Si une consigne unique ou une plage calculée dépasse le minimum ou maximum pris en charge, Velair applique le résultat valide le plus proche. L’état en direct affiche la consigne demandée, celle appliquée et la limite atteinte avant le graphique. Home Assistant crée aussi une seule notification persistante pour cette limite ; les mises à jour répétées n’en créent pas de nouvelles, et Velair la ferme après rétablissement.
+Si une consigne unique ou une plage calculée dépasse le minimum ou maximum pris en charge, Velair applique le résultat valide le plus proche. Le graphique identifie la limite atteinte ; **Données techniques** présente la consigne unique ou la plage demandée et appliquée. Home Assistant crée aussi une seule notification persistante pour cette limite ; les mises à jour répétées n’en créent pas de nouvelles, et Velair la ferme après rétablissement.
 
 <a id="when-velair-does-nothing"></a>
 ## Quand Velair n’intervient pas
@@ -347,8 +429,16 @@ C’est important car l’heure actuelle peut encore correspondre à un ancien b
 
 Lorsque l’assistance par capteur ambiant est activée, le préconditionnement adaptatif utilise aussi ce capteur comme source effective de température pour ses décisions et son apprentissage.
 
+Les décalages facultatifs distincts de chauffage et de refroidissement se configurent dans Anticipation. Room Assist calcule sa cible de base à partir de l'objectif initial de la pièce, puis Velair applique le supplément de préparation. Les limites de l'appareil réduisent ce supplément ; les bandes à deux consignes gardent leur largeur. Un décalage positif configuré maintient temporairement la direction de préparation jusqu'au seuil initial de la pièce, même si le supplément effectif est nul ou si Room Assist a hérité d'une phase sans demande. Après ce seuil ou le début programmé, le supplément cesse et l'hystérésis et le freinage ordinaires reprennent. Les plages natives `heat_cool` gardent leurs limites existantes de prise en charge du freinage.
+
+Room Assist confirme sa demande effective de chauffage ou de refroidissement avec la cible appliquée. Pendant la préparation, cela inclut la demande temporaire tout en conservant séparément sa phase d'hystérésis ordinaire. L'alimentation climatique partagée suit cette demande effective par son intégration Room Assist existante ; elle n'ajoute ni décalage, ni hystérésis, ni règle de préparation. À la fin du supplément, la demande ordinaire de Room Assist reprend. Une commande échouée ou remplacée ne confirme pas une nouvelle demande, et un échec de restauration ne peut laisser la préparation retirée demander l'alimentation indéfiniment. Consultez [Alimentation climatique partagée](shared-climate-supply.fr.md#room-assist).
+
+Le graphique distingue l'objectif nominal de la consigne finale Room Assist plus préparation. Son badge de supplément inclut un `0` limité ; **Données techniques** sépare la base, le supplément demandé, le supplément effectif et la commande finale. Pendant la préparation, le seuil **Fin de préparation** dispose d'un bouton d'information expliquant la marge d'arrivée configurée. Une cible de `21 °C` avec une marge d'arrivée de `0.1 °C` termine la préparation de chauffage à `20.9 °C` ; cette marge est distincte de la bande de régulation Room Assist. Consultez [Décalage temporaire de consigne](adaptive-preconditioning.fr.md#temporary-setpoint-offset) pour les exemples de chauffage, de refroidissement et de limites physiques.
+
 <a id="automation-events"></a>
 ## Événements d’automatisation
+
+Les événements de mise à jour peuvent aussi inclure un objet `braking` indiquant les niveaux configuré et effectif, la phase active, les températures effectives de retrait et de reprise, la limite de consigne et une éventuelle raison d’inactivité. Ces champs supplémentaires décrivent la politique de demande confirmée, pas l’activité physique de l’équipement. Voir [Mise à jour de Room Sensor Assist](automation-events.fr.md#room-sensor-assist-updated) pour un exemple.
 
 Velair émet l’événement Home Assistant standard `velair_event`.
 
@@ -430,9 +520,15 @@ entities:
   - climate.living_room
 ```
 
-L’échelle en direct distingue deux relations. Pour une consigne unique, la ligne supérieure compare le capteur ambiant à la consigne programmée ; la ligne inférieure compare la mesure interne à la consigne de l’appareil. En `heat` ou `cool` fixe, la bande hachurée indique les deux limites d’hystérésis et l’état nomme la limite active. Pour les modes automatiques à consigne unique, elle reste une marge neutre. Pour une plage native, des crochets rouges et bleus identifient les bandes programmée et appliquée complètes, avec leurs deux limites. Un connecteur signé de décalage de plage relie leurs centres pour représenter le déplacement de toute la bande, et non d’une limite seule. Ces indicateurs décrivent seulement la consigne envoyée par Velair ; ils ne confirment pas une activité réelle de chauffage ou refroidissement du thermostat, de la vanne ou du compresseur.
+Le même graphique en direct est utilisé dans le panneau latéral et les cartes. Les pastilles compactes **Pièce**, **Cible**, **Appareil** et **Consigne** sont reliées verticalement à leurs positions de température. Survolez, sélectionnez au clavier ou appuyez sur une pastille pour ses détails. **Normal** montre la demande actuelle et le prochain seuil ; **Détaillé** ajoute l'écart pièce-objectif, l'ajustement total et tout supplément de préparation déjà inclus dans ce total. Les libellés de mesure figurent sur leurs lignes si l'espace le permet, sinon dessous.
 
-Dans les colonnes étroites du tableau de bord, l’échelle défile horizontalement pour garder les marqueurs lisibles.
+Une flèche pleine représente le chauffage ou le refroidissement demandé. Une flèche en pointillés représente l'attente et pointe vers le seuil de reprise. Ces flèches décrivent la demande de Room Assist, pas une tendance de température mesurée ni la preuve qu'une vanne ou un compresseur fonctionne. Si la demande acceptée est indisponible, le graphique indique cette incertitude au lieu d'inventer une demande ou un état d'attente.
+
+La bande hachurée immédiatement au-dessus de l'axe conserve la bande de régulation nominale et sa légende. Un arrêt effectif par freinage est marqué séparément ; la bande n'implique pas que la demande continue au-delà de cet arrêt. La pastille de consigne identifie le freinage uniquement lorsque sa protection a réellement changé la commande appliquée. Pour une plage native `heat_cool`, des crochets distincts montrent les bandes complètes de l'objectif et de la consigne appliquée, avec des hachures aux marges extérieures Room Assist. Les limites physiques sont identifiées.
+
+Le graphique présente la demande dans son badge d’état, les mesures dans les pastilles de température et le seuil d’arrêt ou de reprise à côté de la flèche. Si la mesure de la pièce manque et empêche de dessiner cette relation, le seuil reste dans le badge d’état. **Explication** ouvre un court contexte sous le graphique : l’écart entre les mesures, la raison pour laquelle un cycle continue après avoir atteint la cible de confort, ou la préparation, le freinage ou la limite de l’appareil qui influe sur le réglage. Ce contexte ne répète ni les températures affichées, ni la demande, ni l’aide sur la bande de régulation. Aucun résumé distinct n’est répété sous le graphique.
+
+**Données techniques** regroupe les étapes de la consigne de l’appareil, les limites de régulation et l’origine et les horaires dans la même zone de détail. Les mesures restent dans le graphique au lieu d’être répétées dans un second tableau. Les valeurs consécutives calculée, demandée, avant alignement au pas et appliquée partagent une ligne lorsqu’elles sont identiques, avec le nom de chaque étape ; les valeurs différentes restent séparées. Les commandes de plage et les informations sur leur consigne de référence unique restent distinctes. Les valeurs d’arrêt et de reprise ne sont pas répétées comme prochain seuil ou limite nominale identique ; le sens du cycle est indiqué sans répéter sa température. Le pas de l’appareil et les protections ou limites physiques pertinentes restent disponibles. Le supplément de préparation possède son propre groupe, avec les valeurs demandée et appliquée lorsqu’elles diffèrent, y compris un zéro limité. Origine et horaires indique l’entité du capteur et le début du bloc avec la date ; à défaut de date, seule l’heure est utilisée. Les groupes s’empilent dans les panneaux et cartes étroits. Une seule vue de détail peut être ouverte à la fois ; sélectionnez de nouveau son bouton ou appuyez sur Échap pour la fermer. Les boutons fonctionnent au clavier et au toucher, et le détail reste sous le graphique sans couvrir d’autres commandes. Ouvrir ou fermer un détail ne modifie pas la demande de régulation. Le graphique s’adapte aux colonnes étroites sans modifier l’échelle de température ni éloigner une mesure de sa position réelle.
 
 La carte Lovelace Room Assist peut masquer des éléments pour une vue compacte réservée au tableau de bord :
 

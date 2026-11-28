@@ -1,3 +1,4 @@
+import { renderPreconditioningOffset } from "./preconditioning-offset";
 import { html, nothing } from "lit";
 import { renderCommandSettlingMismatch } from "./diagnostics-command-settling";
 import { learningReasonLabel, learningTransitionLabel, renderLearningDiagnostics } from "./preconditioning-learning-activity";
@@ -209,6 +210,7 @@ function renderUnitDetail(host: VelairViewHost, entityId: string, unit: UnitDiag
         ? renderCommandSettlingMismatch(host, entityId, unit.command_settling) : nothing;
       return comparison === nothing ? renderIssue(host, issue, text) : comparison;
     })}</div>` : nothing}
+    ${renderPreconditioningOffset(host, entityId, host._data?.zone_runtime?.[entityId], "diagnostics")}
     <div class="diagnostics-groups">
       ${renderPlannedReturnUnitDiagnostics(host, entityId)}
       ${renderGroup(host, "diagnosticsStatusDelivery", "mdi:send-check-outline", statusRows)}

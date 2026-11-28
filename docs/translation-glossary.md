@@ -2,6 +2,35 @@
 
 Use these terms consistently when translating Velair user documentation. Keep Home Assistant entity IDs, service names, attributes, YAML keys, code samples, and external URLs unchanged. Interface labels may be translated to match the maintained locale; identifiers such as `Room Assist`, `Humidex`, and `HVAC` remain recognizable.
 
+The Room Assist selector **Braking** uses the canonical English options
+**Default**, **Moderate** and **High**. Here, braking means withdrawing heating
+or cooling demand more firmly around the room target; it does not mean an
+explicit physical shutdown or predictive preconditioning. These new labels
+use the maintained panel translations; the Spanish and French labels are:
+
+| English | Spanish | French |
+| --- | --- | --- |
+| Braking | Frenado | Freinage |
+| Default | Predeterminado | Par défaut |
+| Moderate | Moderado | Modéré |
+| High | Alto | Élevé |
+
+**High braking steps** is the per-zone Settings count used by High braking;
+it is dimensionless. The temperature equivalent follows the equipment's step
+in the active Celsius or Fahrenheit unit. Match these panel labels:
+
+| English | Spanish | French |
+| --- | --- | --- |
+| High braking steps | Pasos de frenado Alto | Pas de freinage Élevé |
+
+The Room Assist **Minimum control margin** sets a minimum requested gap from
+the equipment's internal reading. It does not widen the room's deadband or
+change braking thresholds. Match the maintained panel label in translated guides:
+
+| English | Spanish | French |
+| --- | --- | --- |
+| Minimum control margin | Margen mínimo de control | Marge minimale de commande |
+
 | English | Spanish | French |
 | --- | --- | --- |
 | sidebar panel | panel de la barra lateral | panneau de la barre latérale |
@@ -57,6 +86,25 @@ Use these terms consistently when translating Velair user documentation. Keep Ho
 English remains the canonical source. Synchronization and linguistic review are recorded separately for each guide. A blank glossary cell means the term is pending translation, not an English fallback copy.
 
 Literal control names follow the interface even when a locale still displays an English label. Narrative wording may use a natural localized term and explain that label. Blueprint form labels remain English unless the blueprint itself provides a translation.
+
+## Room Assist graph controls
+
+The shared graph uses **Normal** and **Detailed** for its presentation modes.
+**Explanation** and **Technical data** open alternate views in the same inline
+detail area. Use these maintained panel labels for literal control references;
+an explanation of a request does not confirm physical equipment operation.
+
+| Language | Normal | Detailed | Explanation | Technical data |
+| --- | --- | --- | --- | --- |
+| Spanish | Normal | Detallado | Explicación | Datos técnicos |
+| French | Normal | Détaillé | Explication | Données techniques |
+| German | Normal | Detailliert | Erklärung | Technische Daten |
+| Italian | Normale | Dettagliato | Spiegazione | Dati tecnici |
+| Dutch | Normaal | Gedetailleerd | Uitleg | Technische gegevens |
+| Polish | Normalny | Szczegółowy | Wyjaśnienie | Dane techniczne |
+| Portuguese (Brazil) | Normal | Detalhado | Explicação | Dados técnicos |
+| Portuguese (Portugal) | Normal | Detalhado | Explicação | Dados técnicos |
+| Russian | Обычный | Подробный | Объяснение | Технические данные |
 
 ## Supply control terminology
 

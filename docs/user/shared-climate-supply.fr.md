@@ -8,8 +8,8 @@ Traductions: [Original en anglais](shared-climate-supply.md) · [Español](share
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Version de référence | 1.9.3-dev.20261120233407 |
+| Dernière synchronisation | 2026-11-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -90,9 +90,15 @@ Les cibles actuelles sont utilisées, y compris les changements manuels et celle
 
 Un panneau d’information bleu en tête de **Demande et hystérésis**, avant le sélecteur, explique la priorité de Room Assist et quand l’hystérésis de l’alimentation s’applique.
 
-Lorsque Room Assist contrôle la cible active d’une pièce, l’alimentation suit son intention de commande confirmée. En chauffage fixe, sa phase `towards_upper` demande de la chaleur ; en refroidissement fixe, `towards_lower` demande du froid. Ses limites de commutation restent prioritaires : l’hystérésis de l’alimentation et l’exception de la pièce ne s’appliquent pas une seconde fois. Le contrôle de plage native suit sa direction confirmée. Une cible assistée invalide ou en attente reste inconnue jusqu’à une confirmation valide.
+Lorsque Room Assist contrôle la cible active d'une pièce, l'alimentation partagée suit sa demande effective confirmée. Pendant la régulation ordinaire, la phase `towards_upper` du chauffage fixe demande de la chaleur et `towards_lower` du refroidissement fixe demande du froid. Le contrôle de plage native suit sa direction confirmée. Les limites de commutation de Room Assist restent prioritaires ; l'hystérésis de l'alimentation et les exceptions de pièce ne s'appliquent pas une seconde fois.
 
-La cible corrigée du thermostat n’est pas comparée à un capteur externe de la pièce. Room Assist peut cesser de demander l’alimentation alors que le thermostat affiche encore la même cible ajustée.
+Pendant une préparation anticipée avec un décalage de consigne positif configuré, Room Assist inclut aussi la demande temporaire de chauffage ou de refroidissement de cette préparation dans sa demande effective. Sa phase d'hystérésis ordinaire est conservée séparément. Par exemple, un objectif de chauffage à `21 °C` avec une marge de préparation de `0.1 °C` peut demander de la chaleur jusqu'à `20.9 °C`, même si la phase ordinaire était au repos. Le refroidissement vers `24 °C` suit la même logique à `24.1 °C`. La consigne temporaire de l'appareil n'est pas un nouvel objectif pour la pièce. À la fin du supplément, Room Assist reprend sa demande ordinaire, ce qui peut arrêter ou poursuivre la demande. L'alimentation applique toujours ses délais, durées minimales et agrégation entre pièces existants, sans règle de préparation distincte.
+
+Seule l'intention de contrôle actuelle et confirmée est utilisée. Une cible assistée invalide ou en attente reste inconnue jusqu'à une confirmation valide. Le retrait de la préparation invalide également son ancienne demande temporaire si la restauration de la cible normale échoue.
+
+La cible corrigée du thermostat n'est pas comparée à un capteur externe de la pièce. Room Assist peut cesser de demander l'alimentation alors que le thermostat affiche encore la même cible ajustée.
+
+Sans Room Assist, l'alimentation utilise toujours la cible rapportée par le thermostat et son hystérésis normale. Un décalage de préparation peut modifier cette cible rapportée ; son retrait permet d'évaluer normalement la cible résultante. Aucune priorité de préparation ni rétention spéciale de demande n'est ajoutée à cette voie.
 
 <a id="timing-and-manual-control"></a>
 ## Temporisation et commande manuelle

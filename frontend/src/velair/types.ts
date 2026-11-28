@@ -41,7 +41,27 @@ export type HassState = {
   };
 };
 
+export type SensorEntityIdsPreview = {
+  preview_id: string;
+  rows: Array<{
+    entity_id: string;
+    proposed_entity_id: string;
+    climate_entity_id: string;
+    sensor_key: string;
+    name: string;
+    status: "ready" | "unchanged" | "conflict";
+  }>;
+};
+
+export type SensorEntityIdsResult = {
+  status: "applied" | "rolled_back" | "recovery_required";
+  renamed: Array<{ old_entity_id: string; new_entity_id: string }>;
+  failed: Array<{ entity_id: string; code: "rename_failed" | "rollback_failed"; message: string }>;
+  preview: SensorEntityIdsPreview;
+};
+
 export type HomeAssistant = {
+  user?: { is_admin?: boolean };
   callService(domain: string, service: string, serviceData?: Record<string, unknown>): Promise<void>;
   connection: HassConnection;
   formatEntityName?(state: HassState, name?: string | HassEntityNameItem | HassEntityNameItem[], options?: { separator?: string }): string;
@@ -345,9 +365,13 @@ export type RoomSensorScheduleDetail = {
   room_sensor_schedule: RoomSensorSchedule | null;
 };
 
+export type RoomAssistBrakingLevel = "default" | "moderate" | "high";
+
 export type PreconditioningSettings = {
   master_entity_id?: string | null;
   enabled: boolean;
+  heating_setpoint_offset?: number;
+  cooling_setpoint_offset?: number;
   max_lead_minutes: number;
   minimum_delta_temperature: number;
   learning_history_size: number;
@@ -364,7 +388,10 @@ export type PreconditioningSettings = {
   room_sensor_schedule?: RoomSensorSchedule | RoomSensorScheduleSummary;
   room_sensor_assist_enabled: boolean;
   room_sensor_assist_deadband: number;
+  room_sensor_assist_braking_level?: RoomAssistBrakingLevel;
+  room_sensor_assist_high_braking_steps?: number;
   room_sensor_assist_max_delta: number;
+  room_sensor_assist_minimum_margin?: number;
   room_sensor_assist_debounce_seconds: number;
 };
 
@@ -626,7 +653,54 @@ export type PreconditioningLearningSummary = {
   cool: PreconditioningDirectionLearning;
 };
 
+export type PreconditioningOffsetStatus = {
+  direction: "heat" | "cool";
+  requested: number;
+  applied: number;
+  base_target: { temperature: number } | { target_temp_low: number; target_temp_high: number };
+  limited_by: "minimum" | "maximum" | "step" | null;
+};
+
 export type RoomSensorAssistStatus = {
+  minimum_margin?: {
+    configured: number;
+    active: boolean;
+    limited_by: "step" | "minimum" | "maximum" | "range_width" | null;
+  };
+  reference_setpoint?: {
+    boundary: "low" | "high";
+    calculated_temperature: number;
+    requested_temperature: number;
+    applied_temperature: number;
+    scheduled_target_guard: "heating_ceiling" | "cooling_floor" | null;
+    pre_step_temperature: number | null;
+    target_temp_step: number | null;
+  };
+  control_intent?: {
+    active: boolean;
+    valid: boolean;
+    demand: boolean | null;
+    direction: "heat" | "cool" | null;
+    source?: "normal" | "preconditioning";
+    thresholds?: Partial<Record<"heat" | "cool", {
+      target: number;
+      start_temperature: number;
+      stop_temperature: number;
+    }>>;
+  };
+  preconditioning_offset?: PreconditioningOffsetStatus;
+  braking?: {
+    high_steps?: number;
+    steps?: number;
+    temperature_delta?: number | null;
+    configured_level: RoomAssistBrakingLevel;
+    effective_level: RoomAssistBrakingLevel;
+    active: boolean;
+    stop_temperature: number | null;
+    resume_temperature: number | null;
+    setpoint_bound: number | null;
+    reason: string | null;
+  };
   status: "not_configured" | "disabled" | "idle" | "ready" | "assisting" | "holding" | "blocked" | "unavailable";
   enabled: boolean;
   configured: boolean;
@@ -796,6 +870,9 @@ export type PlannedReturnControl = {
 };
 
 export type ZoneRuntimeStatus = {
+  preconditioning_offset?: PreconditioningOffsetStatus;
+  applied_target_temp_low?: number | null;
+  applied_target_temp_high?: number | null;
   planned_return?: PlannedReturnControl | null;
   state: "stopped" | "paused" | "boost" | "preconditioning" | "scheduled" | "idle" | "externally_managed";
   room_temperature?: number | null;

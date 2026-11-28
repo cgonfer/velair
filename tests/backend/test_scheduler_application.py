@@ -2762,7 +2762,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
             [("set_temperature", self.entity_id, 21.0, True, "heat")],
         )
 
-    async def test_expired_boost_restores_previous_state_for_keep_block(self) -> None:
+    async def test_expired_boost_applies_keep_target_with_previous_mode(self) -> None:
         previous_state = {"hvac_mode": "cool", "temperature": 19}
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
             {
@@ -2784,7 +2784,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
 
         self.assertEqual(
             self.climate.calls,
-            [("restore_state", self.entity_id, previous_state)],
+            [("set_temperature", self.entity_id, 21.0, True, "cool")],
         )
 
     async def test_expired_boost_applies_current_turn_off_block(self) -> None:
@@ -3148,7 +3148,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
             ],
         )
 
-    async def test_cancel_boost_restores_previous_state_for_keep_block(self) -> None:
+    async def test_cancel_boost_applies_keep_target_with_previous_mode(self) -> None:
         previous_state = {"hvac_mode": "cool", "temperature": 19}
         self.climate.snapshots[self.entity_id] = previous_state
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
@@ -3169,7 +3169,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
 
         self.assertEqual(
             self.climate.calls[-1],
-            ("restore_state", self.entity_id, previous_state),
+            ("set_temperature", self.entity_id, 21.0, True, "cool"),
         )
 
     async def test_cancel_boost_is_idempotent_without_active_boost(self) -> None:
@@ -4663,6 +4663,7 @@ class VelairSchedulerSavedScheduleTest(_PreparedSchedulerFixture, unittest.Isola
         )
 
     async def test_start_can_apply_current_schedule_when_enabled(self) -> None:
+        self.hass.states[self.entity_id].attributes["supported_features"] = 1
         self.data["zones"][self.entity_id]["schedule"]["tuesday"] = [
             {
                 "start": "17:00",
@@ -12058,7 +12059,9 @@ class VelairSchedulerPreconditioningTest(_PreparedSchedulerFixture, unittest.Iso
                     reason="test_failure",
                 )
 
-        self.assertEqual(self.scheduler._room_sensor_assist_states, {})
+        self.assertEqual(set(self.scheduler._room_sensor_assist_states), {self.entity_id})
+        retained = self.scheduler._room_sensor_assist_states[self.entity_id]
+        self.assertEqual(retained.effective_control_intent, {"source": "retiring", "valid": False})
         dismiss_ids = {
             call[2]["notification_id"]
             for call in self.hass.services.calls

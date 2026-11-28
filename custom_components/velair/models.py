@@ -11,6 +11,8 @@ from copy import deepcopy
 from uuid import uuid4
 from typing import Any, Literal, NotRequired, TypedDict
 
+from .room_assist_braking import normalize_high_braking_steps
+
 from .const import (
     ACTION_SET_CLIMATE_OPTIONS,
     ACTION_SET_HVAC_MODE,
@@ -153,6 +155,17 @@ class ZoneOverride(TypedDict):
     previous_state: NotRequired["ClimateStateSnapshot"]
 
 
+class PendingBoostReturn(TypedDict):
+    """Local delivery checkpoint for an ended Boost, never an active override."""
+
+    id: str
+    ended_at: str
+    reason: Literal["manual", "expired"]
+    boost: ZoneOverride
+    announced: NotRequired[bool]
+    mode_retired: NotRequired[bool]
+
+
 class ZonePauseReason(TypedDict):
     """One independently owned reason that keeps a zone paused."""
 
@@ -188,6 +201,8 @@ class PreconditioningData(TypedDict):
     master_entity_id: NotRequired[str | None]
     max_lead_minutes: int
     minimum_delta_temperature: float
+    heating_setpoint_offset: float
+    cooling_setpoint_offset: float
     learning_history_size: int
     similar_sample_count: int
     comfort_percentile: int
@@ -202,6 +217,9 @@ class PreconditioningData(TypedDict):
     room_sensor_schedule: NotRequired[dict[str, Any]]
     room_sensor_assist_enabled: bool
     room_sensor_assist_deadband: float
+    room_sensor_assist_braking_level: str
+    room_sensor_assist_high_braking_steps: int
+    room_sensor_assist_minimum_margin: float
     room_sensor_assist_max_delta: float
     room_sensor_assist_debounce_seconds: int
 
@@ -376,6 +394,7 @@ class ZoneData(TypedDict):
     template_links: NotRequired[dict[str, TemplateLinkData]]
     day_layout_key: NotRequired[str]
     override: NotRequired[ZoneOverride | None]
+    pending_boost_return: NotRequired[PendingBoostReturn]
     pauses: NotRequired[list[ZonePauseReason]]
     preconditioning: PreconditioningData
     comfort: ComfortData
@@ -901,6 +920,9 @@ def normalize_schedule_data(
             ),
         }
         from .day_layouts import normalize_day_layout_key
+        pending_return = _normalize_pending_boost_return(zone_data.get("pending_boost_return"))
+        if pending_return is not None and override is None and not pauses:
+            zones[entity_id]["pending_boost_return"] = pending_return
         zones[entity_id]["day_layout_key"] = normalize_day_layout_key(zone_data.get("day_layout_key"))
         if "template_links" in zone_data:
             zones[entity_id]["template_links"] = _stored_template_link_modes(zone_data["template_links"])
@@ -1858,7 +1880,7 @@ def _normalize_preconditioning_anchors(raw: Any, zone_count: int) -> dict[str, d
     if not isinstance(raw, dict):
         return {}
     result: dict[str, dict[str, Any]] = {}
-    for key, value in list(raw.items())[-max(32, zone_count * 16):]:
+    for key, value in raw.items():
         if not isinstance(key, str) or not isinstance(value, dict):
             continue
         try:
@@ -1868,8 +1890,50 @@ def _normalize_preconditioning_anchors(raw: Any, zone_count: int) -> dict[str, d
             continue
         if any(instant.tzinfo is None for instant in instants):
             continue
-        result[key] = deepcopy(value)
-    return result
+        anchor = deepcopy(value)
+        if any(field in anchor for field in ("completed_at", "weekday", "start", "completion_context")):
+            try:
+                completed = datetime.fromisoformat(anchor["completed_at"].replace("Z", "+00:00"))
+                weekday = anchor["weekday"]
+                start = normalize_start_time(anchor["start"])
+                entity = anchor["entity_id"]
+                expected = f"{entity}|{weekday}|{start}|{instants[1].astimezone(timezone.utc).isoformat()}"
+                valid = (completed.tzinfo is not None and weekday in WEEKDAYS
+                         and anchor.get("direction") in ("heat", "cool")
+                         and isinstance(anchor.get("completion_context"), str)
+                         and re.fullmatch(r"[0-9a-f]{64}", anchor["completion_context"]) is not None
+                         and instants[0].astimezone(timezone.utc) <= completed.astimezone(timezone.utc)
+                         < instants[1].astimezone(timezone.utc) and key == expected)
+            except (KeyError, TypeError, ValueError, AttributeError):
+                valid = False
+            if not valid:
+                # Corrupt completion opt-in must not erase legacy source-start
+                # evidence or manufacture a completed preparation.
+                for field in ("completed_at", "weekday", "start", "completion_context"):
+                    anchor.pop(field, None)
+        result[key] = anchor
+    limit = max(32, zone_count * 16)
+    # Give live own continuity priority without allowing old completed records
+    # to displace still-live dependency evidence at the load boundary.
+    now = datetime.now(timezone.utc)
+    completed, sources, expired = [], [], []
+    for key, anchor in result.items():
+        target = datetime.fromisoformat(anchor["target_when"].replace("Z", "+00:00"))
+        expiry = datetime.fromisoformat(anchor["expires_at"].replace("Z", "+00:00"))
+        completed_at = datetime.fromisoformat(anchor["completed_at"].replace("Z", "+00:00")) if "completed_at" in anchor else None
+        if completed_at is not None and completed_at <= now < target:
+            completed.append(key)
+        elif expiry > now:
+            sources.append(key)
+        else:
+            expired.append(key)
+    selected = completed[-limit:]
+    for entries in (sources, expired):
+        capacity = limit - len(selected)
+        if capacity:
+            selected.extend(entries[-capacity:])
+    retained = set(selected)
+    return {key: value for key, value in result.items() if key in retained}
 
 
 def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
@@ -1887,6 +1951,14 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
         "max_lead_minutes": max_lead_minutes,
         "minimum_delta_temperature": _normalize_preconditioning_delta(
             data.get("minimum_delta_temperature")
+        ),
+        # Storage can contain either runtime unit. Unit-specific bounds and the
+        # current device step are enforced at explicit configuration writes.
+        "heating_setpoint_offset": _normalize_preconditioning_offset(
+            data.get("heating_setpoint_offset")
+        ),
+        "cooling_setpoint_offset": _normalize_preconditioning_offset(
+            data.get("cooling_setpoint_offset")
         ),
         "learning_history_size": _normalize_int(
             data.get("learning_history_size"),
@@ -1942,8 +2014,19 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
             data.get("room_temperature_entity_id")
         ),
         "room_sensor_assist_enabled": bool(data.get("room_sensor_assist_enabled", False)),
+        "room_sensor_assist_braking_level": (
+            data.get("room_sensor_assist_braking_level", "default")
+            if data.get("room_sensor_assist_braking_level", "default") in ("default", "moderate", "high")
+            else "default"
+        ),
         "room_sensor_assist_deadband": _normalize_room_sensor_assist_deadband(
             data.get("room_sensor_assist_deadband")
+        ),
+        "room_sensor_assist_high_braking_steps": normalize_high_braking_steps(
+            data.get("room_sensor_assist_high_braking_steps", 2)
+        ),
+        "room_sensor_assist_minimum_margin": _normalize_float(
+            data.get("room_sensor_assist_minimum_margin"), 0.0, minimum=0.0, maximum=18.0,
         ),
         "room_sensor_assist_max_delta": _normalize_float(
             data.get("room_sensor_assist_max_delta"),
@@ -2863,6 +2946,15 @@ def _normalize_float(
     return max(minimum, min(number, maximum))
 
 
+def _normalize_preconditioning_offset(value: Any) -> float:
+    """Preserve stored delta precision, repairing invalid offsets to disabled."""
+    try:
+        offset = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    return offset if isfinite(offset) and 0 <= offset <= 9.0 else 0.0
+
+
 def _normalize_room_sensor_assist_deadband(value: Any) -> float:
     """Repair a corrupt stored deadband to its safe Celsius default."""
     try:
@@ -3059,6 +3151,34 @@ def _normalize_zone_override(raw_override: Any) -> ZoneOverride | None:
         override["previous_state"] = previous_state
 
     return override
+
+
+def _normalize_pending_boost_return(raw: Any) -> PendingBoostReturn | None:
+    """Read bounded, valid local checkpoints without reviving a Boost."""
+    if not isinstance(raw, dict):
+        return None
+    token, ended_at, reason = raw.get("id"), raw.get("ended_at"), raw.get("reason")
+    if not isinstance(token, str) or not token or len(token) > 128:
+        return None
+    if not isinstance(ended_at, str) or reason not in ("manual", "expired"):
+        return None
+    try:
+        ended = datetime.fromisoformat(ended_at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ended.tzinfo is None:
+        return None
+    raw_boost = raw.get("boost")
+    boost = _normalize_zone_override(raw_boost)
+    if not boost or boost.get("type") != "boost" or not boost.get("previous_state"):
+        return None
+    _copy_climate_options(raw_boost, boost)
+    pending: PendingBoostReturn = {"id": token, "ended_at": ended_at, "reason": reason, "boost": boost}
+    if raw.get("announced") is True:
+        pending["announced"] = True
+    if raw.get("mode_retired") is True:
+        pending["mode_retired"] = True
+    return pending
 
 
 def _normalize_zone_pause_override(raw_override: dict[str, Any]) -> ZoneOverride | None:

@@ -5,8 +5,8 @@ from homeassistant.const import Platform
 DOMAIN = "velair"
 NAME = "Velair"
 MAX_PROFILE_DESCRIPTION_LENGTH = 500
-MODE_DEFAULT_OPTION = "Default"
-MODE_MANUAL_OPTION = "Manual"
+MODE_DEFAULT_OPTION = "default"
+MODE_MANUAL_OPTION = "manual"
 
 CONF_CLIMATE_ENTITIES = "climate_entities"
 CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP = "apply_active_schedule_on_startup"

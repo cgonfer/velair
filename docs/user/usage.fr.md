@@ -9,8 +9,8 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.2 |
-| Dernière synchronisation | 2026-11-12 |
+| Version de référence | 1.9.3-beta.6 |
+| Dernière synchronisation | 2026-11-25 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -32,6 +32,18 @@ Dans les **Réglages** du panneau latéral, **Affichage des noms des équipement
 **Noms actuels avec contexte de zone** conserve ces noms et ajoute séparément la zone Home Assistant effective lorsque plusieurs équipements gérés portent le même nom. **Noms des entités avec contexte** utilise le nom propre de l’entité, ou celui de l’appareil s’il s’agit de son entité principale, avec un contexte Home Assistant séparé pour les noms répétés. Pour un appareil nommé `Test` et une entité nommée `Test 2`, le format actuel est `Test Test 2` ; le format d’entité est `Test 2`, avec le contexte de zone ou d’appareil si nécessaire. La zone propre à l’entité est prioritaire sur celle de son appareil.
 
 Lorsque le contexte de zone ou d’appareil ne suffit pas à distinguer des noms identiques, l’identifiant de l’entité reste disponible comme référence. Les options des listes déroulantes natives affichent le contexte sur la même ligne. Les noms personnalisés des cartes et les noms des Groupes de pièce restent prioritaires. Velair enregistre cette préférence et la partage entre les navigateurs et les cartes ; modifiez-la depuis les Réglages du panneau latéral. Elle ne renomme pas les entités Home Assistant et ne modifie ni leurs identifiants, ni leurs programmations, ni les commandes climatiques. Les anciennes versions de Home Assistant conservent leurs noms existants lorsque les métadonnées structurées de nommage ne sont pas disponibles.
+
+<a id="sensor-entity-ids"></a>
+
+## Identifiants d’entité des capteurs
+
+Les nouveaux capteurs Velair utilisent l’identifiant d’entité de l’équipement climatique source et la fonction du capteur comme base de leurs identifiants initiaux. Home Assistant applique ses règles de nommage et résout les identifiants déjà occupés. Des équipements portant le même nom visible peuvent ainsi recevoir des identifiants de capteurs distincts. Les noms des capteurs restent traduits comme auparavant.
+
+Les capteurs existants conservent leurs identifiants enregistrés, y compris les identifiants personnalisés. Modifier **Affichage des noms des équipements climatiques**, importer les Réglages ou redémarrer ne les renomme pas.
+
+Les administrateurs peuvent ouvrir **Réglages → Maintenance → Vérifier les identifiants d’entité des capteurs** pour examiner les capteurs existants. La vérification affiche l’équipement source, l’identifiant actuel et l’identifiant proposé, y compris pour les capteurs sans suffixe numérique et les capteurs de diagnostic désactivés. Rien n’est sélectionné automatiquement. Sélectionnez les changements souhaités et confirmez le renommage ; vous pouvez aussi fermer la vérification sans rien modifier. Actualiser la vérification efface ses sélections. Une proposition modifiée ou périmée doit être vérifiée de nouveau avant de pouvoir être appliquée.
+
+Modifier un identifiant d’entité peut nécessiter la mise à jour des automatisations, tableaux de bord, modèles et références externes. Vérifiez ces références avant de confirmer ; Velair ne garantit pas leur réécriture. Cette opération ne modifie ni les noms des capteurs, ni leurs identités internes, ni les réglages, ni les commandes climatiques. Si un lot échoue, Velair tente de rétablir les identifiants précédents et signale les changements qui subsistent.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation du panneau et liens directs
@@ -1159,9 +1171,9 @@ et crée atomiquement de nouvelles valeurs Fahrenheit par défaut. Après cette
 mise à niveau, les changements ultérieurs d’unité Home Assistant utilisent
 la conversion explicite complète décrite ci-dessus et conservent les données.
 
-Les exports actuels du format portable v26 conservent les valeurs brutes et
+Les exports actuels du format portable v30 conservent les valeurs brutes et
 déclarent leur unité. Les anciennes versions de Velair ne peuvent pas importer
-les exports v26 ; utilisez une version prenant en charge v26 pour les
+les exports v30 ; utilisez une version prenant en charge v30 pour les
 restaurer. Les anciens fichiers pris en charge, notamment v4, v5, v8 et v9,
 restent importables. Les imports convertissent les données thermiques
 sélectionnées lorsque l’unité du fichier diffère de celle de Home Assistant.
@@ -1181,27 +1193,13 @@ modifier avant de se fier à cette programmation.
 La mise à niveau, la migration, les sauvegardes et la récupération complètes
 sont décrites dans [Unités de température et migration](temperature-units.fr.md).
 
-Lorsque l’assistance par capteur est activée, Room Assist montre une échelle
-compacte de température en direct pendant un bloc de température géré actif.
-Pour une consigne unique, elle indique la consigne programmée, le capteur de
-pièce, la consigne de l’appareil et son relevé. Une bande neutre hachurée indique
-les limites de bande morte. Avec `heat` ou `cool` fixe, l’état montre aussi si
-le contrôle se dirige vers la limite inférieure ou supérieure ; avec les
-modes automatiques scalaires, la bande reste une marge neutre. Pour une plage
-native, elle s’étend de la limite basse programmée moins la bande morte à la
-limite haute plus la bande morte ; des crochets séparés montrent toujours les
-bandes complètes programmée et appliquée, avec un connecteur entre leurs
-centres montrant le déplacement signé de toute la plage. Le capteur de pièce
-et le relevé de l’appareil restent des marqueurs individuels. La légende
-traduite complète reste centrée sur la bande morte représentée, même lorsque
-cette bande est plus étroite que le libellé ; une bande morte nulle supprime
-la surface et est indiquée explicitement. Masquer `show_room_assist_deadband`
-masque ensemble son réglage, sa bande et sa légende. Ces valeurs viennent de
-l’état Home Assistant et de l’état d’exécution Velair ; elles ne sont pas
-enregistrées comme nouvel historique. Si aucun bloc de température géré n’est
-actif, l’onglet montre un état d’attente plutôt que des valeurs fictives. Si
-un capteur est sélectionné mais que l’assistance est désactivée, l’onglet
-indique qu’il est enregistré mais non opérationnel. Pour une plage fixe Chauffage ou Refroidissement avec référence configurée, la bande marque la consigne de référence choisie moins et plus la bande morte ; les crochets montrent toujours les plages programmée et appliquée complètes.
+Lorsque l'assistance par capteur est activée, son graphique en direct sépare **Pièce**, **Cible**, **Appareil** et **Consigne** en pastilles compactes reliées verticalement à leurs positions de température. Développez une pastille pour les détails. **Normal** montre la demande actuelle, le prochain seuil effectif et tout supplément de préparation ; **Détaillé** ajoute l'écart de la pièce, l'ajustement total et le supplément déjà inclus dans ce total. Les libellés figurent sur les lignes de mesure si l'espace le permet, sinon dessous. Une flèche pleine représente la demande, tandis qu'une flèche en pointillés indique la reprise pendant l'attente ; aucune ne représente une tendance mesurée du capteur ni une activité physique HVAC.
+
+Une fine bande hachurée au-dessus de l'axe montre la bande de régulation nominale avec sa légende dessous. Les seuils de freinage effectifs restent distincts. Une plage native `heat_cool` ne hachure que les marges extérieures Room Assist. Pour une plage fixe Chauffage ou Refroidissement, la bande entoure plutôt la consigne de référence sélectionnée. Des crochets distincts montrent les bandes nominale et appliquée complètes ; **Détaillé** mesure leur décalage commun signé lorsqu'il est non nul. Une bande morte nulle ne dessine aucune zone hachurée et la légende affiche zéro. Masquer `show_room_assist_deadband` masque le réglage, la bande et la légende.
+
+Le graphique présente la demande une seule fois dans son badge d’état et le seuil d’arrêt ou de reprise à côté de la flèche. **Explication** ouvre un court contexte sous le graphique sans répéter ces libellés ni les mesures de température ; **Données techniques** regroupe les consignes de l’appareil, les limites de régulation et l’origine et les horaires dans la même zone. Un seul détail peut être ouvert à la fois. Sélectionnez de nouveau son bouton ou appuyez sur Échap pour le fermer ; ces commandes de présentation ne modifient pas la demande.
+
+Les étapes de calcul, de demande et d’application identiques partagent une seule valeur avec tous leurs libellés ; les valeurs différentes, les informations sur la référence d’une plage et les limites de préparation restent distinctes. Les mesures restent dans le graphique, et les groupes de supplément de préparation ou de protection n’apparaissent que lorsqu’ils sont pertinents. Une demande inconnue reste inconnue. Les valeurs viennent de Home Assistant et de l’état d’exécution de Velair, sans nouvel historique. Sans bloc de température géré actif, l’onglet affiche un état d’attente. Un capteur sélectionné avec l’assistance désactivée reste enregistré et est affiché comme inactif.
 
 L’assistance par capteur de pièce est pilotée par événements. Velair n’interroge
 pas périodiquement les températures. Il écoute uniquement le capteur configuré
@@ -1519,18 +1517,17 @@ programmations tout en permettant des automatisations avancées comme :
 - activer un forçage depuis un assistant vocal ;
 - activer un forçage avec un mode HVAC préféré.
 
-Lorsqu’un forçage expire, Velair résout la zone concernée dans cet ordre :
+Lorsqu’un forçage expire ou est annulé, Velair résout la zone concernée dans cet ordre :
 
 1. Si un bloc actif définit explicitement un mode HVAC, Velair applique cette
    consigne programmée.
 2. Si un bloc actif éteint l’appareil, Velair l’éteint.
 3. Si aucun bloc n’est actif, Velair rétablit l’état capturé avant le forçage.
-4. Si le bloc actif utilise `Conserver`, Velair rétablit aussi l’état capturé
-   avant le forçage, car `Conserver` ne définit pas de nouveau mode HVAC à
-   appliquer après la dérogation temporaire.
+4. Si le bloc de température actif utilise `Keep`, Velair applique sa température actuelle ou sa plage complète avec le mode HVAC enregistré avant le forçage. Les options enregistrées de l’appareil sont rétablies, sauf si le bloc actuel choisit une autre valeur. Si le mode enregistré était Arrêt, Keep utilise, comme d’habitude, le premier mode compatible autre qu’Arrêt. Les modes enregistrés incompatibles ou absents sont signalés comme erreurs de livraison plutôt que devinés.
 
-Un forçage ne doit donc pas amener Velair à inventer une nouvelle consigne de
-chauffage ou refroidissement lorsque la programmation ne la définit pas explicitement.
+Par exemple, un appareil en Refroidissement à 24 °C peut temporairement effectuer un forçage en Chauffage à 22 °C. Si le bloc actif utilise Conserver le mode actuel à 20 °C lorsque le forçage se termine, Velair revient en Refroidissement à 20 °C, sans envoyer d’abord les anciens 24 °C. Les blocs de température seule, de mode explicite, de mode seul, d’options seules et d’arrêt conservent leur fonctionnement habituel. Cette règle propre au retour ne modifie pas Keep lors de l’application ordinaire du programme.
+
+Velair enregistre un retour en attente avant de retirer le forçage. Si Home Assistant redémarre avant confirmation de la livraison, ce retour reprend avec le bloc alors en vigueur, même si **Appliquer le programme actif au démarrage** est désactivé. Cela termine un retour déjà engagé ; le forçage n’est pas réactivé et le programme de toutes les zones n’est pas appliqué. Une indisponibilité temporaire de l’appareil utilise la récupération de livraison existante. Une nouvelle commande manuelle, un forçage, une pause, un changement de Profil ou de Mode Velair, ou la désactivation ou réaffectation de la zone remplace l’ancien retour.
 
 <a id="startup-behavior"></a>
 ## Comportement au démarrage
@@ -1543,6 +1540,8 @@ le démarrage**. Velair applique alors le bloc actuellement actif aux appareils
 gérés après le démarrage de Home Assistant si le planificateur est automatique.
 Un bloc commencé un jour précédent reste actif jusqu’au bloc hebdomadaire
 suivant. Les forçages actifs sont respectés.
+
+Un retour de forçage inachevé est récupéré indépendamment de ce réglage, comme décrit sous [Forçage](#boost).
 
 <a id="automation-blueprints"></a>
 ## Blueprints d’automatisation
@@ -1589,7 +1588,7 @@ Le fichier peut contenir :
 - les définitions de profils climatiques ;
 - les définitions de modes.
 
-Les exports actuels du modèle 26 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 26. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
+Les exports actuels du modèle 30 conservent les deux types de liaison aux modèles, les références de préréglages, les relations de Maître de préconditionnement, les politiques de format et de référence des cibles, l’appartenance aux groupes et leur configuration partagée. Les paramètres de zone conservent aussi les programmations facultatives des capteurs Room Assist, le niveau de freinage sélectionné, le nombre de pas de freinage Élevé par zone et la marge minimale de commande, indépendamment des programmations de température et des Profils. Les repères d’exécution acceptée du maître restent locaux et ne sont pas exportés. Exporter des programmations ou Profils inclut les modèles et préréglages nécessaires comme sections supplémentaires sélectionnées. Avec des données de groupe, les groupes, programmations et Profils requis sont aussi inclus, même en partant d’un export d’apprentissage. L’import valide la configuration combinée, y compris les consommateurs existants des ressources remplacées. Les préréglages fusionnent par clé stable : les clés correspondantes sont remplacées, les préréglages locaux absents restent. Les anciennes sauvegardes restent importables ; les anciennes versions ne peuvent importer le modèle 30. Conservez une sauvegarde de la version précédente si vous pourriez avoir besoin d’y revenir. Consultez [l’exemple de sauvegarde](linked-schedule-examples.fr.md#back-up-the-whole-setup).
 
 À l’import, Velair permet de choisir les sections à écraser. L’import
 remplace les données sélectionnées : exportez d’abord si vous avez besoin
@@ -1687,7 +1686,7 @@ Active un profil climatique enregistré et applique immédiatement le comporteme
 effectif actuel. Cela remplace l’ensemble complet de Profils actifs ; les zones
 non couvertes par le Profil choisi reviennent à leurs programmations Par défaut.
 Utilisez l’identifiant stable montré par Velair plutôt que son nom affiché
-modifiable. Une activation directe met le sélecteur de Mode sur `Manual`.
+modifiable. Une activation directe met le sélecteur de Mode sur `manual`.
 Omettre `profile_id` revient encore aux programmations par défaut pour la
 compatibilité ; les nouvelles automatisations devraient utiliser explicitement
 `velair.deactivate_profile`.
@@ -1821,11 +1820,7 @@ de `temperature`, selon les mêmes règles que `velair.set_temperature`.
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Annule un forçage actif avant son expiration. Le retour est toujours le même
-qu’à l’expiration normale : Velair applique la consigne explicite active
-lorsqu’elle existe ; sinon, y compris avec un bloc `Conserver`, il rétablit
-l’état climatique enregistré, y compris les options prises en charge par
-l’appareil. L’appel n’a aucun effet si aucun forçage n’est actif.
+Annule un forçage actif avant son expiration. Le retour suit le même fonctionnement qu’à l’expiration normale : un bloc de température utilisant `Keep` combine sa cible actuelle avec le mode HVAC antérieur au forçage, tandis que les blocs explicites conservent leur fonctionnement habituel. Sans bloc programmé applicable, Velair rétablit l’état enregistré de l’appareil, y compris les options prises en charge. L’appel n’a aucun effet si aucun forçage n’est actif.
 
 ```yaml
 action: velair.cancel_boost

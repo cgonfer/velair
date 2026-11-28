@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](manual-control.md) · [Español](manual-cont
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.9 |
-| Última sincronización | 2026-11-02 |
+| Versión de referencia | 1.9.3-beta.3 |
+| Última sincronización | 2026-11-22 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -94,7 +94,11 @@ Cuando cambia la entidad, Velair relaciona cada campo modificado con esas expect
 
 Algunos dispositivos comunican varios valores mientras procesan una orden. Pueden volver brevemente a un objetivo anterior, publicar uno intermedio o comunicar el modo y la temperatura en otro orden. Velair mantiene un periodo breve y limitado de estabilización solo para los campos que cambió, para evitar que esas actualizaciones creen un ajuste manual incorrectamente. El periodo no se reinicia cuando llega una respuesta del dispositivo; se establece definitivamente cuando termina la secuencia completa de servicios de Home Assistant. Un cambio de Home Assistant claramente realizado por un usuario, u otro script o automatización identificable, sigue siendo externo, y los cambios posteriores a la estabilización se tratan normalmente.
 
-Cuando una actualización anónima durante la estabilización no puede distinguirse de forma fiable del proceso del dispositivo para alcanzar el estado solicitado, Velair mantiene prudentemente el control Automático. Así evita convertir una orden rechazada o retrasada en un falso ajuste manual. El estado de estabilización solo existe durante la ejecución y se borra al reiniciar. Si el equipo sigue sin coincidir con el valor solicitado al terminar la estabilización, Velair mantiene el control Automático y registra una advertencia de estabilización de la orden. La siguiente instantánea actualizada de Diagnóstico muestra la advertencia; sus datos incluyen los valores esperados y observados. Velair no reintenta la orden a ciegas ni convierte la discrepancia en un ajuste manual diferido.
+Cuando una actualización anónima durante la estabilización no puede distinguirse de forma fiable del proceso del dispositivo para alcanzar el estado solicitado, Velair mantiene prudentemente el control Automático. Así evita convertir una orden rechazada o retrasada en un falso ajuste manual. El estado de estabilización solo existe durante la ejecución y se borra al reiniciar.
+
+Durante una orden reciente de apagado de Velair, un restablecimiento de la consigna única al mínimo publicado explícitamente por el dispositivo también se reconoce como un efecto opcional del apagado. El mínimo puede llegar antes, a la vez o después del estado `off`, incluso mientras la orden sigue ejecutándose. Esta excepción requiere límites mínimo y máximo válidos y que la intención actual de Velair siga siendo apagar; no oculta acciones identificables de usuarios o automatizaciones. Utiliza el mismo periodo limitado de estabilización, y una nueva orden de temperatura o modo HVAC retira las pruebas anteriores. El mínimo no se ordena ni es obligatorio: un termostato que conserva su consigna anterior también puede confirmar el apagado con normalidad. Una comunicación del mínimo por sí sola no confirma que el termostato se haya apagado.
+
+Si el equipo sigue sin coincidir con el valor solicitado al terminar la estabilización, Velair mantiene el control Automático y registra una advertencia de estabilización de la orden. La siguiente instantánea actualizada de Diagnóstico muestra la advertencia; sus datos incluyen los valores esperados y observados. Velair no reintenta la orden a ciegas ni convierte la discrepancia en un ajuste manual diferido.
 
 Se aplica una excepción independiente mientras Velair mantiene un equipo en planificación automática en `off`. Algunos dispositivos comunican un objetivo de sustitución, como `0 °C` cuando su mínimo publicado es `5 °C`. Si solo cambian los objetivos y todos los valores nuevos quedan fuera del mínimo y el máximo publicados explícitamente por el dispositivo, Velair ignora la actualización, incluso si llega después de la estabilización. No emite un evento de cambio externo, no inicia un ajuste manual ni interrumpe la ejecución del horario. Ambos límites deben ser válidos; si falta alguno, se mantiene la detección habitual. Los cambios de objetivo válidos, los cambios externos de modo HVAC, las acciones identificables de usuarios o automatizaciones y las sesiones manuales existentes conservan su comportamiento habitual.
 

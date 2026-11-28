@@ -1,4 +1,6 @@
 import { VelairApiClient } from "../api/client";
+import { backendErrorMessage } from "../domain/backend-errors";
+import { languageFromHass, translate } from "../i18n";
 import type { HassConnection, HomeAssistant, ScheduleResponse, ScheduleUpdateMessage } from "../types";
 import { ScheduleRuntimeUpdates } from "./schedule-runtime-updates";
 
@@ -177,7 +179,7 @@ export class PanelScheduleSession {
         this.publish(this._runtimeUpdates.merge(data, runtimeRevision, false, operationId));
       }
     }).catch((error: unknown) => {
-      if (this._current(connection, generation) && sequence === this._sequence && inputRevision === this._inputRevision) this._set({ error: error instanceof Error ? error.message : String(error) });
+      if (this._current(connection, generation) && sequence === this._sequence && inputRevision === this._inputRevision) this._set({ error: backendErrorMessage(error, translate(languageFromHass(this._hass), "unableLoad")) });
     }).finally(() => {
       if (!this._current(connection, generation)) return;
       this._refresh = undefined;
@@ -216,7 +218,7 @@ export class PanelScheduleSession {
       if (!current()) await unsubscribe();
       else this._unsubscribe = unsubscribe;
     } catch (error) {
-      if (current()) this._set({ error: error instanceof Error ? error.message : String(error) });
+      if (current()) this._set({ error: backendErrorMessage(error, translate(languageFromHass(this._hass), "unableSubscribe")) });
     } finally {
       if (current()) this._subscribing = false;
     }

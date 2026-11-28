@@ -28,6 +28,42 @@ function connection() {
 }
 
 describe("panel schedule session", () => {
+  describe.each(["load", "subscription"] as const)("%s errors", (operation) => {
+    it.each([
+      { name: "Home Assistant error object", error: { code: "not_loaded", message: "Velair is not loaded" }, expected: "Velair is not loaded" },
+      { name: "Error instance", error: new Error("Connection lost"), expected: "Connection lost" },
+      { name: "string rejection", error: "Connection lost", expected: "Connection lost" },
+      { name: "opaque backend error", error: { code: "unknown_error", message: "Unknown error" }, code: "unknown_error" },
+      { name: "missing backend message", error: { code: "not_loaded" }, code: "not_loaded" },
+      { name: "empty backend message", error: { message: "  " } },
+      { name: "malformed backend message", error: { message: { reason: "not loaded" } } },
+      { name: "null rejection", error: null },
+      { name: "undefined rejection", error: undefined },
+    ])("shows readable text for $name and recovers after retry", async ({ error, expected, code }) => {
+      const mock = connection();
+      mock.hass.language = "es";
+      if (operation === "subscription") vi.mocked(mock.hass.connection.subscribeMessage).mockRejectedValueOnce(error);
+      const session = new PanelScheduleSession(); session.connect(mock.hass);
+      if (operation === "load") mock.requests[0].reject(error);
+      await flush();
+      const fallback = operation === "load" ? "No se pudieron cargar los datos" : "No se pudo suscribir a las actualizaciones";
+      expect(session.state.error).toBe(expected ?? `${fallback}${code ? ` (${code})` : ""}`);
+      expect(session.state.error).not.toContain("[object Object]");
+      if (operation === "load") expect(session.state.loading).toBe(false);
+
+      if (operation === "subscription") {
+        mock.requests[0].resolve(data(1)); await flush();
+        mock.events.get("ready")!(); await flush();
+      } else void session.refresh();
+      mock.requests[1].resolve(data(2)); await flush();
+      expect(session.state.error).toBeUndefined();
+      expect(session.state.data?.configuration_revision).toBe(2);
+      expect(session.state.loading).toBe(false);
+      if (operation === "subscription") expect(mock.hass.connection.subscribeMessage).toHaveBeenCalledTimes(2);
+      session.disconnect();
+    });
+  });
+
   it("captures synchronous transport errors and permits a subsequent retry", async () => {
     const mock = connection(); vi.mocked(mock.hass.connection.sendMessagePromise).mockImplementationOnce(() => { throw new Error("transport unavailable"); });
     const session = new PanelScheduleSession(); session.connect(mock.hass); await flush();

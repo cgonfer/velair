@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](shared-climate-supply.md) · [Español](shared-c
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.6 |
-| Laatst gesynchroniseerd | 2026-10-28 |
+| Referentieversie | 1.9.3-dev.20261120233407 |
+| Laatst gesynchroniseerd | 2026-11-21 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -90,9 +90,15 @@ Actuele thermostaatdoelen gelden, inclusief handmatige wijzigingen en doelen van
 
 Een blauw informatiepaneel bovenaan **Vraag en hysterese**, vóór de gedragskeuze, verklaart de voorrang van Room Assist en wanneer toevoerhysterese geldt.
 
-Wanneer Room Assist het actieve doel van een kamer beheert, volgt gedeelde toevoer zijn vastgelegde regelintentie. Bij vaste verwarming vraagt de fase `towards_upper` warmte; bij vaste koeling vraagt `towards_lower` koeling. Zijn bestaande schakelgrenzen blijven leidend: toevoerhysterese en thermostaatuitzondering worden niet opnieuw toegepast. Oorspronkelijke bereikregeling volgt haar vastgelegde richting. Een ongeldig of nog wachtend ondersteund doel blijft onbekend totdat een geldige regelintentie is vastgelegd.
+Wanneer Room Assist het actieve kamerdoel beheert, volgt de gedeelde toevoer de bevestigde effectieve vraag. Bij gewone regeling vraagt de fase `towards_upper` warmte bij vaste verwarming en `towards_lower` koeling bij vaste koeling. Oorspronkelijke bereikregeling volgt de bevestigde richting. De schakelgrenzen van Room Assist blijven leidend; toevoerhysterese en kameroverrides worden niet nogmaals toegepast.
 
-Het gecorrigeerde thermostaatdoel wordt niet met een aparte kamersensor vergeleken. Room Assist kan toevoervraag beëindigen terwijl de thermostaat nog hetzelfde aangepaste doel meldt.
+Tijdens vroege voorbereiding met een positief ingestelde instelpuntverschuiving neemt Room Assist ook de tijdelijke verwarmings- of koelvraag van die voorbereiding op in de effectieve vraag. De gewone hysteresefase blijft apart behouden. Een verwarmingsdoel `21 °C` met voorbereidingsmarge `0.1 °C` kan bijvoorbeeld warmte vragen tot `20.9 °C`, ook als de gewone fase rustte. Koelen naar `24 °C` werkt spiegelbeeldig bij `24.1 °C`. Het tijdelijke apparaatinstelpunt is geen nieuw kamerdoel. Na de extra hervat Room Assist de gewone vraag; die kan de aanvraag stoppen of voortzetten. De toevoer blijft bestaande vertragingen, minimumtijden en samenvoeging van kamervragen toepassen, zonder aparte voorbereidingsregel.
+
+Alleen bevestigde actuele regelintentie wordt gebruikt. Een ongeldig of nog niet bevestigd ondersteund doel blijft onbekend totdat een geldige bevestiging beschikbaar is. Als voorbereiding vervalt, wordt ook de oude tijdelijke vraag ongeldig wanneer herstel van het gewone doel mislukt.
+
+Het gecorrigeerde thermostaatdoel wordt niet vergeleken met een externe kamersensor. Room Assist kan stoppen toevoer te vragen terwijl de thermostaat nog hetzelfde aangepaste doel meldt.
+
+Zonder Room Assist blijft de toevoer het gemelde thermostaatdoel en de gewone toevoerhysterese gebruiken. Een voorbereidingsverschuiving kan dat gemelde doel veranderen; na verwijderen beoordeelt de toevoer het resulterende doel normaal. Dit pad krijgt geen voorbereidingsvoorrang of bijzonder vasthouden van de vraag.
 
 <a id="timing-and-manual-control"></a>
 ## Timing en handmatige regeling

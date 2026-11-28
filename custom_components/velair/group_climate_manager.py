@@ -174,10 +174,12 @@ class GroupClimateManager(ClimateManager):
 
     async def _async_set_temperature_target(self, entity_id, target, *, blocking, ensure_on, hvac_mode, range_target, climate_options):
         """Retain physical mode fallback, validation and complete action ownership."""
+        return_context = getattr(self, "_boost_return_provider", lambda _entity: None)(entity_id)
         if entity_id not in self._data.get("room_groups", {}):
             return await self._physical._async_set_temperature_target(
                 entity_id, target, blocking=blocking, ensure_on=ensure_on,
-                hvac_mode=hvac_mode, range_target=range_target, climate_options=climate_options)
+                hvac_mode=hvac_mode, range_target=range_target, climate_options=climate_options,
+                **({"preserve_matching_mode": True} if return_context is not None else {}))
         members = self.members(entity_id)
         unit = self.temperature_unit(entity_id)
         status = {}
@@ -206,6 +208,12 @@ class GroupClimateManager(ClimateManager):
             self._physical._register_expected_action(member, mirror_context, expected)
         for member in members:
             converted = converted_targets[member]
+            member_options = climate_options
+            if return_context is not None:
+                saved_snapshot, block_options = return_context
+                member_snapshot = saved_snapshot.get("group_members", {}).get(member, {})
+                member_options = self._physical.boost_return_options(
+                    member, member_snapshot, block_options, hvac_mode=hvac_mode)
             try:
                 self._physical.validate_temperature_target(member, range_target=range_target,
                     hvac_mode=hvac_mode, ensure_on=ensure_on, temperature_only=not ensure_on and hvac_mode is None)
@@ -214,7 +222,8 @@ class GroupClimateManager(ClimateManager):
                     raise HomeAssistantError("Climate is unavailable")
                 await self._physical._async_set_temperature_target(member, converted,
                     blocking=blocking, ensure_on=ensure_on, hvac_mode=hvac_mode,
-                    range_target=range_target, climate_options=climate_options)
+                    range_target=range_target, climate_options=member_options,
+                    **({"preserve_matching_mode": True} if return_context is not None else {}))
                 status[member] = {"status": "success"}
             except (DeliverySuperseded, asyncio.CancelledError):
                 self.delivery_status[entity_id] = status
@@ -231,6 +240,25 @@ class GroupClimateManager(ClimateManager):
                 self._physical._discard_expected_action(member, mirror_context.id)
         if any(item["status"] == "failed" for item in status.values()):
             raise HomeAssistantError("Room group temperature delivery was incomplete")
+
+    def boost_return_hvac_mode(self, entity_id, snapshot, *, range_target):
+        """Require a real, compatible historical mode for every group member."""
+        if entity_id not in self._data.get("room_groups", {}):
+            return self._physical.boost_return_hvac_mode(
+                entity_id, snapshot, range_target=range_target)
+        saved_members = snapshot.get("group_members")
+        if not isinstance(saved_members, dict):
+            raise ValueError("Missing saved group member HVAC modes for Boost return")
+        modes = set()
+        for member in self.members(entity_id):
+            saved = saved_members.get(member)
+            if not isinstance(saved, dict):
+                raise ValueError(f"Missing saved HVAC mode for {member} Boost return")
+            modes.add(self._physical.boost_return_hvac_mode(
+                member, saved, range_target=range_target))
+        if len(modes) != 1:
+            raise ValueError("Group members have different saved HVAC modes for Boost return")
+        return modes.pop()
 
     def climate_state_snapshot(self, entity_id):
         if entity_id not in self._data.get("room_groups", {}):

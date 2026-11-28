@@ -73,6 +73,92 @@ a boundary does not establish the device's heating or cooling behavior. Native
 `heat_cool` behavior is unchanged. Changing the reference invalidates learning
 observations started with the previous interpretation.
 
+## Temporary Setpoint Offset
+
+**Heating offset** and **Cooling offset** add optional actuator effort during
+advance preparation. Both start at `0`, which keeps the existing behavior. Choose
+each value in the climate's effective temperature step, up to `5 °C` (`9 °F`).
+The largest selectable value is the highest compatible step within that limit.
+These are temperature differences: a heating offset of `2 °C` adds two degrees;
+a cooling offset of `2 °C` subtracts two degrees.
+
+The scheduled room target and learning objective stay unchanged. For example,
+preparing a `21 °C` heating block with offset `2 °C` sends `23 °C` temporarily.
+Preparing a `24 °C` cooling block with offset `1.5 °C` sends `22.5 °C` temporarily.
+With Minimum temperature delta `0.1 °C`, those preparations finish at `20.9 °C`
+and `24.1 °C`, respectively. The offset is also removed when the block starts.
+Velair then reconciles the current schedule, Room Assist and other active
+controls through its existing delivery and recovery behavior.
+
+For a two-setpoint target, both boundaries move by the same amount. A heating
+band `20–24 °C` with requested offset `3 °C` and physical maximum `25 °C` becomes
+`21–25 °C`: the band remains four degrees wide and the effective offset is
+reduced to `1 °C`. Cooling mirrors this at the physical minimum. The effective
+extra is rounded down to a compatible delta step and never exceeds the request.
+If no room remains, a configured positive offset can apply `0 °C`; preparation
+still retains its direction until the original room threshold is reached.
+
+Changing one direction's configured offset resets only that direction's learning.
+The predictor, sample selection and observation validity rules stay the same.
+Sessions whose effective offset varies with device limits or Room Assist remain
+eligible under those existing rules. Restoring preconditioning defaults sets
+both offsets to zero, resetting only directions whose offset changed, and
+preserves the separate Room Assist settings, including braking.
+
+If the device later reports a different step, Velair keeps your saved request and
+reduces only the applied extra to a compatible step. Temperature-unit conversion
+preserves the physical delta and does not reset learning. Portable model `28`
+tags exported learning with its direction's configured offset; importing learning
+requires a matching resulting configuration. Older learning is treated as offset
+zero. A configuration-only import that changes an offset resets that direction's
+retained local learning.
+
+The panel keeps **Scheduled target** and the value attributed to Velair at the
+original target. The existing **Applied target** marker shows the final command.
+An active offset badge shows its signed effective extra, including limited zero;
+its details explain the original target, Room Assist base, requested extra,
+effective extra, final command and any device limitation.
+
+## After Reaching The Target
+
+When an accepted early preparation reaches its arrival threshold before the
+block starts, Velair keeps that block's original target until its scheduled time.
+The temporary offset ends at arrival. This also works with offset zero, without
+Room Assist, and when the observation is too short to become a learning sample.
+
+For example, the current block is `20 °C` and preparation for a future `21 °C`
+block finishes at `20.9 °C`. Overview keeps **Target** at `21 °C`, rather than
+returning to `20 °C` when observation ends. With a `2 °C` heating offset, the
+temporary `23 °C` command returns to the nominal `21 °C`. If **Applied** is also
+`21 °C`, the duplicate value is hidden as usual. Cooling mirrors this: a future
+`24 °C` target reached at `24.1 °C` keeps nominal `24 °C` after a temporary
+`22 °C` command ends. Room Assist may apply its ordinary correction or braking
+against that nominal target.
+
+Velair saves this completed preparation locally and validates the matching
+schedule and control context after a restart. **Apply active schedule after
+startup** still decides whether it sends a command:
+
+| Startup option | Valid completed preparation before the block |
+| --- | --- |
+| Enabled | Apply the recovered nominal target, such as `21 °C`, through normal delivery. Do not restore its preparation offset. |
+| Disabled | Recover nominal `21 °C` for the panel and current intent without sending a target, mode or other block options because of this recovery. Show the actual applied target separately if it differs. |
+
+Recovery does not reopen learning or re-enable the extra if the room drifts while
+Home Assistant is offline. It needs a successfully saved completion; a reported
+setpoint alone cannot prove preparation finished. A failed save cannot guarantee
+continuity through a subsequent restart. Pauses, Manual adjustment, overrides,
+disabled preparation and replaced schedules or ownership still take precedence.
+Changing the reference setpoint, room group membership or active Mode also
+invalidates a saved completion when its prepared context no longer matches.
+At the nominal block time, ordinary scheduling takes over.
+
+Without a confirmed completed early preparation, the existing target distinction
+remains valid: **Target** `20 °C` and **Applied** `21 °C` can describe different
+scheduled and device values. Enabling preconditioning alone does not change it.
+
+## Live Predictions
+
 When a climate is expanded, each supported mode shows a live prediction card. It uses the same backend next-event data as the Overview tab, so pauses, boosts, unsupported modes, and blocks that cannot be preconditioned are handled consistently. When a matching future block exists, the card shows the calculated start time, the target time, the lead time, the scheduled temperature and mode, and whether Velair is using the initial model or similar local history.
 
 Planned Return preparation is identified separately from weekly schedule
@@ -295,6 +381,16 @@ If the outdoor sensor is unavailable when a sample is saved, Velair simply store
 By default, Adaptive Preconditioning uses the climate entity's `current_temperature`.
 
 If Room Sensor Assist is enabled for that climate and a room sensor is selected, Adaptive Preconditioning uses that room sensor as the effective room temperature for decisions and learning.
+
+During preparation, Room Assist first calculates its normal valid base target;
+the temporary offset is added afterwards. For example, a nominal heating target
+of `21 °C`, Room Assist base `22 °C` and heating offset `2 °C` send `24 °C` if the
+device permits it. Room Assist never uses that temporary command as the room's
+learning objective. A positive configured offset temporarily keeps preparation's
+direction active even if Room Assist inherited a non-driving hysteresis phase.
+Once the original preparation threshold is reached, normal hysteresis and the
+selected braking level apply again. This priority also holds when physical limits
+reduce the effective extra to zero; configuring zero keeps existing behavior.
 
 This is useful for TRVs or thermostats whose built-in sensor is too close to a radiator, air outlet, or other local heat source. See [Room Assist](room-assist.md) for the actuator-side behavior.
 

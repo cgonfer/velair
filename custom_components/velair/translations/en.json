@@ -148,7 +148,11 @@
     },
     "select": {
       "mode": {
-        "name": "Mode"
+        "name": "Mode",
+        "state": {
+          "default": "Default",
+          "manual": "Manual"
+        }
       }
     },
     "switch": {

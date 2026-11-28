@@ -21,7 +21,7 @@ def supply_group():
 
 class SharedDemandContractTest(unittest.TestCase):
     def test_model_24_roundtrips_on_delay_and_import_replaces_pause_provenance(self):
-        self.assertEqual(api.EXPORT_MODEL_VERSION, 26)
+        self.assertEqual(api.EXPORT_MODEL_VERSION, 30)
         data = normalize_schedule_data({}, ["climate.room"])
         raw = supply_group()
         raw.update(on_delay_seconds=37, suspended=True, suspension_reason="external_off")
@@ -170,11 +170,21 @@ class SharedDemandRoomAssistTest(unittest.IsolatedAsyncioTestCase):
 
     def committed(self, mode="heat", phase="towards_upper"):
         self.hass.states[self.entity].state = mode
-        self.scheduler._room_sensor_assist_states[self.entity] = _RoomSensorAssistState(
+        self.commit_state(_RoomSensorAssistState(
             entity_id=self.entity, target_temperature=21, applied_temperature=30,
             applied_offset=9, direction=mode, hvac_mode=mode,
             room_temperature_entity_id="sensor.room", weekday="monday", start="08:00",
-            hysteresis_phase=phase, hysteresis_mode=mode)
+            hysteresis_phase=phase, hysteresis_mode=mode))
+
+    def commit_state(self, state):
+        """Fixture acceptance mirrors the producer's cached control snapshot."""
+        from dataclasses import replace
+        intent = self.scheduler._normal_room_sensor_assist_control_intent(
+            state, self.hass.states[self.entity].state, 20,
+            self.data["zones"][self.entity]["preconditioning"]["room_sensor_assist_deadband"])
+        committed = replace(state, effective_control_intent=intent)
+        self.scheduler._room_sensor_assist_states[self.entity] = committed
+        return committed
 
     def test_only_committed_phase_drives_shared_source(self):
         # No runtime commit: a preview or corrected thermostat target cannot drive it.
@@ -207,7 +217,7 @@ class SharedDemandRoomAssistTest(unittest.IsolatedAsyncioTestCase):
             self.committed(mode)
             committed = replace(self.scheduler._room_sensor_assist_states[self.entity],
                                 deadband_low=20.7, deadband_high=21.3)
-            self.scheduler._room_sensor_assist_states[self.entity] = committed
+            committed = self.commit_state(committed)
             result = self.scheduler.get_shared_demand_room_assist(self.entity)
             self.assertEqual(result["temperature"], 20)
             self.assertEqual(result["sensor_entity_id"], "sensor.room")
@@ -224,10 +234,10 @@ class SharedDemandRoomAssistTest(unittest.IsolatedAsyncioTestCase):
         self.target.temperature = None
         self.target.target_temp_low = 20
         self.target.target_temp_high = 24
-        self.scheduler._room_sensor_assist_states[self.entity] = replace(
+        self.commit_state(replace(
             self.scheduler._room_sensor_assist_states[self.entity],
             target_temperature=None, target_temp_low=20, target_temp_high=24,
-            direction=None, hysteresis_mode=None)
+            direction=None, hysteresis_mode=None))
         with patch.object(self.scheduler, "_range_thermal_mode_supported", return_value=True):
             result = self.scheduler.get_shared_demand_room_assist(self.entity)
         self.assertTrue(result["valid"])

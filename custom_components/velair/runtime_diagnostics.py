@@ -1210,6 +1210,22 @@ class RuntimeDiagnosticsManager:
                 status = "warning"
 
         owner_id, delivery = self._delivery_for_entity(entity_id)
+        read_resolution = getattr(scheduler, "get_schedule_resolution_status", None)
+        resolution = read_resolution(owner_id) if callable(read_resolution) else None
+        if isinstance(resolution, dict) and resolution.get("status") in (
+            "waiting_capabilities", "invalid"
+        ):
+            severity = "warning" if resolution["status"] == "waiting_capabilities" else "error"
+            issues.append({
+                "severity": severity,
+                "code": (
+                    "schedule_waiting_for_capabilities"
+                    if severity == "warning" else "schedule_incompatible"
+                ),
+                "message": resolution.get("message"),
+            })
+            if status != "error":
+                status = severity
         directly_delivered = owner_id == entity_id or bool(delivery)
         if not delivery:
             delivery = {"status": "idle", "retry_count": 0, "last_error": None}
@@ -1346,6 +1362,7 @@ class RuntimeDiagnosticsManager:
                 "comfort": comfort_config,
             },
             "effective_setup": scheduler.get_zone_effective_setup(entity_id),
+            "schedule_resolution": deepcopy(resolution),
             "intent": deepcopy(runtime_status),
             "last_application": deepcopy(self._last_applied.get(owner_id)) if directly_delivered else None,
             "delivery": delivery,

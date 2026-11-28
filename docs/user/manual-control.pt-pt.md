@@ -8,8 +8,8 @@ Traduções: [Original em inglês](manual-control.md) · [Español](manual-contr
 
 | Informação | Estado |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.9 |
-| Última sincronização | 2026-11-02 |
+| Versão de referência | 1.9.3-beta.3 |
+| Última sincronização | 2026-11-22 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -91,6 +91,8 @@ Quando a entidade muda, o Velair correlaciona cada campo alterado com essas expe
 Alguns dispositivos informam vários valores enquanto processam um comando. Podem voltar brevemente a um alvo antigo, publicar um intermédio ou informar modo e temperatura fora de ordem. O Velair mantém um período curto e limitado de estabilização apenas para campos que alterou, evitando que essas atualizações criem incorretamente Ajuste manual. O período não recomeça a cada resposta; é finalizado quando a sequência completa de serviços retorna. Uma alteração claramente originada por utilizador do Home Assistant ou por outro script/automação identificável continua externa; alterações posteriores à estabilização são tratadas normalmente.
 
 Quando uma atualização anónima na estabilização não pode ser distinguida da convergência do dispositivo, o Velair mantém conservadoramente o controlo Automático. Isso evita transformar um comando rejeitado ou atrasado em falso Ajuste manual. O estado de estabilização só existe durante a execução e é removido ao reiniciar. Se o dispositivo ainda divergir do valor solicitado ao terminar, mantém Automático e regista um aviso de estabilização. A próxima visão atualizada do Diagnóstico mostra o aviso, com valores esperados e observados no relatório. O Velair não repete cegamente o comando nem transforma a divergência em Ajuste manual atrasado.
+
+Durante um comando recente de desligar do Velair, a reposição de um alvo escalar para o mínimo explicitamente comunicado pelo dispositivo também é reconhecida como um possível efeito de desligar. O mínimo pode chegar antes, em conjunto ou depois do estado `off`, incluindo enquanto o comando ainda está em execução. Esta exceção exige limites mínimo e máximo válidos e que a intenção atual do Velair continue a ser desligar; não oculta ações identificáveis de utilizadores ou automações. Utiliza o mesmo período limitado de estabilização, e um comando mais recente de alvo ou modo HVAC invalida os indícios anteriores. O mínimo não é enviado nem exigido: um termóstato que mantém o alvo anterior pode continuar a confirmar normalmente que desligou. Comunicar apenas o mínimo não confirma que o termóstato desligou.
 
 Aplica-se uma exceção separada enquanto o Velair mantém um dispositivo sob agendamento automático em `off`. Alguns dispositivos comunicam uma temperatura-alvo de substituição, como `0 °C` quando o mínimo publicado é `5 °C`. Se apenas os alvos mudarem e todos os novos valores estiverem fora do mínimo e do máximo comunicados explicitamente pelo dispositivo, o Velair ignora a atualização, incluindo quando chega após a estabilização. Não emite um evento de alteração externa, não inicia um ajuste manual nem interrompe a execução do agendamento. Ambos os limites têm de ser válidos; se algum estiver em falta, a deteção habitual mantém-se ativa. Alterações válidas dos alvos, alterações externas do modo HVAC, ações identificáveis de utilizadores ou automatizações e sessões manuais existentes mantêm o comportamento habitual.
 

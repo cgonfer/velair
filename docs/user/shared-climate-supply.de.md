@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.6 |
-| Letzte Synchronisierung | 2026-10-28 |
+| Referenzversion | 1.9.3-dev.20261120233407 |
+| Letzte Synchronisierung | 2026-11-21 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -90,9 +90,15 @@ Aktuelle Thermostatsollwerte gelten einschließlich manueller Änderungen und Zi
 
 Ein blaues Informationsfeld am Anfang von **Bedarf und Hysterese**, vor der Verhaltensauswahl, erläutert den Vorrang von Room Assist und wann die Versorgungshysterese gilt.
 
-Wenn Room Assist das aktive Raumziel steuert, folgt die gemeinsame Versorgung seiner bestätigten Steuerungsabsicht. Bei festem Heizen fordert die Phase `towards_upper` Wärme an, bei festem Kühlen fordert `towards_lower` Kälte an. Seine bestehenden Schaltgrenzen bleiben maßgeblich; Versorgungshysterese und Thermostatausnahme werden nicht erneut angewendet. Native Bereichssteuerung folgt ihrer bestätigten Richtung. Ungültige oder noch ausstehende unterstützte Ziele bleiben unbekannt, bis eine gültige Steuerungsabsicht bestätigt wurde.
+Wenn Room Assist das aktive Raumziel steuert, folgt die gemeinsame Versorgung seiner bestätigten wirksamen Anforderung. Bei normaler Regelung fordert die Phase `towards_upper` bei festem Heizen Wärme an, `towards_lower` bei festem Kühlen Kühlung. Native Bereichsregelung folgt ihrer bestätigten Richtung. Die Schaltgrenzen von Room Assist bleiben maßgeblich; Versorgungshysterese und Raumausnahmen werden nicht erneut angewendet.
 
-Der korrigierte Thermostatsollwert wird nicht mit einem externen Raumsensor verglichen. Room Assist kann eine Anforderung beenden, obwohl der Thermostat weiterhin denselben korrigierten Sollwert meldet.
+Während vorzeitiger Vorbereitung mit positiv konfiguriertem Sollwertversatz enthält die wirksame Anforderung von Room Assist auch die vorübergehende Heiz- oder Kühlanforderung dieser Vorbereitung. Die normale Hysteresephase bleibt separat erhalten. Ein Heizziel von `21 °C` mit Vorbereitungsmarge `0.1 °C` kann beispielsweise bis `20.9 °C` Wärme anfordern, selbst wenn die normale Phase ruhte. Kühlen auf `24 °C` verhält sich bei `24.1 °C` spiegelbildlich. Der vorübergehende Gerätesollwert ist kein neues Raumziel. Endet der Zusatz, setzt Room Assist seine normale Anforderung fort; diese kann die Anforderung beenden oder fortsetzen. Die Versorgung wendet weiterhin bestehende Verzögerungen, Mindestzeiten und die Zusammenfassung mehrerer Räume an, ohne separate Vorbereitungsregel.
+
+Es gilt nur bestätigte aktuelle Steuerungsabsicht. Ein ungültiges oder noch nicht bestätigtes unterstütztes Ziel bleibt bis zu einer gültigen Bestätigung unbekannt. Endet die Vorbereitung, wird ihre alte vorübergehende Anforderung auch dann ungültig, wenn das Wiederherstellen des normalen Ziels fehlschlägt.
+
+Der korrigierte Thermostatsollwert wird nicht mit einem separaten Raumsensor verglichen. Room Assist kann die Versorgungsanforderung beenden, obwohl der Thermostat weiterhin denselben angepassten Sollwert meldet.
+
+Ohne Room Assist verwendet die Versorgung weiterhin den gemeldeten Thermostatsollwert und ihre normale Versorgungshysterese. Ein Vorbereitungsversatz kann diesen gemeldeten Sollwert ändern; nach seinem Entfernen bewertet die Versorgung das resultierende Ziel normal. Dieser Ablauf erhält weder Vorbereitungsvorrang noch eine besondere Beibehaltung der Anforderung.
 
 <a id="timing-and-manual-control"></a>
 ## Zeitverhalten und manuelle Steuerung

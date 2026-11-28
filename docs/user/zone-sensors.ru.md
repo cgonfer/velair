@@ -8,8 +8,8 @@
 
 | Сведения | Статус |
 | --- | --- |
-| Версия для сверки | 1.9.0-beta.1 |
-| Последняя синхронизация | 2026-10-11 |
+| Версия для сверки | 1.9.3-beta.1 |
+| Последняя синхронизация | 2026-11-14 |
 | Языковая проверка | Перевод с помощью ИИ |
 | Соответствие оригиналу | Соответствует актуальному английскому оригиналу. |
 
@@ -169,12 +169,12 @@ triggers:
 Для климатической сущности вроде `climate.living_room` новая запись в реестре обычно получает идентификатор вида:
 
 ```text
-sensor.velair_ventilation_opportunity_living_room
-sensor.velair_control_living_room
-sensor.velair_delivery_diagnostics_living_room
+sensor.velair_living_room_ventilation_opportunity
+sensor.velair_living_room_control
+sensor.velair_living_room_delivery_diagnostics
 ```
 
-Это предлагаемые идентификаторы, а не постоянный API. Home Assistant может добавить суффикс, чтобы избежать совпадения, а пользователь может переименовать сущность. Выбирайте фактические идентификаторы из своего реестра Home Assistant. Отображаемое имя сущности использует понятное имя управляемого климатического устройства, а предлагаемый идентификатор — объектную часть идентификатора климатической сущности. Имя служебного устройства Velair и его область не входят в предлагаемый идентификатор.
+Это предлагаемые идентификаторы сущностей, а не постоянный API. Home Assistant может добавить суффикс, чтобы избежать совпадения, а пользователь может изменить идентификатор сущности. Выбирайте сущности по фактическим идентификаторам в своём реестре Home Assistant. Отображаемое имя использует понятное имя управляемого климатического устройства, а основа начального идентификатора состоит из объектной части идентификатора климатической сущности и назначения датчика. Home Assistant применяет к этой основе настроенные правила именования устройств и областей. Существующие зарегистрированные идентификаторы сохраняются, включая пользовательские. Администраторы могут при желании проверить их в разделе **Настройки → Обслуживание → Проверить идентификаторы сущностей датчиков**. Прежде чем переименовывать идентификаторы, используемые автоматизациями или другими потребителями данных, прочитайте [руководство по использованию](usage.ru.md#sensor-entity-ids).
 
 <a id="zone-control"></a>
 ## Управление зоной
@@ -271,7 +271,7 @@ sensor.velair_delivery_diagnostics_living_room
 alias: Velair living room delivery exhausted
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 actions:
   - action: persistent_notification.create
@@ -287,8 +287,8 @@ actions:
 ```yaml
 condition: template
 value_template: >-
-  {{ is_state('sensor.velair_control_living_room', 'automatic')
-     and state_attr('sensor.velair_control_living_room', 'runtime_state')
+  {{ is_state('sensor.velair_living_room_control', 'automatic')
+     and state_attr('sensor.velair_living_room_control', 'runtime_state')
          == 'scheduled' }}
 ```
 

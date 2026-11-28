@@ -729,7 +729,8 @@ class FrontendSourceContractTest(unittest.TestCase):
         self.assertIn("renderPreconditioningView(host, visibleZoneIds)", content_source)
         self.assertNotIn("renderPreconditioningView", settings_source)
         self.assertNotIn("preconditioning-config", settings_source)
-        self.assertNotIn("_saveZonePreconditioning", settings_source)
+        # Settings owns per-zone High braking depth; preparation controls
+        # remain in their dedicated view. Behavior is covered by Lit view tests.
         self.assertIn("@container (max-width: 760px)", responsive_styles_source)
         self.assertIn(".preconditioning-config-sections,\n    .preconditioning-directions", responsive_styles_source)
         self.assertIn("@container (max-width: 600px)", responsive_styles_source)

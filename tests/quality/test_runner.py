@@ -5,6 +5,8 @@ from pathlib import Path
 import stat
 import contextlib
 import io
+import json
+import os
 import shutil
 import tempfile
 import unittest
@@ -185,3 +187,97 @@ class QualityArchiveTests(unittest.TestCase):
                         {"captured": 1}, {"recorded": True}, {"failed": 1}):
             with self.subTest(changes=changes):
                 self.assertFalse(runner.complete_visual_matrix({**proof, **changes}, "compare", "recorded"))
+
+
+class HistoricalVisualTests(unittest.TestCase):
+    def execute(self, label, *, browser_exit=0, complete=True):
+        with tempfile.TemporaryDirectory(prefix="velair-baseline-visual-test-") as directory:
+            root = Path(directory)
+            private = root / "private"
+            private.mkdir()
+            output = root / "output"
+            captured = {}
+
+            def checked(command, *, cwd=None, env=None, timeout=None):
+                if "start" in command:
+                    (private / "ha-state.json").write_text(json.dumps({
+                        "component_sha256": "a" * 64, "image_id": "ha-image", "container": "owned-test",
+                    }), encoding="utf-8")
+                elif "stop" in command:
+                    (private / "ha-state.json").unlink()
+                else:
+                    captured.update(env)
+                    mode = env["VELAIR_QUALITY_VISUAL"]
+                    status = "compared" if mode == "compare" else "captured"
+                    proof = {"mode": mode, "failed": 0, status: 18 if complete else 0,
+                             "executions": [
+                                 {"project": project, "name": f"{surface}-{theme}", "status": status}
+                                 for project in ("desktop", "mobile", "tablet")
+                                 for surface in ("overview", "editor", "dialog") for theme in ("light", "dark")
+                             ] if complete else []}
+                    (output / "visual-results.json").write_text(json.dumps(proof), encoding="utf-8")
+                    (output / "playwright.json").write_text(json.dumps({"suites": [{"specs": [{
+                        "title": "selected screens", "tests": [{"projectName": "desktop", "expectedStatus": "passed",
+                        "results": [{"status": "failed" if browser_exit else "passed"}]}],
+                    }]}]}), encoding="utf-8")
+                    return browser_exit
+                return 0
+
+            args = SimpleNamespace(image=None, size="small", suite="release", visual="compare", archive=None,
+                                   skip_load=True, port=8123)
+            resources = SimpleNamespace(samples={"container_cpu_percent": [1]}, errors=0)
+            # Inherited flags must not weaken candidate enforcement or change the baseline role.
+            with patch.dict(os.environ, {"VELAIR_QUALITY_BASELINE": "true" if label == "candidate" else "false"}), \
+                 patch.object(runner, "private_runtime", return_value=contextlib.nullcontext(private)), \
+                 patch.object(runner, "checked", side_effect=checked), \
+                 patch.object(runner.quality_browser, "server", return_value=contextlib.nullcontext({"endpoint": "ws://127.0.0.1:3000", "imageId": "browser-image"})), \
+                 patch.object(runner, "Resources", return_value=contextlib.nullcontext(resources)):
+                result = runner.execute(args, ROOT / "custom_components/velair", output, label)
+            return result, captured
+
+    def test_historical_capture_does_not_weaken_candidate_visual_gate(self):
+        baseline, baseline_env = self.execute("baseline")
+        candidate, candidate_env = self.execute("candidate")
+        self.assertEqual(baseline_env["VELAIR_QUALITY_BASELINE"], "true")
+        self.assertEqual(baseline_env["VELAIR_QUALITY_VISUAL"], "capture")
+        self.assertEqual((baseline["outcome"], baseline["status"], baseline["visualStatus"]),
+                         ("pass", "unreviewed", "capture-unreviewed"))
+        self.assertTrue(any("Historical appearance" in item for item in baseline["limitations"]))
+        self.assertEqual(candidate_env["VELAIR_QUALITY_BASELINE"], "false")
+        self.assertEqual(candidate_env["VELAIR_QUALITY_VISUAL"], "compare")
+        self.assertEqual((candidate["outcome"], candidate["status"], candidate["visualStatus"]),
+                         ("pass", "pass", "compared"))
+        self.assertEqual(baseline["environment"]["fingerprint"], candidate["environment"]["fingerprint"])
+        self.assertEqual(runner.quality.compare(baseline, candidate)["status"], "comparable")
+
+    def test_candidate_missing_visual_evidence_remains_a_failure(self):
+        candidate, _ = self.execute("candidate", complete=False)
+        self.assertEqual(candidate["outcome"], "fail")
+        self.assertEqual(candidate["visualStatus"], "incomplete-visual-evidence")
+
+    def test_baseline_functional_failure_and_incomplete_capture_stay_visible(self):
+        for failure in ({"browser_exit": 1}, {"complete": False}):
+            with self.subTest(failure=failure):
+                baseline, _ = self.execute("baseline", **failure)
+                self.assertEqual(baseline["outcome"], "fail")
+
+    def test_paired_root_summary_preserves_historical_visual_scope(self):
+        from tests.quality.test_reports import example
+        calls = []
+
+        def execute(args, component, output, label):
+            calls.append(label)
+            result = example()
+            result["visualStatus"] = "capture-unreviewed" if label == "baseline" else "compared"
+            return result
+
+        with tempfile.TemporaryDirectory(prefix="velair-paired-summary-test-") as directory:
+            output = Path(directory) / "output"
+            argv = ["run.py", "--component", str(ROOT / "custom_components/velair"), "--baseline-component",
+                    str(ROOT / "custom_components/velair"), "--output", str(output)]
+            with patch.object(runner.sys, "argv", argv), patch.object(runner, "execute", side_effect=execute):
+                self.assertEqual(runner.main(), 0)
+            result = runner.quality.read_json(output / "quality-report.json")
+            self.assertIn(runner.HISTORICAL_VISUAL_LIMITATION, result["limitations"])
+            self.assertEqual(result["comparison"]["status"], "comparable")
+            self.assertEqual(calls, ["baseline", "candidate", "candidate", "baseline", "baseline", "candidate"])

@@ -312,7 +312,9 @@ its absence when using an older backend.
         "room_temperature_entity_id": "sensor.living_room_temperature",
         "room_sensor_assist_enabled": false,
         "room_sensor_assist_deadband": 0.3,
-        "room_sensor_assist_max_delta": 2.0
+        "room_sensor_assist_high_braking_steps": 2,
+        "room_sensor_assist_max_delta": 2.0,
+        "room_sensor_assist_minimum_margin": 0.0
       },
       "comfort": {
         "enabled": false,
@@ -449,10 +451,10 @@ its absence when using an older backend.
   "templates": [],
   "versions": {
     "export_format": "velair_portable_data",
-    "portable_model": 26,
+    "portable_model": 30,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.2"
+    "integration": "1.9.3-beta.6"
   }
 }
 ```
@@ -690,6 +692,15 @@ These events share the existing 100-entry runtime-only history. Newly introduced
 category preferences default to enabled while retaining previous choices.
 Exports remove `away_mode_id`, `destination_mode_id` and related operational
 Mode/Profile identifiers even when raw entity IDs are requested.
+
+Per-climate `schedule_resolution` describes the last prepared effective
+schedule: `status` is `ready`, `waiting_capabilities`, or `invalid`; unresolved
+results also include a `code` and `message`. Waiting adds the warning issue
+`schedule_waiting_for_capabilities`; invalid resolution adds the error issue
+`schedule_incompatible`. Physical members use their room group's logical
+resolution. Capability updates rebuild and re-arm the scheduler independently
+of the startup-application setting. Reading Diagnostics does not authorize a
+delivery or consume a pending startup application.
 
 Per-climate `preconditioning_learning.heat` and `.cool` diagnostics retain their
 observation counts and can expose current `activity` and `last_transition`.
@@ -1138,15 +1149,56 @@ await hass.connection.sendMessagePromise({
     master_entity_id: "climate.hall",
     max_lead_minutes: 1440,
     minimum_delta_temperature: 0.3,
+    heating_setpoint_offset: 2.0,
+    cooling_setpoint_offset: 0.0,
     min_start_minutes: 10,
     fallback_minutes_per_degree: 25,
     room_temperature_entity_id: "sensor.living_room_temperature",
     room_sensor_assist_enabled: true,
     room_sensor_assist_deadband: 0.3,
-    room_sensor_assist_max_delta: 2.0
+    room_sensor_assist_high_braking_steps: 2,
+    room_sensor_assist_max_delta: 2.0,
+    room_sensor_assist_minimum_margin: 0.0
   }
 });
 ```
+
+`heating_setpoint_offset` and `cooling_setpoint_offset` are nonnegative deltas,
+defaulting to zero and limited to `5 °C` / `9 °F` in the climate's runtime unit.
+New values must be multiples of the effective climate step, anchored at zero.
+An unchanged saved request remains valid if device capabilities later change;
+only the effective delivered extra is floored to the available step/capacity.
+Changing a configured offset atomically clears that direction's learning and
+discards its old runtime observation after persistence. The opposite direction
+is preserved. Defaults set both offsets to zero and preserve Room Assist braking.
+
+During accepted advance preparation, `zone_runtime` and `room_sensor_assist`
+can include runtime-only `preconditioning_offset`:
+
+```ts
+{ direction: "heat", requested: 2, applied: 1,
+  base_target: { temperature: 24 }, limited_by: "maximum" }
+```
+
+`requested` and `applied` are signed deltas (positive heat, negative cool).
+`base_target` contains `temperature` or `target_temp_low` / `target_temp_high`.
+`limited_by` is `minimum`, `maximum`, `step`, or `null`. Presence denotes the
+accepted temporary rule, including saturated zero; retirement removes it.
+The nominal target fields stay unchanged. Existing `applied_temperature` and
+`applied_target_temp_low/high` report the final command. Existing `applied_offset`
+and `range_shift` keep their Room Assist meanings; they are not the preparation
+extra. Status readers do not advance hysteresis or offset lifecycle.
+
+Room Assist computes its effective direction, demand and nominal switching
+boundaries alongside each target calculation and retains them in private runtime
+state after acceptance, including the existing equivalent-target no-service path.
+Shared Climate Supply consumes that confirmed intent through its existing
+interface; querying it does not recalculate preparation or hysteresis. The ordinary
+phase remains separate from temporary preparation demand. Retirement invalidates
+the old temporary intent before restoration, so a failed restore is owned but
+invalid rather than a stale request or a fallback to the elevated device target.
+This adds no persisted setting or portable field. Without Room Assist, supply's
+reported-target and hysteresis path remains unchanged.
 
 The optional `preconditioning.room_sensor_schedule` object adds a weekly Room
 Assist reference schedule. It contains `enabled`, `default_source`, and `periods`;
@@ -1232,7 +1284,50 @@ Outdoor temperature context is optional and local. In the Preconditioning tab, `
 
 Room temperature sensor support is optional and local. In the Room Assist tab, `room_temperature_entity_id` is selected through a sensor dropdown that lists local `sensor.*` temperature entities. Selecting a sensor stores the configuration, but Velair uses it as the effective room temperature only when `room_sensor_assist_enabled` is true. In that mode Velair can temporarily adjust a scalar target or move a complete native range while the real scheduled target remains unchanged. For fixed `heat` and `cool` with a scalar target or configured range reference, a non-zero `room_sensor_assist_deadband` defines a runtime hysteresis cycle between the scalar target or selected reference minus and plus that value; `room_sensor_assist_max_delta` caps correction relative to the active edge. A zero deadband preserves legacy signed correction. Scalar automatic modes retain their neutral deadband, while native `heat_cool` ranges retain their stable holding margin. Scalar non-driving targets are kept on the safe side of the scheduled target, and a valid native `heat_cool` holding band remains stable until the external room leaves it or its active target changes. `room_sensor_assist_debounce_seconds` controls how many seconds Velair waits after relevant state changes before recalculating the assisted target. Room Sensor Assist can run on normal scheduled blocks and can also provide the temperature source for Adaptive Preconditioning while it is enabled.
 
+`room_sensor_assist_high_braking_steps` is a per-zone integer from 2 through 10,
+defaulting to 2. It changes only the fixed High setpoint guard: heating uses a
+ceiling below the scheduled target and cooling a floor above it, each separated
+by the configured count times the effective equipment step. It does not change
+the High stop/resume thresholds or Moderate's single-step guard. Count-only
+saves recalculate the guard while retaining a valid hysteresis phase. The count
+is dimensionless and survives temperature-unit conversion unchanged.
+
+The optional `room_sensor_assist_minimum_margin` defaults to zero and strengthens
+applicable corrections without changing those switching thresholds. It accepts
+0..10 Celsius / 0..18 Fahrenheit deltas and cannot exceed
+`room_sensor_assist_max_delta` in the final merged settings. Invalid updates or
+imports are rejected rather than raising the maximum automatically. Fixed phases
+strengthen activation and withdrawal; automatic holding stays neutral. See
+[Minimum control margin](room-assist.md#minimum-control-margin).
+
 `room_sensor_assist` in the schedule response is runtime-only status. It is derived from Home Assistant state and scheduler state when the response is built; it is not persisted as history.
+
+Its additive `braking` fields include `high_steps` (saved High count), `steps`
+(effective count: High's saved count, Moderate's one, or Default's zero), and
+`temperature_delta` (the positive equivalent difference in the runtime climate
+unit, or `null` when no effective step is available). These describe configured
+and effective bounds, not confirmed physical heating or cooling activity.
+
+Its additive `minimum_margin` descriptor exposes `configured`, `active`, and
+nullable `limited_by` (`step`, `minimum`, `maximum`, or `range_width`). Activity
+means the margin applies to the accepted calculation, not that equipment has
+physically opened or started. Step/cap incompatibility can prevent an exact
+request; existing requested/applied targets expose the delivered result.
+
+Its optional `control_intent` object exposes validated committed demand for
+read-only presentation: `active`, `valid`, nullable `demand` and `direction`,
+plus `source` (`normal` or `preconditioning`) and directional `thresholds` only
+when valid. Each threshold has `target`, `start_temperature` and
+`stop_temperature`. This is available independently of Shared Climate Supply
+configuration. A missing or invalid projection is unknown, not no demand; clients
+must not reconstruct its phase from live temperatures or status names.
+
+Fixed-mode ranges can additionally expose `reference_setpoint` with the selected
+`boundary`, its committed `calculated_temperature`, `requested_temperature`,
+final `applied_temperature` and `scheduled_target_guard`. This describes the
+scalar reference calculation already used to move the complete range; it does
+not replace the range fields or imply that both setpoints use scalar rounding.
+It is absent for native ranges and unvalidated runtime intent.
 
 When the thermostat's physical minimum or maximum changes the target that Room
 Assist actually applied, `limited_by` is `minimum` or `maximum` and
@@ -1407,7 +1502,7 @@ the previous set but not covered by the selected Profile resolve immediately to
 their Default schedules. It applies the current effective schedule, cancels
 Boost on affected zones, and preserves global or per-zone manual pauses. Direct
 activation clears `active_mode_id`, so the native selector reports
-`Manual`. New automations should use `velair.deactivate_profile` explicitly to
+`manual`. New automations should use `velair.deactivate_profile` explicitly to
 return to default schedules.
 
 Create or update one Mode with:
@@ -1424,8 +1519,8 @@ await hass.connection.sendMessagePromise({
 
 Omit `key` when creating a mode; include the stable returned key when updating
 one. Names are trimmed, limited to 255 characters, case-insensitively unique,
-cannot contain control characters, and cannot use the built-in names `Default`
-or `Manual`, translated built-in labels such as `Predeterminado`, nor the Home
+cannot contain control characters, and cannot use the built-in names `default`
+or `manual` in any letter case, reserved translated labels such as `Predeterminado`, nor the Home
 Assistant states `unknown` and `unavailable`.
 Every Mode must provide one or more unique existing IDs in `profile_ids`.
 Selected Profiles must not explicitly configure the same zone; conflicting
@@ -1441,6 +1536,16 @@ await hass.connection.sendMessagePromise({
 The schedule response contains `modes` and `active_mode_id`.
 Automations select a configured value through Home Assistant's standard
 `select.select_option` action on `select.velair_mode`.
+
+The built-in option values and entity states are `default` and `manual`.
+Home Assistant translates their display labels; service inputs and state
+comparisons always use the lowercase raw values. Custom Mode names remain their
+option values and states. This replaces the previous `Default` and `Manual`
+values and breaks existing literal references in actions, triggers, conditions,
+templates, scenes, dashboards, and external systems. See
+[the migration guide](../user/climate-profiles.md#update-existing-mode-automations).
+The entity identity and persisted Mode/Profile selection are unchanged; Velair
+does not rewrite user automations or external configuration.
 
 The Velair panel changes the active Mode through a structured WebSocket
 command so it does not depend on the user-editable Home Assistant entity ID:
@@ -1656,6 +1761,49 @@ inside the backend transaction, including blockers that changed after preview.
 Changing the proposed modes requires a new discovery; retained UI drafts do not
 grant correction ownership over destinations unaffected by the new selection.
 
+## Sensor entity ID review
+
+Both commands require administrator access and operate only on registered Velair
+zone sensors for currently configured physical climates. They do not alter
+schedule data or restart the scheduler.
+
+```ts
+const preview = await hass.connection.sendMessagePromise({
+  type: "velair/preview_sensor_entity_ids"
+});
+```
+
+The read-only response contains `preview_id` and `rows`. Each row contains
+`entity_id`, `proposed_entity_id`, `climate_entity_id`, `sensor_key`, `name` and
+`status` (`ready`, `unchanged` or `conflict`). Proposals use the same source-based
+ID policy as new sensors and Home Assistant's native naming and collision rules.
+Custom IDs are included for explicit review rather than inferred from suffixes.
+
+```ts
+await hass.connection.sendMessagePromise({
+  type: "velair/apply_sensor_entity_ids",
+  preview_id: preview.preview_id,
+  entity_ids: selectedCurrentEntityIds
+});
+```
+
+The backend recomputes the plan and rejects stale previews, empty or duplicate
+selections, conflicts and foreign or unmanaged sensors before writing. Clients
+must not submit destination IDs; those are derived from the authoritative plan.
+The frontend must require explicit selection and explain that references may
+need updating before applying a rename.
+
+The result contains `status` (`applied`, `rolled_back` or `recovery_required`),
+`renamed` mappings with `old_entity_id` and `new_entity_id`, `failed` items with
+`entity_id`, `code` and `message`, and a fresh `preview`. An unsuccessful batch
+attempts reverse rollback and reports the mappings that actually remain. Treat
+rollback/recovery results as failures and clear selections before another review.
+This is not a guarantee of durable multi-entry transactions or automatic repair
+of references in YAML, templates, dashboards or external consumers.
+
+Registered unique IDs, custom names and sensor behavior are preserved. No review,
+preference change, import or restart automatically renames existing entities.
+
 ## Export Data
 
 ```ts
@@ -1670,7 +1818,7 @@ Returns a versioned portable JSON payload:
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 26,
+  "model_version": 30,
   "temperature_unit": "°C",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {}
@@ -1679,9 +1827,25 @@ Returns a versioned portable JSON payload:
 
 ## Import Data
 
-Model 26 preserves optional Room Assist sensor schedules in zone configuration.
+Model 30 preserves optional Room Assist sensor schedules, the selected
+Room Assist braking level, per-zone High braking step count, minimum control margin and separate preparation offsets
+in zone configuration. The margin is a canonical Celsius delta, defaults to zero
+for older files and cannot exceed Maximum assist delta. Updates and imports
+validate the final configuration without changing another tuning value.
+`room_sensor_assist_high_braking_steps` is an integer from 2 through 10 and
+defaults to 2 for older imports. It is a dimensionless count and is never
+converted as a temperature or delta.
+Each exported learning direction includes `setpoint_offset`, a positive magnitude
+derived from confirmed configuration. Older models or an absent tag mean zero.
+Import converts this delta before matching it with the resulting zone configuration
+and revalidates the tag inside the scheduler mutation lock. Incompatible learning
+rejects the transaction; portable tags are removed before internal history is saved.
+Zones-only imports clear retained learning only for changed offset directions;
+combined imports retain compatible supplied history. Internal predictor/sample
+schemas and selection rules are unchanged.
 Existing supported backups remain importable; older Velair versions reject new
-model 26 exports, including exports created without an enabled sensor schedule.
+model 30 exports, including exports created without an enabled sensor schedule
+or non-default braking level.
 
 ```ts
 await hass.connection.sendMessagePromise({

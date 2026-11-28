@@ -17,6 +17,14 @@ _CAPABILITY_FIELDS = (
 )
 
 
+def capability_state_signature(state):
+    """Ignore ordinary readings while observing capability/availability changes."""
+    attributes = state.attributes if state is not None else {}
+    return (getattr(state, "state", None) in (None, "unknown", "unavailable"),
+            tuple((key, input_value(attributes.get(key))) for key in _CAPABILITY_FIELDS),
+            target_feature_presence(attributes))
+
+
 def _past(value, now):
     try:
         instant = datetime.fromisoformat(value)
@@ -45,6 +53,7 @@ class RuntimeScheduleProjection:
         self.parse_start = parse_start
         self.make_event = make_event
         self.schedules = {}
+        self.schedule_resolution = {}
         self.preconditioning = {}
         self.configuration_revision = 0
         self.configuration_data = None
@@ -71,6 +80,7 @@ class RuntimeScheduleProjection:
         self.dependents = {}
         self.entity_order = {}
         self.dependency_contexts = {}
+        self.completion_contexts = {}
         self._relations_contexts = {}
         self._authority_inputs = {}
         self._authority_contexts = {}
@@ -94,7 +104,9 @@ class RuntimeScheduleProjection:
         return (
             source.get("schedule", {}), links, templates, resources,
             behavior.get("behavior"), zone.get("target_range_modes"),
-            zone.get("target_range_reference"), owner.get_temperature_step(entity),
+            zone.get("target_range_reference"),
+            getattr(state, "state", None) in (None, "unknown", "unavailable"),
+            owner.get_temperature_step(entity),
             owner.get_temperature_limits(entity),
             (tuple((key, input_value(attrs.get(key))) for key in _CAPABILITY_FIELDS), target_feature_presence(attrs)),
         )
@@ -120,6 +132,7 @@ class RuntimeScheduleProjection:
         configured = set(owner._data["zones"])
         for entity in set(self.schedules) - configured:
             self.schedules.pop(entity, None)
+            self.schedule_resolution.pop(entity, None)
             self.preconditioning.pop(entity, None)
             owner._room_sensor_schedules.entries.pop(entity, None)
             self._configuration_inputs.pop(entity, None)
@@ -136,7 +149,8 @@ class RuntimeScheduleProjection:
             previous = self.schedules.get(entity)
             different = signature != self._configuration_inputs.get(entity)
             if different or previous is None:
-                schedule = owner._effective_schedule(entity, zone)
+                schedule, resolution = owner._resolve_effective_schedule(entity, zone)
+                self.schedule_resolution[entity] = resolution
                 self.schedules[entity] = PreparedSchedule(
                     entity, schedule, now, self.resolve_occurrences, self.parse_start, self.make_event)
                 self._configuration_inputs[entity] = deepcopy(signature)
@@ -210,6 +224,9 @@ class RuntimeScheduleProjection:
                 self._authority_contexts[entity] = self._authority_generation
         compute = getattr(owner, "_compute_dependency_context", owner._dependency_context)
         self.dependency_contexts = {entity: compute(entity, None) for entity in zones}
+        completion = getattr(owner, "_compute_completion_context", None)
+        self.completion_contexts = ({entity: completion(entity, None, dependency_context=self.dependency_contexts[entity])
+                                     for entity in zones} if completion is not None else {})
         for mapping in (self._resolution_inputs, self._resolution_at_by_entity,
                         self._resolution_deadlines, self._forecasts_by_entity,
                         self._next_by_entity, self._raw_generations, self._authority_inputs,
@@ -299,7 +316,7 @@ class RuntimeScheduleProjection:
                 continue
             if upcoming is None or application < utc(upcoming.when):
                 upcoming = event
-        for anchor in owner._data.get("preconditioning_accepted_anchors", {}).values():
+        for key, anchor in owner._data.get("preconditioning_accepted_anchors", {}).items():
             if anchor.get("entity_id") not in scope:
                 continue
             try:
@@ -308,6 +325,9 @@ class RuntimeScheduleProjection:
                     deadlines.append(utc(expiry))
             except (ValueError, TypeError):
                 pass
+            completed = owner._completed_anchor_instants(key, anchor, now)
+            if completed is not None:
+                deadlines.append(utc(completed[2]))
         if upcoming is None:
             self._next_by_entity.pop(entity, None)
         else:

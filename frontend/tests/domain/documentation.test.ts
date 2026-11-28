@@ -14,6 +14,22 @@ const availability = {
 const options = { availability, releaseVersion: "" };
 
 describe("localized documentation destinations", () => {
+  it("opens the translated minimum margin section with the selected release reference", () => {
+    expect(documentationDestination("roomAssistMinimumMargin", { language: "es" }, {
+      availability: { "docs/user/room-assist.md": { es: "docs/user/room-assist.es.md" } }, releaseVersion: "1.9.3-beta.4",
+    })).toEqual({
+      href: "https://github.com/cgonfer/velair/blob/v1.9.3-beta.4/docs/user/room-assist.es.md#minimum-control-margin",
+      language: "es", translated: true,
+    });
+  });
+  it("keeps the minimum margin anchor and release when a translation is unavailable", () => {
+    expect(documentationDestination("roomAssistMinimumMargin", { language: "ja" }, {
+      availability: {}, releaseVersion: "1.9.3-beta.4",
+    })).toEqual({
+      href: "https://github.com/cgonfer/velair/blob/v1.9.3-beta.4/docs/user/room-assist.md#minimum-control-margin",
+      language: "en", translated: false,
+    });
+  });
   it.each(["es", "es-ES", "ES_es"])("uses existing HA locale normalization for %s", (language) => {
     expect(documentationDestination("schedules", { language }, options)).toEqual({
       href: "https://github.com/cgonfer/velair/blob/main/docs/user/usage.es.md",
@@ -77,6 +93,7 @@ describe("complete documentation availability used by the build", () => {
     ["preconditioningMaster", "docs/user/adaptive-preconditioning.md#preconditioning-master"],
     ["plannedReturn", "docs/user/planned-return.md"],
     ["roomAssist", "docs/user/room-assist.md"],
+    ["roomAssistMinimumMargin", "docs/user/room-assist.md#minimum-control-margin"],
     ["comfort", "docs/user/comfort.md"],
     ["diagnostics", "docs/user/diagnostics.md"],
     ["troubleshooting", "docs/user/troubleshooting.md"],

@@ -24,18 +24,17 @@ function fixture() {
 }
 
 describe("linked timeline details", () => {
-  it("keeps the complete editable timeline in a named keyboard-scrollable region", () => {
+  it.each(["schedule", "template"] as const)("keeps the full %s day in the editor without a scrolling wrapper", (source) => {
     const { container, host, block } = fixture();
     host._timelineBlocks = () => [block];
     host._currentTimelineNow = () => new Date("2026-10-05T12:00:00");
-    render(renderTimeline(host, "climate.room"), container);
-    const scroll = container.querySelector<HTMLElement>('.timeline-scroll[role="region"]')!;
-    expect(scroll.getAttribute("aria-label")).toBe("timeline");
-    expect(scroll.tabIndex).toBe(0);
-    expect(scroll.querySelectorAll(".timeline-hours > span")).toHaveLength(5);
-    expect(scroll.querySelector(".timeline-track .timeline-block")?.getAttribute("draggable")).toBe("true");
-    expect(scroll.querySelectorAll(".timeline-resize-handle")).toHaveLength(2);
-    expect(container.querySelector(".timeline-scroll-hint")?.textContent).toBe("timelineScrollHint");
+    render(renderTimeline(host, "climate.room", source), container);
+    const panel = container.querySelector<HTMLElement>(".timeline-panel")!;
+    expect(panel.querySelectorAll(".timeline-header .timeline-hours > span")).toHaveLength(5);
+    expect(panel.querySelector(".timeline-hours")?.textContent).toContain("24");
+    expect(panel.querySelector(":scope > .timeline-track .timeline-block")?.getAttribute("draggable")).toBe("true");
+    expect(panel.querySelectorAll(".timeline-resize-handle")).toHaveLength(2);
+    expect(panel.querySelector(".timeline-scroll, .timeline-canvas, .timeline-scroll-hint")).toBeNull();
   });
 
   it("shows adapted target with distinct origin icons and complete details", () => {

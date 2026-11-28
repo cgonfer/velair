@@ -148,7 +148,11 @@
     },
     "select": {
       "mode": {
-        "name": "Режим"
+        "name": "Режим",
+        "state": {
+          "default": "По умолчанию",
+          "manual": "Ручной"
+        }
       }
     },
     "switch": {

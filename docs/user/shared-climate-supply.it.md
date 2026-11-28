@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](shared-climate-supply.md) · [Español](share
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.6 |
-| Ultima sincronizzazione | 2026-10-28 |
+| Versione di riferimento | 1.9.3-dev.20261120233407 |
+| Ultima sincronizzazione | 2026-11-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -90,9 +90,15 @@ Si usano gli obiettivi attuali, incluse modifiche manuali e obiettivi di Precond
 
 Un pannello informativo blu all’inizio di **Richiesta e isteresi**, prima del selettore, spiega la priorità di Room Assist e quando si applica l’isteresi dell’alimentazione.
 
-Quando Room Assist controlla l’obiettivo attivo di una stanza, l’alimentazione segue il suo intento di controllo confermato. Con riscaldamento fisso, la fase `towards_upper` richiede calore; con raffrescamento fisso, `towards_lower` richiede freddo. I suoi limiti di commutazione restano autorevoli: l’isteresi dell’alimentazione e l’eccezione della stanza non vengono applicate una seconda volta. Il controllo nativo a intervallo segue la direzione confermata. Un obiettivo assistito non valido o in attesa resta sconosciuto fino a una conferma valida.
+Quando Room Assist controlla l'obiettivo attivo di una stanza, l'alimentazione condivisa segue la sua richiesta effettiva confermata. Durante la regolazione ordinaria, la fase `towards_upper` del riscaldamento fisso richiede calore e `towards_lower` del raffreddamento fisso richiede freddo. Il controllo nativo a intervallo segue la direzione confermata. I limiti di commutazione di Room Assist restano autorevoli; isteresi dell'alimentazione ed eccezioni della stanza non si applicano una seconda volta.
 
-L’obiettivo corretto del termostato non viene confrontato con un sensore ambiente esterno. Room Assist può smettere di richiedere alimentazione mentre il termostato segnala ancora lo stesso obiettivo corretto.
+Durante la preparazione anticipata con uno scostamento positivo configurato, Room Assist include nella propria richiesta effettiva anche la richiesta temporanea di riscaldamento o raffreddamento della preparazione. La fase ordinaria di isteresi resta conservata separatamente. Per esempio, un obiettivo di riscaldamento di `21 °C` con margine di preparazione `0.1 °C` può richiedere calore fino a `20.9 °C`, anche se la fase ordinaria era a riposo. Il raffreddamento verso `24 °C` segue la stessa logica a `24.1 °C`. Il setpoint temporaneo del dispositivo non è un nuovo obiettivo della stanza. Alla fine dell'incremento Room Assist riprende la richiesta ordinaria, che può interrompere o continuare la richiesta. L'alimentazione applica ancora i ritardi, i tempi minimi e l'aggregazione tra stanze esistenti, senza una regola di preparazione separata.
+
+Si usa solo l'intento di controllo attuale e confermato. Un obiettivo assistito non valido o in attesa resta sconosciuto fino a una conferma valida. Ritirare la preparazione invalida anche la vecchia richiesta temporanea se il ripristino dell'obiettivo normale fallisce.
+
+L'obiettivo corretto del termostato non viene confrontato con un sensore ambiente esterno. Room Assist può smettere di richiedere alimentazione mentre il termostato segnala ancora lo stesso obiettivo corretto.
+
+Senza Room Assist, l'alimentazione continua a usare l'obiettivo riportato dal termostato e la propria isteresi normale. Uno scostamento di preparazione può cambiare l'obiettivo riportato; rimuoverlo consente di valutare normalmente l'obiettivo risultante. Non si aggiungono priorità di preparazione o mantenimenti speciali della richiesta a questo percorso.
 
 <a id="timing-and-manual-control"></a>
 ## Temporizzazione e controllo manuale

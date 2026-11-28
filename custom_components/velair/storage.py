@@ -640,6 +640,18 @@ def _snap_migrated_editable_temperatures(
             for key in ("temperature", "target_temp_low", "target_temp_high"):
                 snap_target(override.get("previous_state"), key)
 
+        pending = zone.get("pending_boost_return")
+        ended_boost = pending.get("boost") if isinstance(pending, dict) else None
+        if isinstance(ended_boost, dict):
+            snapshot = ended_boost.get("previous_state")
+            snapshots = [snapshot]
+            if isinstance(snapshot, dict) and isinstance(snapshot.get("group_members"), dict):
+                snapshots.extend(snapshot["group_members"].values())
+            for key in ("temperature", "target_temp_low", "target_temp_high"):
+                snap_target(ended_boost, key)
+                for saved in snapshots:
+                    snap_target(saved, key)
+
         comfort = zone.get("comfort")
         if isinstance(comfort, dict):
             for key in ("temperature_min", "temperature_max"):
@@ -693,28 +705,34 @@ def _convert_scheduler_temperatures(
             if isinstance(schedule, dict):
                 for blocks in schedule.values():
                     _convert_blocks(blocks, source, target)
-            override = zone.get("override")
-            if isinstance(override, dict):
+            pending = zone.get("pending_boost_return")
+            ended_boost = pending.get("boost") if isinstance(pending, dict) else None
+            for override in (zone.get("override"), ended_boost):
+                if not isinstance(override, dict):
+                    continue
                 for key in ("temperature", "target_temp_low", "target_temp_high"):
                     if isinstance(override.get(key), (int, float)):
                         override[key] = round(absolute_temperature(override[key], source, target), 6)
-            previous_state = override.get("previous_state") if isinstance(override, dict) else None
-            if isinstance(previous_state, dict):
-                snapshots = [previous_state]
-                members = previous_state.get("group_members")
-                if isinstance(members, dict):
-                    snapshots.extend(item for item in members.values() if isinstance(item, dict))
-                for snapshot in snapshots:
-                    for key in ("temperature", "target_temp_low", "target_temp_high"):
-                        if isinstance(snapshot.get(key), (int, float)):
-                            snapshot[key] = round(
-                                absolute_temperature(snapshot[key], source, target), 6
-                            )
+                previous_state = override.get("previous_state")
+                if isinstance(previous_state, dict):
+                    snapshots = [previous_state]
+                    members = previous_state.get("group_members")
+                    if isinstance(members, dict):
+                        snapshots.extend(item for item in members.values() if isinstance(item, dict))
+                    for snapshot in snapshots:
+                        for key in ("temperature", "target_temp_low", "target_temp_high"):
+                            if isinstance(snapshot.get(key), (int, float)):
+                                snapshot[key] = round(
+                                    absolute_temperature(snapshot[key], source, target), 6
+                                )
             pre = zone.get("preconditioning")
             if isinstance(pre, dict):
                 for key in (
                     "minimum_delta_temperature",
+                    "heating_setpoint_offset",
+                    "cooling_setpoint_offset",
                     "room_sensor_assist_deadband",
+                    "room_sensor_assist_minimum_margin",
                     "room_sensor_assist_max_delta",
                 ):
                     if isinstance(pre.get(key), (int, float)):
@@ -802,6 +820,12 @@ def _convert_scheduler_temperatures(
             for history in directions.values():
                 if not isinstance(history, dict):
                     continue
+                # Portable model 28 tags describe the control rule, not an
+                # absolute target. Internal learning has no such metadata.
+                if isinstance(history.get("setpoint_offset"), (int, float)):
+                    history["setpoint_offset"] = round(
+                        temperature_delta(history["setpoint_offset"], source, target), 6
+                    )
                 for observation in history.get("observations", []):
                     if not isinstance(observation, dict):
                         continue

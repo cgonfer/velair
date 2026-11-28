@@ -122,7 +122,10 @@ class RangeOnlyRuntimeTest(unittest.IsolatedAsyncioTestCase):
         self.assert_pair(22, 26)
         self.calls.clear()
         await self.scheduler.async_cancel_zone_boost(self.entity)
-        self.assert_pair(20, 24)
+        self.assertEqual(self.state.state, "heat")
+        self.assert_pair(21, 25)
+        self.assertFalse(any(service == "set_temperature" and data.get("target_temp_low") == 20
+                             for service, data in self.calls))
         self.calls.clear()
         await self.scheduler.async_pause_zone(self.entity, pause_id="window", action="turn_off")
         self.assertEqual(self.state.state, "off")

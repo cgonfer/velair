@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.9 |
-| Letzte Synchronisierung | 2026-11-02 |
+| Referenzversion | 1.9.3-beta.3 |
+| Letzte Synchronisierung | 2026-11-22 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -91,6 +91,8 @@ Bei einer Entitätsänderung gleicht Velair jedes geänderte Feld mit diesen Erw
 Manche Geräte melden beim Verarbeiten eines Befehls mehrere Werte. Sie kehren kurz zu einem alten Ziel zurück, veröffentlichen Zwischenziele oder melden Modus und Temperatur in anderer Reihenfolge. Velair hält für die von ihm geänderten Felder eine kurze begrenzte Stabilisierungsphase, damit solche Geräteupdates keine falsche manuelle Anpassung erzeugen. Ein Echo startet sie nicht neu; sie wird beim Rückkehren der vollständigen Home-Assistant-Dienstfolge abschließend festgelegt. Eindeutig benutzerinitiierte Home-Assistant-Änderungen oder Änderungen eines anderen erkennbaren Skripts beziehungsweise einer Automation bleiben extern. Änderungen nach der Stabilisierung werden normal behandelt.
 
 Lässt sich ein anonymes Update während der Stabilisierung nicht zuverlässig von der Geräteangleichung unterscheiden, behält Velair vorsichtig die automatische Steuerung. So wird ein abgelehnter oder verzögerter Velair-Befehl nicht zur falschen manuellen Anpassung. Dieser Zustand existiert nur zur Laufzeit und wird beim Neustart gelöscht. Weicht das Gerät nach Ablauf noch vom angeforderten Wert ab, bleibt die automatische Steuerung bestehen und Velair vermerkt eine Laufzeitwarnung zur Befehlsstabilisierung. Die nächste aktuelle Diagnose-Momentaufnahme zeigt sie; der Bericht enthält erwartete und beobachtete Werte. Velair wiederholt den Befehl nicht blind und macht daraus keine verspätete manuelle Anpassung.
+
+Bei einem kürzlich gesendeten Velair-Off-Befehl wird auch das Zurücksetzen eines einzelnen Sollwerts auf das vom Gerät ausdrücklich gemeldete Minimum als mögliche Folge des Ausschaltens erkannt. Das Minimum kann vor, zusammen mit oder nach der `off`-Meldung eintreffen, auch während der Befehl noch läuft. Diese Ausnahme setzt gültige Mindest- und Höchstgrenzen sowie eine weiterhin auf Off gerichtete Steuerungsabsicht von Velair voraus; erkennbare Benutzer- oder Automationsaktionen werden dadurch nicht verborgen. Es gilt dieselbe begrenzte Stabilisierungsphase. Ein neuerer Sollwert- oder HVAC-Befehl verwirft die älteren Zuordnungsnachweise. Das Minimum wird weder angefordert noch vorausgesetzt: Ein Thermostat, das seinen bisherigen Sollwert beibehält, kann den Off-Befehl weiterhin normal bestätigen. Eine Meldung des Minimums allein bestätigt nicht, dass das Thermostat ausgeschaltet hat.
 
 Eine gesonderte Ausnahme gilt, solange Velair ein automatisch gesteuertes Klimagerät in `off` hält. Manche Geräte melden einen Platzhalter als Zieltemperatur, etwa `0 °C` bei einem veröffentlichten Minimum von `5 °C`. Ändern sich ausschließlich Zieltemperaturen und liegen alle neuen Werte außerhalb des vom Gerät ausdrücklich gemeldeten Minimums und Maximums, ignoriert Velair die Aktualisierung, auch wenn sie erst nach der Stabilisierung eintrifft. Es wird kein Ereignis für eine externe Änderung ausgelöst, keine manuelle Anpassung gestartet und die Zeitplanausführung nicht unterbrochen. Beide Grenzwerte müssen gültig sein; fehlt einer, bleibt die bisherige Erkennung aktiv. Gültige Zieländerungen, externe HVAC-Modusänderungen, erkennbare Benutzer- oder Automationsaktionen sowie bestehende manuelle Sitzungen behalten ihr bisheriges Verhalten.
 

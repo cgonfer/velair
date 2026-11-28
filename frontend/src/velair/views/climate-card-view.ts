@@ -1,3 +1,4 @@
+import { renderPreconditioningOffset } from "./preconditioning-offset";
 import { climateCardBoostTemperatureError } from "../domain/climate-card-boost";
 import { entityName } from "../domain/entity-name";
 import { renderEntityNameContext } from "./entity-name";
@@ -143,6 +144,7 @@ export function renderClimateCard(host: VelairViewHost, entityId?: string) {
         ? renderExternalOwner(host, entityId, externalSystem?.name ?? external?.provider, external)
         : html`
             ${renderCurrentState(host, entityId)}
+            ${renderPreconditioningOffset(host, entityId, runtime, "card")}
             ${runtime?.state === "paused" || runtime?.state === "boost"
               ? renderRuntimeState(host, runtime)
               : nothing}

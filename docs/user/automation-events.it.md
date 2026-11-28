@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](automation-events.md) · [Español](automatio
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.2 |
-| Ultima sincronizzazione | 2026-10-17 |
+| Versione di riferimento | 1.9.3-beta.2 |
+| Ultima sincronizzazione | 2026-11-15 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -691,7 +691,22 @@ deadband_high: 21.3
 reason: scheduled_event
 ```
 
-Per un obiettivo singolo fisso `heat` o `cool` con fascia di tolleranza diversa da zero, i quattro campi di isteresi identificano la fase di esecuzione confermata, il limite attivo e l’intera fascia di commutazione. Sono omessi per tolleranza zero, modalità automatiche a obiettivo singolo e intervalli nativi. La fase resta invariata mentre la stanza attraversa il centro programmato e si inverte solo quando il sensore esterno raggiunge il limite opposto.
+Per un obiettivo singolo fisso `heat` o `cool` con fascia di tolleranza diversa da zero, i quattro campi di isteresi identificano la fase di esecuzione confermata, il limite attivo e la fascia nominale. Sono omessi con tolleranza zero, nelle modalità automatiche a obiettivo singolo e negli intervalli nativi. Con i livelli di frenata Predefinito o Moderato, la fase resta invariata mentre la stanza attraversa il centro programmato e si inverte solo quando il sensore esterno raggiunge il limite opposto. Alto avvia la fase senza richiesta termica all’obiettivo programmato, mantenendo il limite di riattivazione esistente.
+
+Un evento di aggiornamento può anche includere metadati aggiuntivi `braking` sulla politica applicata, anche quando un intervallo in modalità fissa usa un riferimento configurato:
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+Questo esempio descrive il riscaldamento con un obiettivo di `20.5 °C`, una fascia di tolleranza di `0.5 °C` e un passo del dispositivo di `0.5 °C`. Il livello effettivo è `default` quando la frenata aggiuntiva non può essere applicata; il livello configurato viene conservato e `reason` ne spiega il motivo. Le soglie o il limite della temperatura impostata possono essere `null` quando non sono disponibili. I metadati descrivono la riduzione della richiesta termica, non un arresto fisico confermato del dispositivo. I consumatori di eventi esistenti possono ignorare l’oggetto. Consulta [Frenata facoltativa](room-assist.it.md#optional-braking) per le regole di commutazione.
 
 Quando l’obiettivo programmato protegge un risultato fisso di riscaldamento o raffrescamento, l’aggiornamento singolo aggiunge due campi facoltativi:
 

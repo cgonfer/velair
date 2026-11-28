@@ -8,8 +8,8 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.2 |
-| Última sincronização | 2026-11-12 |
+| Versão de referência | 1.9.3-beta.6 |
+| Última sincronização | 2026-11-25 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -31,6 +31,17 @@ Em **Configurações** do painel da barra lateral, **Exibição dos nomes dos di
 **Nomes atuais com contexto de área** mantém esses nomes e adiciona separadamente a área efetiva do Home Assistant quando dispositivos gerenciados compartilham um nome. **Nomes das entidades com contexto** usa o nome próprio da entidade, ou o nome do dispositivo se ela for a entidade principal dele, com contexto separado do Home Assistant para nomes repetidos. Para um dispositivo chamado `Test` e uma entidade chamada `Test 2`, o formato atual é `Test Test 2`; o formato de entidade é `Test 2`, com contexto de área ou dispositivo quando necessário. A área própria da entidade tem prioridade sobre a área do dispositivo.
 
 Quando o contexto de área ou dispositivo não consegue distinguir nomes repetidos, o ID da entidade continua disponível como referência. As opções dos menus suspensos nativos mostram o contexto na mesma linha. Os nomes personalizados dos cartões e os nomes dos Grupos de cômodo mantêm a prioridade. O Velair salva essa preferência e a compartilha entre navegadores e cartões; altere-a nas Configurações do painel da barra lateral. Ela não renomeia entidades do Home Assistant nem altera seus IDs, programações ou comandos de climatização. Versões anteriores do Home Assistant mantêm os nomes existentes quando os metadados estruturados de nomes não estão disponíveis.
+
+<a id="sensor-entity-ids"></a>
+## IDs de entidade dos sensores
+
+Os novos sensores do Velair usam o ID da entidade de climatização de origem e a finalidade do sensor como base para seus IDs iniciais. O Home Assistant aplica suas regras de nomenclatura e resolve conflitos com IDs já ocupados. Assim, dispositivos com o mesmo nome visível podem receber IDs de sensores que permitem distingui-los. Os nomes dos sensores continuam traduzidos como antes.
+
+Os sensores existentes mantêm os IDs registrados, inclusive IDs personalizados. Alterar **Exibição dos nomes dos dispositivos de climatização**, importar Configurações ou reiniciar não muda esses IDs.
+
+Administradores podem abrir **Configurações → Manutenção → Revisar IDs de entidade dos sensores** para revisar os sensores existentes. A revisão mostra o dispositivo de origem, o ID atual e o ID proposto, incluindo sensores sem sufixo numérico e sensores de diagnóstico desativados. Nada é selecionado automaticamente. Selecione as alterações desejadas e confirme a renomeação; você também pode fechar a revisão sem fazer alterações. Atualizar a revisão limpa as seleções. Uma proposta alterada ou desatualizada precisa ser revisada novamente antes de ser aplicada.
+
+Alterar um ID de entidade pode exigir atualizações em automações, painéis, modelos e referências externas. Revise essas referências antes de confirmar; o Velair não garante que irá reescrevê-las. Essa operação não altera nomes dos sensores, identidades internas, configurações nem comandos de climatização. Se uma operação em lote falhar, o Velair tenta restaurar os IDs anteriores e informa as alterações que permanecerem.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navegação do painel e links diretos
@@ -533,13 +544,21 @@ O Velair armazena valores térmicos sem conversão, na unidade registrada com se
 
 A atualização única de dados publicados do Velair que usavam apenas Celsius é diferente. Se o Home Assistant já usa Fahrenheit, o Velair assume que os dados antigos estão em Celsius sem perguntar, mantém o agendador interrompido e direciona o usuário a **Redefinir Velair**. A redefinição descarta a configuração antiga e cria atomicamente novos padrões Fahrenheit. Após essa atualização, mudanças futuras de unidade no Home Assistant usam a conversão explícita completa descrita acima e preservam os dados.
 
-Exportações atuais do modelo portátil v26 preservam os valores sem conversão e declaram sua unidade. Versões anteriores do Velair não conseguem importar exportações v26; use uma versão com suporte a v26 para restaurá-las. Arquivos antigos suportados, incluindo v4, v5, v8 e v9, continuam podendo ser importados. Importações convertem os dados térmicos selecionados quando a unidade do arquivo difere da unidade atual do Home Assistant. Arquivos antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo salvar uma cópia de referência antes da redefinição e importá-la depois.
+Exportações atuais do modelo portátil v30 preservam os valores sem conversão e declaram sua unidade. Versões anteriores do Velair não conseguem importar exportações v30; use uma versão com suporte a v30 para restaurá-las. Arquivos antigos suportados, incluindo v4, v5, v8 e v9, continuam podendo ser importados. Importações convertem os dados térmicos selecionados quando a unidade do arquivo difere da unidade atual do Home Assistant. Arquivos antigos sem unidade são tratados como Celsius, pois todas as versões publicadas do Velair que os produziram armazenavam valores em Celsius. A exportação continua disponível enquanto a programação está interrompida por uma atualização de unidade, permitindo salvar uma cópia de referência antes da redefinição e importá-la depois.
 
 Se um termostato estava indisponível durante a migração ou importação, o Velair verifica seus limites e seu incremento efetivo de temperatura. Um `target_temp_step` válido publicado pelo Home Assistant tem prioridade sobre o último incremento informado e depois sobre a alternativa manual por zona. O painel avisa quando uma temperatura-alvo armazenada já não é compatível, para que seja editada antes de depender dessa programação.
 
 O comportamento completo de atualização, migração, backup e recuperação está em [Unidades de temperatura e migração](temperature-units.pt-br.md).
 
-Quando a assistência por sensor do cômodo está ativada, a aba Room Assist mostra uma escala compacta de temperatura em tempo real enquanto um bloco de temperatura gerenciado está ativo. Para uma temperatura única, ela marca a temperatura-alvo programada, o sensor do cômodo, a temperatura-alvo do termostato e a leitura do termostato. Uma faixa neutra listrada marca os limites inferior e superior da zona morta. Com `heat` ou `cool` fixo, o estado também mostra se o controle está em direção ao limite inferior ou superior; com modos automáticos de temperatura única, a banda permanece uma margem neutra. Para uma faixa nativa `heat_cool`, ela vai do limite inferior programado menos a zona morta até o limite superior programado mais a zona morta; para uma faixa fixa configurada de Aquecimento ou Resfriamento, marca o alvo de referência selecionado menos e mais a banda morta; marcadores separados continuam mostrando as faixas completas programada e aplicada, com uma ligação entre seus centros indicando o movimento com sinal de toda a faixa. O sensor do cômodo e as leituras do termostato continuam como marcadores individuais. A legenda traduzida completa fica centralizada na faixa de zona morta representada, mesmo quando a faixa é mais estreita que o rótulo; uma zona morta zero remove a superfície e é indicada explicitamente. Ocultar `show_room_assist_deadband` oculta conjuntamente sua configuração, faixa e legenda. Esses valores são derivados dos estados do Home Assistant e da execução do Velair; não são persistidos como um novo histórico. Se não há bloco de temperatura gerenciado ativo, a aba mostra um estado de espera em vez de valores fictícios. Se um sensor está selecionado, mas a assistência está desligada, a aba mostra que o sensor está salvo, mas não está em operação.
+Quando a assistência por sensor do cômodo está ativada, seu gráfico em tempo real separa **Cômodo**, **Alvo**, **Equipamento** e **Alvo enviado** em indicadores compactos conectados verticalmente às respectivas posições de temperatura. Expanda um indicador para ver detalhes. **Normal** mostra a solicitação atual, o próximo limite efetivo e qualquer extra de preparação; **Detalhado** acrescenta a diferença do cômodo, o ajuste total e o extra já incluído nesse total. As legendas ficam nas linhas das medições quando há espaço e abaixo delas caso contrário. Uma seta contínua representa demanda, enquanto uma tracejada aponta para a retomada durante a espera; nenhuma representa tendência medida do sensor nem atividade física do equipamento.
+
+Uma faixa fina hachurada acima do eixo mostra a banda nominal de controle, com legenda abaixo. Os limites efetivos de frenagem permanecem separados. Uma faixa nativa `heat_cool` recebe hachura apenas nas margens externas do Room Assist. Para uma faixa fixa de Aquecimento ou Resfriamento, a faixa hachurada envolve o alvo de referência selecionado. Colchetes separados mostram as faixas completas nominal e aplicada; **Detalhado** mede seu deslocamento comum com sinal quando não é zero. Uma zona morta zero não desenha área hachurada e a legenda mostra zero. Ocultar `show_room_assist_deadband` oculta a configuração, a faixa e a legenda.
+
+O gráfico mostra a solicitação uma única vez no indicador de estado e o limite de parada ou retomada ao lado da seta. **Explicação** abre um contexto conciso abaixo do gráfico sem repetir esses rótulos ou as leituras de temperatura; **Dados técnicos** reúne alvos do equipamento, limites de controle e origem e horários na mesma área. Apenas uma visualização de detalhes fica aberta por vez. Selecione seu botão novamente ou pressione Escape para fechá-la; esses controles de apresentação não alteram a solicitação.
+
+Etapas coincidentes de cálculo, solicitação e aplicação compartilham um único valor, preservando todos os rótulos das etapas; valores diferentes, evidências da referência de faixa e limites de preparação continuam distintos. As leituras permanecem no gráfico, e grupos de extra de preparação ou proteção aparecem apenas quando relevantes.
+
+Demanda desconhecida continua desconhecida. Os valores vêm do Home Assistant e do estado de execução do Velair, sem novo histórico. Sem bloco de temperatura gerenciado ativo, a aba mostra um estado de espera. Um sensor selecionado com a assistência desligada permanece salvo e aparece como inativo.
 
 A assistência por sensor do cômodo funciona por eventos. O Velair não consulta temperaturas periodicamente. Ele acompanha apenas o sensor do cômodo e a entidade de climatização configurados enquanto a assistência está ativa, agrupa mudanças com o atraso de atualização por termostato, alinha temperaturas-alvo temporárias ao incremento efetivo publicado, informado anteriormente ou configurado, ignora movimentos menores que esse incremento e restaura a temperatura-alvo real da programação quando o agendador é pausado ou uma zona é pausada, um reforço começa, o bloco desliga, o sensor deixa de ser utilizável ou o recurso é desativado. Limpar esse estado de execução também limpa qualquer fase de histerese de modo fixo. Se o pré-condicionamento adaptativo já iniciou um bloco futuro antecipadamente, a assistência acompanha essa temperatura-alvo futura até o horário de conforto programado, em vez de voltar ao bloco anterior.
 
@@ -668,14 +687,16 @@ O reforço está disponível por serviços, scripts, automações e controles de
 - aplicar um reforço por um assistente de voz;
 - aplicar um reforço com um modo HVAC preferido.
 
-Quando um reforço termina, o Velair resolve a zona afetada nesta ordem:
+Quando um reforço expira ou é cancelado, o Velair resolve a zona afetada nesta ordem:
 
 1. Se há um bloco ativo de programação com modo HVAC explícito, o Velair aplica a temperatura-alvo programada.
 2. Se há um bloco ativo que desliga o termostato, o Velair o desliga.
 3. Se não há bloco ativo, o Velair restaura o estado capturado antes do reforço.
-4. Se o bloco ativo usa `Keep`, o Velair também restaura o estado capturado antes do reforço, pois `Keep` não define um novo modo HVAC a aplicar após a sobreposição temporária.
+4. Se o bloco de temperatura ativo usa `Keep`, o Velair aplica a temperatura atual ou a faixa completa desse bloco usando o modo HVAC salvo antes do reforço. As opções salvas do dispositivo são restauradas, a menos que o bloco atual selecione outro valor. Se o modo salvo era desligado, Keep usa seu primeiro modo compatível diferente de desligado, como de costume. Modos salvos incompatíveis ou ausentes são informados como erros de entrega, em vez de serem adivinhados.
 
-Isso significa que um reforço não deve levar o Velair a inventar uma nova temperatura-alvo de aquecimento ou resfriamento quando a programação atual não a define explicitamente.
+Por exemplo, um equipamento em Refrigeração a 24 °C pode receber temporariamente um Reforço em Aquecimento a 22 °C. Se o bloco ativo for Keep a 20 °C quando o Reforço terminar, o Velair retorna a Refrigeração a 20 °C, sem enviar primeiro os antigos 24 °C. Blocos de apenas temperatura, modo explícito, apenas modo, apenas opções e Desligado mantêm seu comportamento normal. Esta regra específica de retorno não altera Keep durante a aplicação normal da programação.
+
+O Velair salva um retorno pendente antes de remover o Reforço. Se o Home Assistant reiniciar antes da confirmação da entrega, esse retorno é retomado usando o bloco em vigor naquele momento, mesmo quando **Aplicar programação ativo após inicialização** está desabilitado. Isso conclui um retorno já iniciado; não reativa o Reforço nem aplica a programação de todas as zonas. A indisponibilidade temporária do equipamento usa a recuperação de entrega existente. Um novo controle manual, Reforço, pausa, mudança de Perfil ou modo Velair, ou a desativação ou reatribuição da zona substitui o retorno antigo.
 
 <a id="startup-behavior"></a>
 ## Comportamento ao iniciar
@@ -683,6 +704,8 @@ Isso significa que um reforço não deve levar o Velair a inventar uma nova temp
 Por padrão, o Velair restaura o estado armazenado do agendador após iniciar o Home Assistant, mas não força os aparelhos de climatização a uma temperatura-alvo da programação.
 
 Em Configurações, você pode ativar **Aplicar programação ativo após inicialização**. Quando ativado, o Velair aplica o bloco atualmente ativo aos termostatos gerenciados após iniciar o Home Assistant, desde que o agendador esteja em modo automático. Um bloco iniciado em um dia anterior continua contando como bloco ativo até o início do próximo bloco semanal. Reforços ativos são respeitados.
+
+Um retorno de Reforço inacabado é recuperado independentemente desse ajuste, como descrito em [Boost](#boost).
 
 <a id="automation-blueprints"></a>
 ## Blueprints de automação
@@ -712,7 +735,7 @@ O arquivo pode conter:
 - definições de perfis de climatização;
 - definições de modos.
 
-As exportações atuais do modelo 26 preservam os dois tipos de vínculo de modelos, referências de presets, relações de Mestre do pré-condicionamento, políticas de formato e referência de alvo e a autoridade e configuração compartilhada dos grupos de cômodo. As configurações de zona também preservam programações opcionais de sensores do Room Assist, independentemente das programações de temperatura e dos Perfis. Âncoras aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como seções adicionais selecionadas. Quando há dados de grupo, grupos, programações e Perfis necessários também são incluídos, mesmo começando por uma exportação de aprendizado. Importações validam a configuração combinada, incluindo consumidores existentes de recursos compartilhados substituídos. Presets são mesclados pela chave estável: os correspondentes são substituídos, enquanto os locais ausentes do arquivo permanecem. Backups existentes continuam importáveis; versões antigas do Velair não importam arquivos do modelo 26. Mantenha um backup da versão anterior caso precise voltar a ela. Consulte [o exemplo de backup](linked-schedule-examples.pt-br.md#back-up-the-whole-setup).
+As exportações atuais do modelo 30 preservam os dois tipos de vínculo de modelos, referências de presets, relações de Mestre do pré-condicionamento, políticas de formato e referência de alvo e a autoridade e configuração compartilhada dos grupos de cômodo. As configurações de zona também preservam programações opcionais de sensores do Room Assist, o nível de frenagem selecionado, a quantidade de passos da frenagem Alta por zona e a margem mínima de controle, independentemente das programações de temperatura e dos Perfis. Âncoras aceitas de execução do mestre permanecem locais e não são exportadas. Exportar programações ou Perfis inclui os modelos e presets necessários, mostrados como seções adicionais selecionadas. Quando há dados de grupo, grupos, programações e Perfis necessários também são incluídos, mesmo começando por uma exportação de aprendizado. Importações validam a configuração combinada, incluindo consumidores existentes de recursos compartilhados substituídos. Presets são mesclados pela chave estável: os correspondentes são substituídos, enquanto os locais ausentes do arquivo permanecem. Backups existentes continuam importáveis; versões antigas do Velair não importam arquivos do modelo 30. Mantenha um backup da versão anterior caso precise voltar a ela. Consulte [o exemplo de backup](linked-schedule-examples.pt-br.md#back-up-the-whole-setup).
 
 Ao importar, o Velair permite escolher quais seções sobrescrever. A importação substitui os dados selecionados; exporte antes se precisar de um ponto de recuperação. Definições de perfis e modos são portáteis, mas sua seleção ativa não é. O Velair mantém IDs de perfis ativos que ainda existam e volta às programações padrão apenas quando nenhum deles permanece.
 
@@ -772,7 +795,7 @@ Atualize um preset compartilhado salvo usando sua `preset_key` estável. Atualiz
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Ative um perfil de climatização armazenado e aplique imediatamente o comportamento efetivo atual. Isso substitui o conjunto inteiro de perfis ativos; zonas não cobertas pelo perfil selecionado voltam às programações Padrão. Use o ID estável do perfil mostrado pelo Velair, não seu nome de exibição editável. Uma ativação direta define o seletor de modo como `Manual`. Omitir `profile_id` ainda retorna às programações padrão por compatibilidade; novas automações devem usar explicitamente `velair.deactivate_profile`.
+Ative um perfil de climatização armazenado e aplique imediatamente o comportamento efetivo atual. Isso substitui o conjunto inteiro de perfis ativos; zonas não cobertas pelo perfil selecionado voltam às programações Padrão. Use o ID estável do perfil mostrado pelo Velair, não seu nome de exibição editável. Uma ativação direta define o seletor de modo como `manual`. Omitir `profile_id` ainda retorna às programações padrão por compatibilidade; novas automações devem usar explicitamente `velair.deactivate_profile`.
 
 ```yaml
 action: velair.activate_profile
@@ -875,7 +898,7 @@ Um reforço com faixa usa `target_temp_low` e `target_temp_high` no lugar de `te
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Cancele antecipadamente um reforço ativo. Isso sempre usa o mesmo comportamento da expiração normal: o Velair aplica a temperatura-alvo explícita da programação ativa, se houver; caso contrário, inclusive com um bloco `Keep`, restaura o estado de climatização salvo, incluindo as opções compatíveis do dispositivo. A chamada não tem efeito quando não há reforço ativo.
+Cancele antecipadamente um reforço ativo. O retorno segue o mesmo comportamento da expiração normal: um bloco de temperatura usando `Keep` combina seu alvo atual com o modo HVAC anterior ao Reforço, enquanto blocos explícitos mantêm seu comportamento normal. Sem um bloco de programação aplicável, o Velair restaura o estado salvo do equipamento, incluindo as opções compatíveis do dispositivo. A chamada não tem efeito quando não há reforço ativo.
 
 ```yaml
 action: velair.cancel_boost

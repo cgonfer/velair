@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](adaptive-preconditioning.md) · [
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Wersja odniesienia | 1.9.3-dev.20261120233407 |
+| Ostatnia synchronizacja | 2026-11-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -46,6 +46,42 @@ Obsługiwane są natywne zakresy `heat_cool`. Jeśli temperatura pomieszczenia j
 Dla dwóch wartości w stałym `heat` lub `cool` wybierz **Wartość zadana odniesienia** dla urządzenia i trybu w **Ustawienia → Urządzenia klimatyczne i grupy**: **Dolna wartość zadana** lub **Górna wartość zadana**, zależnie od rzeczywiście używanej przez urządzenie. Room Assist współdzieli to ustawienie. Przygotowanie i uczenie ogrzewania używają tylko wybranej granicy jako celu ogrzewania, a chłodzenie jako celu chłodzenia. Kierunek określa tryb, także przy górnej granicy ogrzewania lub dolnej chłodzenia. Velair wysyła wcześniej całą nominalną parę, także dla Planowanego powrotu, nigdy samą wybraną granicę.
 
 Przy **Nie skonfigurowano** pary stałego trybu zachowują zaplanowaną godzinę i nie tworzą próbek uczenia cieplnego. Planowany powrót stosuje je przy przybyciu, bez wyprzedzenia. Zakresy `auto` zachowują ograniczenie, ponieważ wybór granicy nie określa sposobu ogrzewania/chłodzenia urządzenia. Natywne `heat_cool` nie zmienia się. Zmiana odniesienia unieważnia obserwacje rozpoczęte z poprzednią interpretacją.
+
+<a id="temporary-setpoint-offset"></a>
+## Tymczasowe przesunięcie nastawy
+
+**Przesunięcie ogrzewania** i **Przesunięcie chłodzenia** opcjonalnie zwiększają oddziaływanie urządzenia podczas przygotowania z wyprzedzeniem. Oba domyślnie wynoszą `0`, zachowując dotychczasowe działanie. Wybieraj wartości zgodne z efektywnym krokiem temperatury urządzenia, do `5 °C` (`9 °F`). Największą dostępną wartością jest najwyższy zgodny krok w tym limicie. Są to różnice temperatur: przesunięcie ogrzewania `2 °C` dodaje dwa stopnie, a przesunięcie chłodzenia `2 °C` odejmuje dwa stopnie.
+
+Cel temperatury w pokoju z harmonogramu i cel uczenia pozostają bez zmian. Przygotowanie bloku ogrzewania `21 °C` z przesunięciem `2 °C` wysyła tymczasowo `23 °C`. Przygotowanie bloku chłodzenia `24 °C` z przesunięciem `1.5 °C` wysyła tymczasowo `22.5 °C`. Przy minimalnej różnicy temperatur `0.1 °C` przygotowania kończą się odpowiednio przy `20.9 °C` i `24.1 °C`. Przesunięcie jest też usuwane przy rozpoczęciu bloku. Velair uzgadnia wtedy bieżący harmonogram, Room Assist i pozostałe aktywne funkcje według dotychczasowych zasad wysyłania poleceń i przywracania.
+
+Dla celu z dwiema nastawami obie granice przesuwają się o tę samą wartość. Pas ogrzewania `20–24 °C` z żądanym przesunięciem `3 °C` i fizycznym maksimum `25 °C` staje się `21–25 °C`: zachowuje szerokość czterech stopni, a efektywne przesunięcie maleje do `1 °C`. Chłodzenie działa symetrycznie przy fizycznym minimum. Efektywny dodatek jest zaokrąglany w dół do zgodnego kroku różnicy i nigdy nie przekracza żądania. Bez wolnego zakresu dodatnio ustawione przesunięcie może dać `0 °C`; kierunek przygotowania pozostaje jednak aktywny do pierwotnego progu temperatury pokoju.
+
+Zmiana przesunięcia jednego kierunku resetuje uczenie tylko dla tego kierunku. Predyktor, wybór próbek i reguły ważności obserwacji pozostają bez zmian. Sesje, w których efektywne przesunięcie zmienia się wskutek limitów urządzenia lub Room Assist, nadal kwalifikują się zgodnie z tymi regułami. Przywrócenie domyślnych ustawień przygotowania zeruje oba przesunięcia, resetuje tylko kierunki ze zmienionym przesunięciem i zachowuje osobne ustawienia Room Assist, w tym hamowanie.
+
+Jeśli urządzenie później zgłosi inny krok, Velair zachowuje zapisane żądanie i zmniejsza jedynie zastosowany dodatek do zgodnego kroku. Zmiana jednostki temperatury zachowuje fizyczną różnicę i nie resetuje uczenia. Przenośny model `28` oznacza eksportowane uczenie skonfigurowanym przesunięciem danego kierunku; import uczenia wymaga zgodnej wynikowej konfiguracji. Starsze uczenie jest traktowane jako przesunięcie zerowe. Import samej konfiguracji zmieniający przesunięcie resetuje zachowane lokalne uczenie tego kierunku.
+
+Panel pozostawia **Cel harmonogramu** i wartość przypisaną Velair przy pierwotnym celu. Istniejący znacznik **Zastosowany cel** pokazuje końcowe polecenie. Etykieta aktywnego przesunięcia pokazuje efektywny dodatek ze znakiem, także ograniczone zero; jej szczegóły objaśniają pierwotny cel, bazę Room Assist, żądany i efektywny dodatek, końcowe polecenie oraz ograniczenia urządzenia.
+
+<a id="after-reaching-the-target"></a>
+## Po osiągnięciu celu
+
+Gdy zaakceptowane przygotowanie z wyprzedzeniem osiągnie próg docelowy przed rozpoczęciem bloku, Velair zachowuje pierwotny cel tego bloku do zaplanowanej godziny. Tymczasowe przesunięcie kończy się przy osiągnięciu progu. Działa to również przy zerowym przesunięciu, bez Room Assist i przy obserwacji zbyt krótkiej, aby stała się próbką uczenia.
+
+Przykład: bieżący blok ma `20 °C`, a przygotowanie przyszłego bloku `21 °C` kończy się przy `20.9 °C`. Przegląd zachowuje **Cel** `21 °C`, zamiast wracać do `20 °C` po zakończeniu obserwacji. Przy przesunięciu ogrzewania `2 °C` tymczasowe polecenie `23 °C` wraca do nominalnych `21 °C`. Jeśli wartość **Zastosowana** też wynosi `21 °C`, duplikat jest jak zwykle ukryty. Chłodzenie działa symetrycznie: przyszły cel `24 °C`, osiągnięty przy `24.1 °C`, zachowuje nominalne `24 °C` po zakończeniu tymczasowego polecenia `22 °C`. Room Assist może zastosować zwykłą korektę lub hamowanie względem tego nominalnego celu.
+
+Velair zapisuje ukończone przygotowanie lokalnie i po restarcie sprawdza zgodność harmonogramu oraz kontekstu regulacji. **Zastosuj aktywny harmonogram po uruchomieniu** nadal decyduje o wysłaniu polecenia:
+
+| Opcja uruchomienia | Prawidłowo ukończone przygotowanie przed blokiem |
+| --- | --- |
+| Włączona | Zastosuj odzyskany nominalny cel, np. `21 °C`, zwykłą ścieżką wysyłania. Nie przywracaj przesunięcia przygotowania. |
+| Wyłączona | Odzyskaj nominalne `21 °C` dla panelu i bieżącego zamiaru sterowania bez wysyłania z powodu tego odzyskania celu, trybu ani innych opcji bloku. Jeśli rzeczywista zastosowana nastawa jest inna, pokaż ją osobno. |
+
+Odzyskanie nie otwiera ponownie uczenia ani nie włącza dodatku, gdy temperatura pokoju zmieni się podczas niedostępności Home Assistant. Wymaga pomyślnie zapisanego zakończenia; sama zgłoszona nastawa nie dowodzi ukończenia przygotowania. Nieudany zapis nie gwarantuje ciągłości po kolejnym restarcie. Pauzy, sterowanie ręczne, nadpisania, wyłączone przygotowanie oraz zastąpione harmonogramy lub własność nadal mają pierwszeństwo. Zmiana nastawy odniesienia, członkostwa w grupie pokoju lub aktywnego Trybu także unieważnia zapisane zakończenie, jeśli kontekst przygotowania przestał pasować. O nominalnej godzinie bloku przejmuje sterowanie zwykły harmonogram.
+
+Bez potwierdzonego zakończenia przygotowania z wyprzedzeniem dotychczasowe rozróżnienie pozostaje poprawne: **Cel** `20 °C` i wartość **Zastosowana** `21 °C` mogą oznaczać różne wartości harmonogramu i urządzenia. Samo włączenie przygotowania tego nie zmienia.
+
+<a id="live-predictions"></a>
+## Bieżące prognozy
 
 Po rozwinięciu encji każdy obsługiwany tryb pokazuje kartę bieżącej prognozy. Korzysta ona z tych samych danych backendu o następnym zdarzeniu co Przegląd, dzięki czemu pauzy, wzmocnienia, nieobsługiwane tryby i bloki nienadające się do przygotowania są traktowane spójnie. Jeśli istnieje pasujący przyszły blok, karta pokazuje obliczony czas rozpoczęcia, czas docelowy, wyprzedzenie, zaplanowaną temperaturę i tryb oraz informację, czy Velair używa modelu początkowego, czy podobnej lokalnej historii.
 
@@ -226,6 +262,8 @@ Jeśli czujnik jest niedostępny podczas zapisu próbki, Velair po prostu zapisu
 Domyślnie adaptacyjne przygotowanie korzysta z `current_temperature` encji klimatu.
 
 Jeśli dla encji włączono wspomaganie czujnikiem pokojowym i wybrano czujnik, funkcja używa go jako efektywnej temperatury pomieszczenia przy podejmowaniu decyzji i uczeniu.
+
+Podczas przygotowania Room Assist najpierw oblicza zwykły prawidłowy cel bazowy, a następnie dodawane jest tymczasowe przesunięcie. Przykładowo nominalny cel ogrzewania `21 °C`, baza Room Assist `22 °C` i przesunięcie ogrzewania `2 °C` wysyłają `24 °C`, jeśli urządzenie na to pozwala. Room Assist nigdy nie używa tego tymczasowego polecenia jako celu uczenia pokoju. Dodatnio ustawione przesunięcie tymczasowo utrzymuje kierunek przygotowania, nawet gdy Room Assist odziedziczył fazę histerezy bez zapotrzebowania. Po osiągnięciu pierwotnego progu przygotowania znów obowiązują zwykła histereza i wybrany poziom hamowania. To pierwszeństwo działa również przy ograniczeniu efektywnego dodatku do zera przez fizyczne limity; ustawienie zera zachowuje dotychczasowe działanie.
 
 To przydatne przy głowicach TRV lub termostatach, których wbudowany czujnik jest zbyt blisko grzejnika, nawiewu lub innego lokalnego źródła ciepła. Zachowanie po stronie urządzenia opisuje [Room Assist](room-assist.pl.md).
 

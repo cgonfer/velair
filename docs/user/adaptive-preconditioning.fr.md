@@ -9,8 +9,8 @@ Traductions: [Original en anglais](adaptive-preconditioning.md) · [Español](ad
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.6 |
-| Dernière synchronisation | 2026-10-28 |
+| Version de référence | 1.9.3-dev.20261120233407 |
+| Dernière synchronisation | 2026-11-21 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -47,6 +47,42 @@ Les plages natives `heat_cool` sont prises en charge. Sous la cible basse de plu
 Pour deux consignes en `heat` ou `cool` fixe, sélectionnez **Consigne de référence** pour l’équipement et le mode dans **Paramètres → Équipements et groupes**. Choisissez la limite réellement utilisée : **Consigne basse** ou **Consigne haute**. Room Assist partage ce réglage. Préparation et apprentissage utilisent uniquement cette limite comme cible de chauffage ou de refroidissement selon le mode, même si la limite choisie est haute pour chauffer ou basse pour refroidir. Velair démarre la paire nominale complète en avance, y compris pour Retour prévu ; il n’envoie jamais seulement la limite choisie.
 
 Avec **Non configurée**, les paires en mode fixe gardent leur horaire et ne produisent pas d’échantillons thermiques. Retour prévu les applique à l’arrivée sans préparation anticipée. Les plages `auto` gardent cette limite car choisir une borne ne définit pas le comportement de chauffage ou de refroidissement. Le comportement natif `heat_cool` reste inchangé. Changer de référence invalide les observations commencées selon l’interprétation précédente.
+
+<a id="temporary-setpoint-offset"></a>
+## Décalage temporaire de consigne
+
+**Décalage de chauffage** et **Décalage de refroidissement** ajoutent un effort facultatif à l'actionneur pendant la préparation anticipée. Ils commencent à `0`, ce qui conserve le comportement existant. Choisissez chaque valeur selon le pas effectif de température de l'appareil, jusqu'à `5 °C` (`9 °F`). La valeur maximale sélectionnable est le plus grand pas compatible dans cette limite. Ce sont des écarts de température : un décalage de chauffage de `2 °C` ajoute deux degrés ; un décalage de refroidissement de `2 °C` en soustrait deux.
+
+La cible programmée de la pièce et l'objectif d'apprentissage restent inchangés. Par exemple, préparer un bloc de chauffage à `21 °C` avec un décalage de `2 °C` envoie temporairement `23 °C`. Préparer un bloc de refroidissement à `24 °C` avec un décalage de `1.5 °C` envoie temporairement `22.5 °C`. Avec un écart minimal de température de `0.1 °C`, ces préparations se terminent respectivement à `20.9 °C` et `24.1 °C`. Le décalage est aussi retiré au début du bloc. Velair réconcilie alors la programmation actuelle, Room Assist et les autres contrôles actifs selon son fonctionnement existant de transmission et de récupération.
+
+Pour une cible à deux consignes, les deux limites se déplacent de la même quantité. Une bande de chauffage `20–24 °C` avec un décalage demandé de `3 °C` et un maximum physique de `25 °C` devient `21–25 °C` : sa largeur reste de quatre degrés et le décalage effectif est réduit à `1 °C`. Le refroidissement suit la même logique au minimum physique. Le supplément effectif est arrondi vers le bas à un pas d'écart compatible et ne dépasse jamais la demande. Sans marge disponible, un décalage positif configuré peut appliquer `0 °C` ; la préparation conserve sa direction jusqu'au seuil initial de la pièce.
+
+Modifier le décalage configuré d'une direction réinitialise uniquement son apprentissage. Le prédicteur, la sélection des échantillons et les règles de validité des observations restent identiques. Les sessions dont le supplément effectif varie avec les limites de l'appareil ou Room Assist restent admissibles selon ces règles. Rétablir les valeurs par défaut du préconditionnement remet les deux décalages à zéro et ne réinitialise que les directions dont le décalage change ; les réglages distincts de Room Assist, dont le freinage, sont conservés.
+
+Si l'appareil signale ensuite un autre pas, Velair conserve la demande enregistrée et réduit seulement le supplément appliqué à un pas compatible. La conversion d'unité conserve l'écart physique sans réinitialiser l'apprentissage. Le modèle portable `28` associe à l'apprentissage exporté le décalage configuré de sa direction ; son importation exige une configuration résultante correspondante. L'ancien apprentissage est considéré comme ayant un décalage nul. Un import de configuration seule qui modifie un décalage réinitialise l'apprentissage local conservé de cette direction.
+
+Le panneau conserve **Cible programmée** et la valeur attribuée à Velair à la cible initiale. Le marqueur existant **Cible appliquée** montre la commande finale. Un badge de décalage actif affiche son supplément effectif signé, y compris un zéro limité ; ses détails expliquent la cible initiale, la base Room Assist, le supplément demandé, le supplément effectif, la commande finale et les limites éventuelles de l'appareil.
+
+<a id="after-reaching-the-target"></a>
+## Après avoir atteint la cible
+
+Lorsqu'une préparation anticipée acceptée atteint son seuil d'arrivée avant le début du bloc, Velair conserve la cible initiale de ce bloc jusqu'à son heure programmée. Le décalage temporaire cesse à l'arrivée. Cela fonctionne aussi avec un décalage nul, sans Room Assist et lorsque l'observation est trop courte pour devenir un échantillon d'apprentissage.
+
+Par exemple, le bloc actuel est à `20 °C` et la préparation d'un futur bloc à `21 °C` se termine à `20.9 °C`. Vue d'ensemble conserve **Consigne** à `21 °C`, au lieu de revenir à `20 °C` à la fin de l'observation. Avec un décalage de chauffage de `2 °C`, la commande temporaire à `23 °C` revient à la valeur nominale de `21 °C`. Si **Appliquée** vaut aussi `21 °C`, le doublon est masqué comme d'habitude. Le refroidissement suit la même logique : une future cible à `24 °C` atteinte à `24.1 °C` conserve le nominal `24 °C` après la fin d'une commande temporaire à `22 °C`. Room Assist peut appliquer sa correction ou son freinage ordinaire à cette cible nominale.
+
+Velair enregistre localement cette préparation terminée et valide la programmation et le contexte de contrôle correspondants après un redémarrage. **Appliquer le programme actif au démarrage** détermine toujours l'envoi d'une commande :
+
+| Option de démarrage | Préparation terminée valide avant le bloc |
+| --- | --- |
+| Activée | Appliquer la cible nominale récupérée, par exemple `21 °C`, par la transmission normale. Ne pas restaurer son décalage de préparation. |
+| Désactivée | Récupérer le nominal `21 °C` pour le panneau et l'intention actuelle sans envoyer de cible, de mode ni d'autres options du bloc du fait de cette récupération. Afficher séparément la cible réellement appliquée si elle diffère. |
+
+La récupération ne rouvre pas l'apprentissage et ne réactive pas le supplément si la température dérive pendant que Home Assistant est hors ligne. Elle nécessite une fin de préparation correctement enregistrée ; une consigne rapportée ne suffit pas à prouver cette fin. Un échec d'enregistrement ne garantit pas la continuité après un redémarrage ultérieur. Les pauses, le réglage manuel, les dérogations, la préparation désactivée et les programmations ou responsabilités de contrôle remplacées restent prioritaires. Modifier la consigne de référence, la composition du groupe de pièce ou le Mode actif invalide aussi une fin enregistrée lorsque son contexte préparé ne correspond plus. À l'heure nominale du bloc, la programmation ordinaire prend le relais.
+
+Sans préparation anticipée terminée et confirmée, la distinction existante reste valable : **Consigne** `20 °C` et **Appliquée** `21 °C` peuvent décrire des valeurs différentes de programmation et d'appareil. Activer seulement le préconditionnement ne change pas cette distinction.
+
+<a id="live-predictions"></a>
+## Prévisions en direct
 
 Lorsque l’appareil est développé, chaque mode pris en charge affiche une carte de prévision en direct. Elle utilise les mêmes données backend du prochain événement que Vue d’ensemble ; les pauses, forçages, modes non pris en charge et blocs ne pouvant pas démarrer en avance sont donc traités de façon cohérente. Lorsqu’un futur bloc correspondant existe, la carte affiche l’heure de début calculée, l’heure cible, l’avance, la température et le mode programmés, ainsi que le choix du modèle initial ou d’un historique local similaire.
 
@@ -228,6 +264,8 @@ Si le capteur extérieur est indisponible lors de l’enregistrement d’un éch
 Par défaut, le préconditionnement adaptatif utilise `current_temperature` de l’entité climatique.
 
 Si l’assistance par capteur ambiant est activée pour cet appareil et qu’un capteur de pièce est sélectionné, le préconditionnement adaptatif utilise ce capteur comme température effective de la pièce pour ses décisions et son apprentissage.
+
+Pendant la préparation, Room Assist calcule d'abord sa cible de base valide habituelle ; le décalage temporaire est ajouté ensuite. Par exemple, une cible nominale de chauffage de `21 °C`, une base Room Assist de `22 °C` et un décalage de chauffage de `2 °C` envoient `24 °C` si l'appareil le permet. Room Assist n'utilise jamais cette commande temporaire comme objectif d'apprentissage de la pièce. Un décalage positif configuré maintient temporairement la direction de préparation active, même si Room Assist a hérité d'une phase d'hystérésis sans demande. Une fois le seuil initial de préparation atteint, l'hystérésis normale et le niveau de freinage choisi s'appliquent à nouveau. Cette priorité demeure lorsque les limites physiques réduisent le supplément effectif à zéro ; configurer zéro conserve le comportement existant.
 
 C’est utile pour les têtes thermostatiques ou thermostats dont le capteur intégré se trouve trop près d’un radiateur, d’une sortie d’air ou d’une autre source locale de chaleur. Consultez [Room Assist](room-assist.fr.md) pour le fonctionnement côté actionneur.
 

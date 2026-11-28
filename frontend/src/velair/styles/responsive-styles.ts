@@ -636,16 +636,7 @@ export const responsiveStyles = css`
 
   }
 
-  @container (max-width: 600px) {
-    .overview-timeline-layout {
-      --overview-timeline-name-column: 120px;
-      grid-template-columns: var(--overview-timeline-name-column) minmax(720px, 1fr);
-      min-width: calc(var(--overview-timeline-name-column) + 720px);
-    }
-
-    .overview-timeline-names,
-    .overview-timeline-rows { grid-auto-rows: 44px; }
-
+  @container (max-width: 340px) {
     .draft-list {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -661,11 +652,9 @@ export const responsiveStyles = css`
       grid-template-areas:
         "time time options delete"
         "mode target target target";
-      grid-template-columns: minmax(0, 1fr) 44px 44px 44px;
+      grid-template-columns: minmax(0, 1fr) 36px 36px 36px;
       min-width: 0;
       row-gap: 8px;
-      border-bottom: 1px solid var(--divider-color);
-      padding-bottom: 12px;
     }
 
     .editable-block > label:first-child { grid-area: time; }
@@ -679,21 +668,9 @@ export const responsiveStyles = css`
     .editable-block > label > .label,
     .editable-block > .block-time-field > label.label,
     .editable-block > .target-action-field > label.label { display: block; }
-    .editable-block input[type="time"] { font-size: 14px; padding-inline: 8px; }
-    .editable-block input,
-    .editable-block select,
-    .editable-block .temperature-range-control,
-    .editable-block .target-action-toggle,
-    .editable-block .target-action-indicator { min-height: 44px; }
-    .editable-block .icon-button,
-    .editable-block .icon-button.danger,
-    .editable-block .advanced-climate-options summary,
-    .editable-block .advanced-climate-options-placeholder { height: 44px; width: 44px; align-self: end; }
-    .editable-block > .advanced-climate-options,
-    .editable-block > .advanced-climate-options-placeholder { align-self: end; }
   }
 
-  @media (max-width: 600px) {
+  @media (max-width: 340px) {
     .draft-list {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -709,11 +686,9 @@ export const responsiveStyles = css`
       grid-template-areas:
         "time time options delete"
         "mode target target target";
-      grid-template-columns: minmax(0, 1fr) 44px 44px 44px;
+      grid-template-columns: minmax(0, 1fr) 36px 36px 36px;
       min-width: 0;
       row-gap: 8px;
-      border-bottom: 1px solid var(--divider-color);
-      padding-bottom: 12px;
     }
 
     .editable-block > label:first-child { grid-area: time; }
@@ -727,17 +702,5 @@ export const responsiveStyles = css`
     .editable-block > label > .label,
     .editable-block > .block-time-field > label.label,
     .editable-block > .target-action-field > label.label { display: block; }
-    .editable-block input[type="time"] { font-size: 14px; padding-inline: 8px; }
-    .editable-block input,
-    .editable-block select,
-    .editable-block .temperature-range-control,
-    .editable-block .target-action-toggle,
-    .editable-block .target-action-indicator { min-height: 44px; }
-    .editable-block .icon-button,
-    .editable-block .icon-button.danger,
-    .editable-block .advanced-climate-options summary,
-    .editable-block .advanced-climate-options-placeholder { height: 44px; width: 44px; align-self: end; }
-    .editable-block > .advanced-climate-options,
-    .editable-block > .advanced-climate-options-placeholder { align-self: end; }
   }
 `;

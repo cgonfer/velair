@@ -62,6 +62,8 @@ export function preconditioningSettings(
   const settings: PreconditioningSettings = {
     master_entity_id: value?.master_entity_id ?? null,
     enabled: Boolean(value?.enabled),
+    heating_setpoint_offset: Number(value?.heating_setpoint_offset ?? 0),
+    cooling_setpoint_offset: Number(value?.cooling_setpoint_offset ?? 0),
     max_lead_minutes: Number(value?.max_lead_minutes ?? 1440),
     minimum_delta_temperature: Number(value?.minimum_delta_temperature ?? defaultMinimumDelta(temperatureUnit)),
     learning_history_size: Number(value?.learning_history_size ?? 120),
@@ -76,12 +78,15 @@ export function preconditioningSettings(
     outdoor_temperature_entity_id: value?.outdoor_temperature_entity_id ?? null,
     room_temperature_entity_id: value?.room_temperature_entity_id ?? null,
     room_sensor_assist_enabled: value?.room_sensor_assist_enabled ?? false,
+    room_sensor_assist_braking_level: value?.room_sensor_assist_braking_level ?? "default",
+    room_sensor_assist_high_braking_steps: value?.room_sensor_assist_high_braking_steps ?? 2,
     room_sensor_assist_deadband: Number(
       value?.room_sensor_assist_deadband
       ?? value?.minimum_delta_temperature
       ?? defaultRoomAssistDeadband(temperatureUnit),
     ),
     room_sensor_assist_max_delta: Number(value?.room_sensor_assist_max_delta ?? defaultRoomAssistDelta(temperatureUnit)),
+    room_sensor_assist_minimum_margin: Number(value?.room_sensor_assist_minimum_margin ?? 0),
     room_sensor_assist_debounce_seconds: Number(
       value?.room_sensor_assist_debounce_seconds ?? 20,
     ),
@@ -108,4 +113,10 @@ function numericStateLabel(value: string | undefined, unit: string) {
     return "";
   }
   return `${value}${unit ? ` ${unit}` : ""}`;
+}
+
+/** Offsets use a zero-anchored delta grid, independently of the absolute target minimum. */
+export function preconditioningOffsetBounds(step: number, maximum: number): { step: number; maximum: number } {
+  const effectiveStep = Number.isFinite(step) && step > 0 ? step : 1;
+  return { step: effectiveStep, maximum: Number((Math.floor((maximum + 1e-9) / effectiveStep) * effectiveStep).toFixed(8)) };
 }

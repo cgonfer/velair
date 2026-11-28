@@ -128,8 +128,11 @@ triggers:
 ## Per-Climate Sensors
 
 For a managed climate such as `climate.living_room`, Home Assistant normally
-creates related entity IDs such as `sensor.velair_control_living_room`. Use
-your real registry IDs in dashboards and automations.
+creates new related entity IDs such as `sensor.velair_living_room_control`.
+Existing registered IDs are preserved. Administrators can optionally review
+them in **Settings → Maintenance → Review sensor entity IDs**, as explained in
+the [usage guide](usage.md#sensor-entity-ids). Use your real registry IDs in
+dashboards and automations.
 
 ### Zone Active Target Temperature
 
@@ -226,7 +229,7 @@ Main attributes:
 Example:
 
 ```yaml
-{{ is_state('sensor.velair_ventilation_opportunity_living_room',
+{{ is_state('sensor.velair_living_room_ventilation_opportunity',
             'comfort_possible') }}
 ```
 
@@ -303,8 +306,8 @@ Main attributes:
 Example:
 
 ```yaml
-{{ is_state('sensor.velair_control_living_room', 'automatic')
-   and state_attr('sensor.velair_control_living_room', 'runtime_state')
+{{ is_state('sensor.velair_living_room_control', 'automatic')
+   and state_attr('sensor.velair_living_room_control', 'runtime_state')
        == 'scheduled' }}
 ```
 
@@ -346,7 +349,7 @@ Example:
 ```yaml
 triggers:
   - trigger: state
-    entity_id: sensor.velair_delivery_diagnostics_living_room
+    entity_id: sensor.velair_living_room_delivery_diagnostics
     to: exhausted
 ```
 

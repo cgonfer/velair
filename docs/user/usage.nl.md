@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.2 |
-| Laatst gesynchroniseerd | 2026-11-12 |
+| Referentieversie | 1.9.3-beta.6 |
+| Laatst gesynchroniseerd | 2026-11-25 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -31,6 +31,18 @@ In **Instellingen** van het zijbalkpaneel bepaalt **Weergave van klimaatnamen** 
 **Huidige namen met ruimtecontext** behoudt die namen en voegt de effectieve Home Assistant-ruimte afzonderlijk toe wanneer beheerde klimaatapparaten dezelfde naam hebben. **Entiteitsnamen met context** gebruikt de eigen naam van de entiteit, of de apparaatnaam als dit de hoofdentiteit van het apparaat is, met afzonderlijke Home Assistant-context bij herhaalde namen. Bij een apparaat met de naam `Test` en een entiteit met de naam `Test 2` is het huidige formaat `Test Test 2`; het entiteitsformaat is `Test 2`, waar nodig met ruimte- of apparaatcontext. De eigen ruimte van een entiteit heeft voorrang op de ruimte van het apparaat.
 
 Als ruimte- of apparaatcontext herhaalde namen niet kan onderscheiden, blijft de entiteits-ID beschikbaar als referentie. Opties in native keuzelijsten tonen de context op dezelfde regel. Aangepaste kaartnamen en namen van Kamergroepen behouden hun voorrang. Velair slaat de voorkeur op en deelt deze tussen browsers en kaarten; wijzig deze via Instellingen van het zijbalkpaneel. De voorkeur hernoemt geen Home Assistant-entiteiten en verandert hun ID's, schema's of klimaatopdrachten niet. Oudere Home Assistant-versies behouden hun bestaande namen wanneer gestructureerde naammetadata niet beschikbaar zijn.
+
+<a id="sensor-entity-ids"></a>
+
+## Entiteits-ID’s van sensoren
+
+Nieuwe Velair-sensoren gebruiken de entiteits-ID van het bronklimaatapparaat en de functie van de sensor als basis voor hun oorspronkelijke ID’s. Home Assistant past zijn naamgevingsregels toe en handelt reeds bezette ID’s af. Klimaatapparaten met dezelfde zichtbare naam kunnen daardoor onderscheidbare sensor-ID’s krijgen. Sensornamen blijven zoals voorheen vertaald.
+
+Bestaande sensoren behouden hun geregistreerde ID’s, inclusief aangepaste ID’s. Het wijzigen van **Weergave van klimaatnamen**, het importeren van Instellingen of een herstart hernoemt ze niet.
+
+Beheerders kunnen **Instellingen → Onderhoud → Entiteits-ID’s van sensoren controleren** openen om bestaande sensoren te bekijken. Het overzicht toont elk bronklimaatapparaat, de huidige ID en de voorgestelde ID, ook voor sensoren zonder numeriek achtervoegsel en uitgeschakelde diagnostische sensoren. Er wordt niets automatisch geselecteerd. Selecteer de gewenste wijzigingen en bevestig het hernoemen; je kunt het overzicht ook sluiten zonder wijzigingen aan te brengen. Het vernieuwen van het overzicht wist de selecties. Een gewijzigd of verouderd voorstel moet opnieuw worden gecontroleerd voordat het kan worden toegepast.
+
+Het wijzigen van een entiteits-ID kan aanpassingen vereisen aan automatiseringen, dashboards, sjablonen en externe verwijzingen. Controleer die verwijzingen voordat je bevestigt; Velair garandeert niet dat ze worden herschreven. Deze bewerking verandert geen sensornamen, interne identiteiten, instellingen of klimaatopdrachten. Als een reeks wijzigingen mislukt, probeert Velair de vorige ID’s te herstellen en meldt het welke wijzigingen overblijven.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Paneelnavigatie en rechtstreekse links
@@ -545,15 +557,17 @@ Thermische waarden worden onbewerkt opgeslagen in de vastgelegde eenheid. Bij ee
 
 De eenmalige upgrade van gepubliceerde gegevens die alleen Celsius ondersteunden is anders. Gebruikt Home Assistant al Fahrenheit, dan neemt Velair zonder vraag aan dat oude gegevens Celsius zijn, houdt planning gestopt en verwijst naar **Velair resetten**. Reset wist de oude configuratie en maakt atomair nieuwe Fahrenheit-standaarden. Latere eenheidswijzigingen gebruiken daarna de volledige expliciete conversie met gegevensbehoud.
 
-Huidige draagbare exports in model v26 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v26 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
+Huidige draagbare exports in model v30 behouden onbewerkte waarden en vermelden hun eenheid. Oudere Velair-versies kunnen v30 niet importeren; gebruik een ondersteunende versie. Eerdere ondersteunde bestanden, waaronder v4, v5, v8 en v9, blijven importeerbaar. Bij verschil met Home Assistant worden gekozen thermische gegevens omgerekend. Oudere bestanden zonder eenheid gelden als Celsius, omdat alle gepubliceerde versies die ze maakten Celsius opsloegen. Export blijft beschikbaar tijdens een eenheidsstop, zodat je vóór reset een referentie bewaart en daarna importeert.
 
 Was een apparaat tijdens migratie of import niet beschikbaar, dan controleert Velair later grenzen en effectieve temperatuurstap. Een actuele geldige `target_temp_step` heeft voorrang op de laatst gemelde stap en handmatige zoneterugval. Het paneel waarschuwt bij onverenigbare opgeslagen doelen, zodat je vóór gebruik kunt corrigeren. Zie [Temperatuureenheden en migratie](temperature-units.nl.md) voor volledige upgrade-, migratie-, back-up- en herstelregels.
 
-Met kamersensorondersteuning en een actief temperatuurblok toont Room Assist een compacte actuele schaal. Voor één doel markeert deze gepland doel, kamersensor, apparaatdoel en apparaatmeting. Een neutraal gestreepte band markeert de dode-zonegrenzen. Bij vast `heat` of `cool` vermeldt status beweging naar onder- of bovengrens; bij automatische enkele doelen is de band een neutrale marge.
+Bij ingeschakelde kamersensorondersteuning scheidt de actuele grafiek **Kamer**, **Doel**, **Apparaat** en **Instelpunt** in compacte chips die loodrecht verbonden zijn met hun temperatuurpositie. Vouw een chip uit voor details. **Normaal** toont de huidige vraag, volgende effectieve drempel en eventuele voorbereidingsextra; **Gedetailleerd** voegt het kamerverschil, de totale aanpassing en de al daarin opgenomen extra toe. Labels staan bij voldoende ruimte op hun meetlijnen en anders eronder. Een doorgetrokken pijl stelt vraag voor; een gestreepte pijl wijst tijdens wachten naar hervatting. Geen van beide stelt een gemeten sensortrend of fysieke HVAC-werking voor.
 
-Bij een oorspronkelijk `heat_cool`-bereik loopt de band van geplande ondergrens minus marge tot bovengrens plus marge. Aparte haken tonen volledige geplande en toegepaste bereiken, met één verbinding tussen hun middelpunten voor de verplaatsing met teken. Kamer- en apparaatmetingen blijven afzonderlijke markeringen. De volledige vertaalde legenda blijft rond de dode zone gecentreerd, ook als die smaller is dan het label. Nul verwijdert de band en wordt expliciet vermeld. `show_room_assist_deadband` verbergen verbergt instelling, band en legenda samen. Bij een ingesteld vast verwarmings- of koelbereik markeert de band in plaats daarvan het gekozen referentie-instelpunt min en plus de dode band.
+Een dunne gearceerde strook boven de as toont de nominale regelband met de legenda eronder. Effectieve afremdrempels blijven apart. Een oorspronkelijk `heat_cool`-bereik arceert alleen de buitenste Room Assist-marges. Bij een vast verwarmings- of koelbereik ligt de strook in plaats daarvan rond het geselecteerde referentie-instelpunt. Aparte haakjes tonen de volledige nominale en toegepaste banden; **Gedetailleerd** meet hun gezamenlijke verschuiving met teken wanneer die niet nul is. Een dode zone van nul tekent geen arcering en de legenda toont nul. Het verbergen van `show_room_assist_deadband` verbergt instelling, strook en legenda.
 
-Deze waarden komen uit Home Assistant en actuele Velair-toestand, zonder nieuwe opgeslagen geschiedenis. Zonder actief temperatuurblok verschijnt een wachttoestand in plaats van voorbeeldwaarden. Met een gekozen sensor maar uitgeschakelde ondersteuning staat vermeld dat de sensor opgeslagen maar niet operationeel is.
+De grafiek toont de vraag één keer in de statusbadge en de stop- of hervattingsdrempel naast de pijl. **Uitleg** opent beknopte context onder de grafiek zonder die labels of temperatuurmetingen te herhalen; **Technische gegevens** groeperen instelpunten van het apparaat, regelgrenzen en bron/tijdgegevens in hetzelfde gebied. Er staat slechts één detailweergave tegelijk open. Selecteer de knop opnieuw of druk op Escape om deze te sluiten; deze presentatiebediening verandert de vraag niet. Overeenkomende berekenings-, vraag- en toepassingsfasen delen één waarde met behoud van alle faselabels. Gewijzigde waarden, bewijs voor de bereikreferentie en voorbereidingsgrenzen blijven apart. Metingen blijven in de grafiek; groepen voor voorbereidingsextra of beveiliging verschijnen alleen als ze relevant zijn.
+
+Onbekende vraag blijft onbekend. Waarden komen uit Home Assistant en de actuele Velair-toestand, zonder nieuwe geschiedenis. Zonder actief beheerd temperatuurblok toont het tabblad een wachtstatus. Een gekozen sensor blijft bij uitgeschakelde ondersteuning opgeslagen en wordt als inactief weergegeven.
 
 Room Assist reageert op gebeurtenissen en peilt temperaturen niet. Het luistert alleen naar gekozen sensor en klimaatentiteit zolang ondersteuning actief is, voegt wijzigingen samen via **Vernieuwingsvertraging**, lijnt tijdelijke doelen uit op actuele, laatst gemelde of ingestelde stap, negeert beweging kleiner dan die stap en herstelt het echte geplande doel bij algemene of zonepauze, tijdelijke aanpassing, uitschakelblok, onbruikbare sensor of uitgeschakelde functie. Het wissen van de uitvoeringstoestand wist ook de vaste hysterese. Heeft voorbereiding al een toekomstig blok gestart, dan volgt Room Assist dat doel tot comforttijd in plaats van terug te vallen op het vorige blok.
 
@@ -646,19 +660,23 @@ Bij het herstellen van de opgeslagen toestand stuurt Velair HVAC-modi en apparaa
 
 De functie is beschikbaar via services, scripts, automatiseringen en dashboards, zodat de schema-editor overzichtelijk blijft. Je kunt bijvoorbeeld via een knop, beweging of spraak een kamer tijdelijk aanpassen, eventueel met gewenste HVAC-modus.
 
-Bij verlopen bepaalt Velair de uitkomst in deze volgorde:
+Bij verlopen of annuleren van een tijdelijke aanpassing bepaalt Velair de uitkomst in deze volgorde:
 
 1. Een actief blok met expliciete HVAC-modus past zijn geplande doel toe.
 2. Een actief uitschakelblok schakelt uit.
 3. Zonder actief blok herstelt Velair de toestand van vóór de aanpassing.
-4. Ook bij `Huidige modus behouden` herstelt het die eerdere toestand, omdat dat blok geen nieuwe HVAC-modus voor na de tijdelijke aanpassing bepaalt.
+4. Als het actieve temperatuurblok `Huidige modus behouden` gebruikt, past Velair de huidige temperatuur of het volledige bereik van dat blok toe met de HVAC-modus die vóór de tijdelijke aanpassing is opgeslagen. Opgeslagen apparaatopties worden hersteld, tenzij het huidige blok een andere waarde kiest. Was de opgeslagen modus uit, dan kiest Behouden zoals gebruikelijk de eerste compatibele modus behalve Uit. Onverenigbare of ontbrekende opgeslagen modi worden als overdrachtsfouten gemeld; Velair raadt geen modus.
 
-Velair verzint zo geen verwarmings- of koeldoel als het schema er geen expliciet vastlegt.
+Een apparaat in Koelen op 24 °C kan bijvoorbeeld tijdelijk in Verwarmen op 22 °C werken. Als bij het einde Huidige modus behouden op 20 °C actief is, keert Velair terug naar Koelen op 20 °C, zonder eerst de oude 24 °C te sturen. Blokken met alleen temperatuur, expliciete modus, alleen modus, alleen opties en Uit behouden hun normale gedrag. Deze terugkeerregel verandert Behouden bij gewone schematoepassing niet.
+
+Velair slaat een wachtende terugkeer op voordat het de tijdelijke aanpassing verwijdert. Als Home Assistant opnieuw start voordat de overdracht is bevestigd, wordt de terugkeer hervat met het dan geldende blok, ook als **Actief schema toepassen na opstarten** uitgeschakeld is. Dit voltooit een al begonnen terugkeer; het activeert de tijdelijke aanpassing niet opnieuw en past niet alle zoneschema’s toe. Tijdelijke onbeschikbaarheid van het apparaat gebruikt het bestaande overdrachtsherstel. Nieuwe handmatige bediening, een tijdelijke aanpassing, pauze, profiel- of Velair-moduswijziging, of uitschakelen/opnieuw toewijzen van de zone vervangt de oude terugkeer.
 
 <a id="startup-behavior"></a>
 ## Gedrag bij opstarten
 
 Standaard herstelt Velair na Home Assistant-start de opgeslagen plannerstatus, zonder apparaten naar schemadoelen te dwingen. Schakel in Instellingen **Actief schema toepassen na opstarten** in om huidige actieve blokken na opstarten toe te passen, mits automatische planning actief is. Een blok van een eerdere dag blijft actief tot het volgende weekblok. Actieve tijdelijke aanpassingen worden gerespecteerd.
+
+Een onvoltooide terugkeer na een tijdelijke aanpassing wordt onafhankelijk van deze instelling hersteld, zoals beschreven onder [Tijdelijke aanpassing](#boost).
 
 <a id="automation-blueprints"></a>
 ## Automatiseringsblueprints
@@ -678,7 +696,7 @@ De [seizoensblueprint](blueprints/seasonal-climate-selection.nl.md) bevestigt st
 
 Instellingen kan een JSON-bestand met versie exporteren en importeren. Het kan thermostaatschema's, sjablonen, gedeelde blokpresets, paneelinstellingen, leergegevens voor adaptieve voorconditionering, klimaatprofielen en modussen bevatten.
 
-Huidige exports in model 26 behouden beide sjabloonkoppelingen, presetverwijzingen, voorconditioneringsmasterrelaties, doel- en referentiebeleid, kamergroepeigenaarschap en gedeelde configuratie. Zone-instellingen behouden ook optionele Room Assist-sensorschema’s, onafhankelijk van temperatuurschema’s en profielen. Geaccepteerde masteruitvoeringsankers blijven lokaal. Schema- en profielexports nemen benodigde sjablonen en presets automatisch op als extra geselecteerde onderdelen. Bij groepsgegevens worden vereiste kamergroepen, schema's en profielen ook opgenomen, zelfs vanuit een leerexport. Imports valideren de gecombineerde configuratie inclusief bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op stabiele sleutel samengevoegd: overeenkomsten vervangen, ontbrekende lokale behouden. Oude back-ups blijven importeerbaar; oudere Velair-versies kunnen model 26 niet importeren. Bewaar een back-up van de vorige versie als je mogelijk wilt teruggaan. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
+Huidige exports in model 30 behouden beide sjabloonkoppelingen, presetverwijzingen, voorconditioneringsmasterrelaties, doel- en referentiebeleid, kamergroepeigenaarschap en gedeelde configuratie. Zone-instellingen behouden ook optionele Room Assist-sensorschema’s en het gekozen afremniveau, het aantal afremstappen voor Hoog per zone en de minimale regelmarge, onafhankelijk van temperatuurschema’s en profielen. Geaccepteerde masteruitvoeringsankers blijven lokaal. Schema- en profielexports nemen benodigde sjablonen en presets automatisch op als extra geselecteerde onderdelen. Bij groepsgegevens worden vereiste kamergroepen, schema's en profielen ook opgenomen, zelfs vanuit een leerexport. Imports valideren de gecombineerde configuratie inclusief bestaande gebruikers van vervangen gedeelde bronnen. Presets worden op stabiele sleutel samengevoegd: overeenkomsten vervangen, ontbrekende lokale behouden. Oude back-ups blijven importeerbaar; oudere Velair-versies kunnen model 30 niet importeren. Bewaar een back-up van de vorige versie als je mogelijk wilt teruggaan. Zie [het back-upvoorbeeld](linked-schedule-examples.nl.md#back-up-the-whole-setup).
 
 Bij import kies je te overschrijven secties. Import vervangt gekozen gegevens; exporteer eerst voor een herstelpunt. Profiel- en modusdefinities zijn overdraagbaar, de actieve selectie niet. Velair behoudt actieve profiel-ID's die nog bestaan en keert pas naar standaard terug als geen meer overblijven.
 
@@ -729,7 +747,7 @@ Werk een opgeslagen gedeelde preset bij met vaste `preset_key`. Gedeeltelijke up
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Activeer één opgeslagen profiel en pas onmiddellijk het huidige effectieve gedrag toe. Dit vervangt de volledige actieve combinatie; ongedekte zones vallen terug op standaard. Gebruik het vaste getoonde profiel-ID, niet de bewerkbare naam. Rechtstreekse activering zet de moduskeuze op `Manual`. Zonder `profile_id` keert de service voor compatibiliteit nog terug naar standaard; nieuwe automatiseringen moeten expliciet `velair.deactivate_profile` gebruiken.
+Activeer één opgeslagen profiel en pas onmiddellijk het huidige effectieve gedrag toe. Dit vervangt de volledige actieve combinatie; ongedekte zones vallen terug op standaard. Gebruik het vaste getoonde profiel-ID, niet de bewerkbare naam. Rechtstreekse activering zet de moduskeuze op `manual`. Zonder `profile_id` keert de service voor compatibiliteit nog terug naar standaard; nieuwe automatiseringen moeten expliciet `velair.deactivate_profile` gebruiken.
 
 ```yaml
 action: velair.activate_profile
@@ -824,7 +842,7 @@ Velair legt herstelbare toestand vóór toepassing vast. Is het apparaat niet be
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Beëindig een actieve tijdelijke aanpassing vroeg. Dit gebruikt hetzelfde herstel als verlopen: een actief expliciet doel of anders, ook bij `Huidige modus behouden`, de opgeslagen klimaattoestand, inclusief ondersteunde apparaatopties. Zonder actieve aanpassing doet de aanroep niets.
+Beëindig een actieve tijdelijke aanpassing vroeg. Dit gebruikt hetzelfde terugkeergedrag als verlopen: een temperatuurblok met `Huidige modus behouden` combineert zijn huidige doel met de HVAC-modus van vóór de tijdelijke aanpassing; expliciete blokken behouden hun normale gedrag. Zonder toepasselijk schemablok herstelt Velair de opgeslagen klimaattoestand, inclusief ondersteunde apparaatopties. Zonder actieve aanpassing doet de aanroep niets.
 
 ```yaml
 action: velair.cancel_boost

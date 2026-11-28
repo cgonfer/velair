@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.2 |
-| Ostatnia synchronizacja | 2026-11-12 |
+| Wersja odniesienia | 1.9.3-beta.6 |
+| Ostatnia synchronizacja | 2026-11-25 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -31,6 +31,17 @@ W sekcji **Ustawienia** panelu bocznego opcja **Wyświetlanie nazw urządzeń kl
 Opcja **Obecne nazwy z kontekstem obszaru** zachowuje te nazwy i dodaje osobno właściwy obszar Home Assistant, gdy zarządzane urządzenia mają tę samą nazwę. Opcja **Nazwy encji z kontekstem** używa własnej nazwy encji lub nazwy urządzenia, jeśli jest to jego główna encja, z osobnym kontekstem Home Assistant dla powtarzających się nazw. Dla urządzenia o nazwie `Test` i encji o nazwie `Test 2` obecny format to `Test Test 2`; format encji to `Test 2`, w razie potrzeby z kontekstem obszaru lub urządzenia. Własny obszar encji ma pierwszeństwo przed obszarem jej urządzenia.
 
 Gdy kontekst obszaru lub urządzenia nie pozwala odróżnić powtarzających się nazw, identyfikator encji pozostaje dostępny jako odniesienie. Opcje natywnych list rozwijanych pokazują kontekst w tym samym wierszu. Własne nazwy kart i nazwy Grup pomieszczeń zachowują pierwszeństwo. Velair zapisuje tę preferencję i współdzieli ją między przeglądarkami i kartami; zmienisz ją w Ustawieniach panelu bocznego. Nie zmienia ona nazw encji Home Assistant, ich identyfikatorów, harmonogramów ani poleceń klimatycznych. Starsze wersje Home Assistant zachowują istniejące nazwy, gdy uporządkowane metadane nazw nie są dostępne.
+
+<a id="sensor-entity-ids"></a>
+## Identyfikatory encji czujników
+
+Początkowe identyfikatory nowych czujników Velair opierają się na identyfikatorze źródłowej encji klimatycznej i przeznaczeniu czujnika. Home Assistant stosuje własne reguły nazewnictwa i rozwiązuje konflikty z zajętymi identyfikatorami. Dzięki temu urządzenia o tej samej widocznej nazwie mogą otrzymać rozróżnialne identyfikatory czujników. Nazwy czujników pozostają przetłumaczone tak jak dotąd.
+
+Istniejące czujniki zachowują identyfikatory zapisane w rejestrze, także własne identyfikatory użytkownika. Zmiana opcji **Wyświetlanie nazw urządzeń klimatycznych**, import Ustawień ani restart nie zmieniają tych identyfikatorów.
+
+Administratorzy mogą otworzyć **Ustawienia → Konserwacja → Sprawdź identyfikatory encji czujników**, aby przejrzeć istniejące czujniki. Przegląd pokazuje źródłowe urządzenie klimatyczne oraz obecny i proponowany identyfikator, również dla czujników bez przyrostka liczbowego i wyłączonych czujników diagnostycznych. Nic nie jest wybierane automatycznie. Wybierz żądane zmiany i potwierdź zmianę identyfikatorów; możesz też zamknąć przegląd bez wprowadzania zmian. Odświeżenie przeglądu usuwa zaznaczenia. Zmienioną lub nieaktualną propozycję trzeba ponownie sprawdzić przed zastosowaniem.
+
+Zmiana identyfikatora encji może wymagać aktualizacji automatyzacji, pulpitów, szablonów i odwołań zewnętrznych. Sprawdź te odwołania przed potwierdzeniem; Velair nie gwarantuje ich przepisania. Ta operacja nie zmienia nazw czujników, ich wewnętrznych identyfikatorów, ustawień ani poleceń klimatycznych. Jeśli operacja zbiorcza się nie powiedzie, Velair próbuje przywrócić poprzednie identyfikatory i zgłasza zmiany, które pozostały.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Nawigacja panelu i bezpośrednie odnośniki
@@ -538,13 +549,17 @@ Velair zapisuje wartości związane z temperaturą bez przeliczania, w jednostce
 
 Jednorazowa aktualizacja z opublikowanych wersji Velair zapisujących wyłącznie Celsjusza przebiega inaczej. Jeśli Home Assistant już używa Fahrenheita, Velair bez pytania uznaje dawne dane za zapisane w Celsjuszu, pozostawia harmonogram zatrzymany i kieruje do **Zresetuj Velair**. Reset usuwa dawną konfigurację i atomowo tworzy nowe ustawienia domyślne w Fahrenheitach. Po tej aktualizacji kolejne zmiany jednostki Home Assistant korzystają z pełnego jawnego przeliczenia opisanego wyżej, z zachowaniem danych.
 
-Eksporty przenośnego modelu v26 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v26; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
+Eksporty przenośnego modelu v30 zachowują surowe wartości i podają ich jednostkę. Wcześniejsze wersje Velair nie potrafią importować eksportów v30; do ich odtworzenia użyj wersji obsługującej ten model. Starsze obsługiwane pliki, w tym v4, v5, v8 i v9, nadal można importować. Import przelicza wybrane dane związane z temperaturą, jeśli jednostka pliku różni się od bieżącej jednostki Home Assistant. Starsze pliki bez jednostki są interpretowane jako Celsjusz, ponieważ wszystkie opublikowane wersje Velair, które tworzyły te pliki, zapisywały wartości w Celsjuszu. Eksport pozostaje dostępny, gdy harmonogram jest zatrzymany na czas aktualizacji jednostki. Dzięki temu możesz zachować kopię odniesienia przed resetem i zaimportować ją później.
 
 Jeśli urządzenie było niedostępne podczas migracji lub importu, Velair sprawdza jego limity i efektywny krok temperatury po odzyskaniu dostępności. Prawidłowy `target_temp_step` ma pierwszeństwo przed ostatnim zgłoszonym i ręcznym zastępczym. Panel ostrzega o niezgodnych celach do edycji przed użyciem. Pełne zasady w [Jednostkach temperatury i migracji](temperature-units.pl.md).
 
-Przy włączonym Room Assist karta pokazuje kompaktową bieżącą skalę temperatury, gdy aktywny jest zarządzany blok temperatury. Dla pojedynczego celu oznacza temperaturę z harmonogramu, odczyt czujnika pokojowego, nastawę urządzenia i odczyt jego termometru. Neutralny kreskowany pas wskazuje dolną i górną granicę strefy nieczułości. Dla stałego `heat` lub `cool` stan pokazuje również, czy sterowanie zmierza ku dolnej czy górnej granicy; dla pojedynczych celów automatycznych pas pozostaje neutralnym marginesem. Przy natywnym zakresie rozciąga się od dolnej zaplanowanej granicy pomniejszonej o strefę nieczułości do górnej powiększonej o tę strefę. Osobne nawiasy nadal pokazują pełny zakres zaplanowany i zastosowany, a jeden łącznik ich środków wskazuje przesunięcie całego zakresu ze znakiem. Odczyty pokojowy i urządzenia pozostają osobnymi znacznikami. Dla skonfigurowanego stałego zakresu ogrzewania lub chłodzenia pas oznacza zamiast tego wybraną wartość odniesienia minus i plus strefa nieczułości.
+Przy włączonym wspomaganiu czujnikiem pokojowym wykres rozdziela **Pokój**, **Cel**, **Urządzenie** i **Nastawę** w zwartych etykietach połączonych prostopadle ze swoimi pozycjami temperatury. Rozwiń etykietę, aby zobaczyć szczegóły. Widok **Normalny** pokazuje bieżące żądanie, następny efektywny próg i ewentualny dodatek przygotowania; **Szczegółowy** dodaje różnicę temperatury pokoju, łączną korektę i dodatek już uwzględniony w tej sumie. Opisy leżą na liniach pomiarów, jeśli jest miejsce, lub poniżej nich. Ciągła strzałka oznacza zapotrzebowanie, a przerywana wskazuje próg wznowienia podczas oczekiwania. Żadna nie oznacza zmierzonego trendu czujnika ani fizycznej pracy HVAC.
 
-Pełna tłumaczona legenda pozostaje wyśrodkowana względem przedstawionej strefy nieczułości, także gdy pas jest węższy od etykiety. Zerowa strefa usuwa powierzchnię pasa i jest opisana wprost. Ukrycie `show_room_assist_deadband` ukrywa razem ustawienie, pas i legendę. Wartości pochodzą ze stanów Home Assistant i bieżącego stanu Velair; nie są zapisywane jako nowa historia. Bez aktywnego zarządzanego bloku temperatury karta pokazuje oczekiwanie zamiast wartości zastępczych. Jeśli czujnik wybrano, ale wspomaganie jest wyłączone, karta pokazuje, że czujnik jest zapisany, lecz nie bierze udziału w działaniu.
+Cienki kreskowany pasek nad osią pokazuje nominalny pas regulacji z legendą poniżej. Efektywne progi hamowania pozostają osobne. Natywny zakres `heat_cool` kreskuje jedynie zewnętrzne marginesy Room Assist. Dla stałego zakresu ogrzewania lub chłodzenia pasek otacza zamiast tego wybraną nastawę odniesienia. Osobne nawiasy pokazują pełne pasy nominalne i zastosowane; widok **Szczegółowy** mierzy ich wspólne przesunięcie ze znakiem, jeśli jest niezerowe. Zerowa strefa nieczułości nie rysuje kreskowania, a legenda pokazuje zero. Ukrycie `show_room_assist_deadband` ukrywa ustawienie, pasek i legendę.
+
+Wykres pokazuje zapotrzebowanie tylko raz na plakietce stanu, a próg zatrzymania lub wznowienia obok strzałki. **Wyjaśnienie** otwiera zwięzły opis kontekstu pod wykresem bez powtarzania tych etykiet ani odczytów temperatur. **Dane techniczne** grupują nastawy urządzenia, granice regulacji oraz źródło i czas w tym samym obszarze. Jednocześnie otwarty jest tylko jeden widok szczegółów. Ponowne wybranie przycisku lub Escape zamyka go; te elementy prezentacji nie zmieniają zapotrzebowania. Zgodne etapy obliczenia, żądania i zastosowania mają jedną wartość z zachowaniem wszystkich nazw etapów. Różne wartości, dowody dotyczące nastawy odniesienia zakresu i limity przygotowania pozostają osobne. Odczyty pozostają na wykresie, a grupy dodatku przygotowania lub ochrony pojawiają się tylko wtedy, gdy są istotne.
+
+Nieznane zapotrzebowanie pozostaje nieznane. Wartości pochodzą z Home Assistant i stanu działania Velair, bez nowej historii. Bez aktywnego zarządzanego bloku temperatury karta pokazuje oczekiwanie. Wybrany czujnik przy wyłączonym wspomaganiu pozostaje zapisany i jest oznaczony jako nieaktywny.
 
 Room Assist działa na podstawie zdarzeń. Velair nie odpytuje temperatur. Nasłuchuje tylko skonfigurowanego czujnika pokojowego i encji klimatu, gdy wspomaganie jest aktywne. Grupuje zmiany według ustawienia **Opóźnienie odświeżenia** urządzenia, dopasowuje tymczasowe nastawy do efektywnego kroku — publikowanego, ostatnio zgłoszonego lub skonfigurowanego — i ignoruje przesunięcia mniejsze od tego kroku. Przywraca rzeczywistą temperaturę harmonogramu, gdy zostanie wstrzymany harmonogram lub strefa, zacznie się Wzmocnienie, blok wyłączy urządzenie, czujnik przestanie dostarczać użyteczne dane albo funkcja zostanie wyłączona. Wyczyszczenie bieżącego stanu usuwa także fazę histerezy stałego trybu. Jeśli adaptacyjne przygotowanie rozpoczęło już przyszły blok wcześniej, Room Assist podąża za tym przyszłym celem do zaplanowanej godziny komfortu, zamiast wracać do poprzedniego bloku.
 
@@ -655,19 +670,23 @@ Wzmocnienie jest dostępne w usługach, skryptach, automatyzacjach i pulpitach b
 - poleceniem głosowym;
 - z preferowanym trybem HVAC.
 
-Po wygaśnięciu:
+Po wygaśnięciu lub anulowaniu Wzmocnienia Velair rozpatruje daną strefę w tej kolejności:
 
 1. Jeśli aktywny blok ma jawny tryb HVAC, Velair stosuje zaplanowaną temperaturę docelową.
 2. Jeśli aktywny blok wyłącza urządzenie, Velair je wyłącza.
-3. Jeśli nie ma aktywnego bloku, Velair przywraca zapamiętany stan urządzenia.
-4. Blok `Keep` również przywraca zapamiętany stan, ponieważ nie określa nowego trybu HVAC po zakończeniu nadpisania.
+3. Jeśli nie ma aktywnego bloku, Velair przywraca stan przechwycony przed Wzmocnieniem.
+4. Jeśli aktywny blok temperatury używa `Keep`, Velair stosuje jego bieżącą temperaturę lub pełny zakres, używając trybu HVAC zapisanego przed Wzmocnieniem. Przywraca zapisane opcje urządzenia, chyba że bieżący blok wybiera inną wartość. Jeśli zapisanym trybem był wyłączony, Keep jak zwykle używa pierwszego zgodnego trybu innego niż wyłączony. Niezgodne lub brakujące zapisane tryby są zgłaszane jako błędy przekazania polecenia, a nie zgadywane.
 
-Velair nie wymyśla celu ogrzewania/chłodzenia bez jawnego określenia.
+Na przykład urządzenie w trybie Chłodzenie przy 24 °C może tymczasowo otrzymać Wzmocnienie w trybie Ogrzewanie przy 22 °C. Jeśli w chwili zakończenia Wzmocnienia aktywny jest blok Keep przy 20 °C, Velair wraca do Chłodzenia przy 20 °C, bez wcześniejszego wysyłania starych 24 °C. Bloki tylko temperatury, jawnego trybu, tylko trybu, tylko opcji i Wyłączone zachowują dotychczasowe działanie. Ta zasada dotyczy wyłącznie powrotu i nie zmienia Keep podczas zwykłego stosowania harmonogramu.
+
+Velair zapisuje oczekujący powrót przed usunięciem Wzmocnienia. Jeśli Home Assistant uruchomi się ponownie przed potwierdzeniem przekazania polecenia, powrót zostanie wznowiony z użyciem obowiązującego wtedy bloku, nawet gdy **Zastosuj aktywny harmonogram po uruchomieniu** jest wyłączone. Kończy to już rozpoczęty powrót; nie włącza ponownie Wzmocnienia ani nie stosuje harmonogramów wszystkich stref. Tymczasowa niedostępność urządzenia korzysta z dotychczasowego odzyskiwania przekazania poleceń. Nowe sterowanie ręczne, Wzmocnienie, pauza, zmiana Profilu lub Trybu Velair albo wyłączenie lub ponowne przypisanie strefy zastępuje poprzedni powrót.
 
 <a id="startup-behavior"></a>
 ## Zachowanie przy uruchomieniu
 
 Domyślnie Velair po uruchomieniu Home Assistant odtwarza zapisany stan harmonogramu bez wymuszania nastaw urządzeń. Włącz w Ustawieniach stosowanie aktywnego harmonogramu po uruchomieniu, jeśli chcesz od razu zastosować bieżący blok podczas działania automatyki. Blok rozpoczęty we wcześniejszym dniu nadal obowiązuje do następnego bloku w tygodniu. Aktywne Wzmocnienia są respektowane.
+
+Niedokończony powrót ze Wzmocnienia jest odzyskiwany niezależnie od tego ustawienia, jak opisano w sekcji [Boost](#boost).
 
 <a id="automation-blueprints"></a>
 ## Blueprinty automatyzacji
@@ -695,7 +714,7 @@ Ustawienia eksportują/importują wersjonowany JSON zawierający:
 - definicje Profili;
 - definicje Trybów.
 
-Bieżący model eksportu 26 zachowuje oba powiązania szablonów, odwołania presetów, zależności nadrzędnego przygotowania, polityki formatów i odniesień, własność grup pomieszczeń i wspólną konfigurację. Ustawienia stref zachowują również opcjonalne harmonogramy czujników Room Assist, niezależnie od harmonogramów temperatury i profili. Przyjęte kotwice wykonania nadrzędnego pozostają lokalne. Eksport harmonogramów lub profili automatycznie dołącza wymagane szablony i presety jako dodatkowe sekcje. Przy danych grup dołączane są wymagane grupy, harmonogramy i profile, także przy eksporcie uczenia. Import sprawdza łączną konfigurację, w tym istniejących użytkowników zastępowanych zasobów. Presety są scalane po stałym kluczu: zgodne zastępowane, nieobecne lokalne zachowane. Dawne kopie nadal można importować; starsze wersje Velair nie importują modelu 26. Zachowaj kopię z poprzedniej wersji, jeśli może być potrzebny powrót do niej. Zobacz [przykład kopii](linked-schedule-examples.pl.md#back-up-the-whole-setup).
+Bieżący model eksportu 30 zachowuje oba powiązania szablonów, odwołania presetów, zależności nadrzędnego przygotowania, polityki formatów i odniesień, własność grup pomieszczeń i wspólną konfigurację. Ustawienia stref zachowują również opcjonalne harmonogramy czujników Room Assist, wybrany poziom hamowania, liczbę kroków silnego hamowania dla każdej strefy i minimalny margines sterowania, niezależnie od harmonogramów temperatury i profili. Przyjęte kotwice wykonania nadrzędnego pozostają lokalne. Eksport harmonogramów lub profili automatycznie dołącza wymagane szablony i presety jako dodatkowe sekcje. Przy danych grup dołączane są wymagane grupy, harmonogramy i profile, także przy eksporcie uczenia. Import sprawdza łączną konfigurację, w tym istniejących użytkowników zastępowanych zasobów. Presety są scalane po stałym kluczu: zgodne zastępowane, nieobecne lokalne zachowane. Dawne kopie nadal można importować; starsze wersje Velair nie importują modelu 30. Zachowaj kopię z poprzedniej wersji, jeśli może być potrzebny powrót do niej. Zobacz [przykład kopii](linked-schedule-examples.pl.md#back-up-the-whole-setup).
 
 Podczas importu możesz wybrać sekcje do nadpisania. Import zastępuje wybrane dane, więc najpierw wykonaj eksport, jeśli potrzebujesz punktu odzyskania. Definicje Profili i Trybów są przenośne, ale ich aktywny wybór nie jest. Velair zachowuje aktywne identyfikatory Profili, które nadal istnieją, i wraca do harmonogramów domyślnych tylko wtedy, gdy żaden z nich nie pozostał.
 
@@ -753,7 +772,7 @@ Aktualizuje zapisany wspólny preset przy użyciu stałego `preset_key`. Aktuali
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Aktywuje jeden zapisany Profil klimatyczny i od razu stosuje jego zachowanie obowiązujące w danej chwili. Zastępuje cały aktywny zestaw Profili; strefy nieobjęte wybranym Profilem wracają do swoich harmonogramów domyślnych. Użyj stałego identyfikatora Profilu pokazywanego przez Velair, a nie jego nazwy, którą można edytować. Bezpośrednia aktywacja ustawia wybór Trybu na `Manual`. Pominięcie `profile_id` nadal przywraca harmonogramy domyślne dla zgodności z wcześniejszymi automatyzacjami; w nowych używaj jawnie `velair.deactivate_profile`.
+Aktywuje jeden zapisany Profil klimatyczny i od razu stosuje jego zachowanie obowiązujące w danej chwili. Zastępuje cały aktywny zestaw Profili; strefy nieobjęte wybranym Profilem wracają do swoich harmonogramów domyślnych. Użyj stałego identyfikatora Profilu pokazywanego przez Velair, a nie jego nazwy, którą można edytować. Bezpośrednia aktywacja ustawia wybór Trybu na `manual`. Pominięcie `profile_id` nadal przywraca harmonogramy domyślne dla zgodności z wcześniejszymi automatyzacjami; w nowych używaj jawnie `velair.deactivate_profile`.
 
 ```yaml
 action: velair.activate_profile
@@ -850,7 +869,7 @@ Wzmocnienie z zakresem korzysta z `target_temp_low` i `target_temp_high` zamiast
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Anuluje aktywne Wzmocnienie przed upływem jego czasu. Powrót przebiega tak samo jak przy zwykłym wygaśnięciu: Velair stosuje aktywny cel wyraźnie określony w harmonogramie, jeśli taki istnieje. W przeciwnym razie, także przy bloku `Keep`, przywraca zapisany stan urządzenia, w tym obsługiwane opcje urządzenia. Wywołanie bez aktywnego Wzmocnienia nie ma skutku.
+Anuluje aktywne Wzmocnienie przed upływem jego czasu. Powrót przebiega tak samo jak przy zwykłym wygaśnięciu: blok temperatury używający `Keep` łączy swój bieżący cel z trybem HVAC sprzed Wzmocnienia, a jawne bloki zachowują dotychczasowe działanie. Bez odpowiedniego aktywnego bloku harmonogramu Velair przywraca zapisany stan, w tym obsługiwane opcje urządzenia. Wywołanie bez aktywnego Wzmocnienia nie ma skutku.
 
 ```yaml
 action: velair.cancel_boost

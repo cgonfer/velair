@@ -402,6 +402,27 @@ class FakeClimateManager:
     def supported_climate_options(self, entity_id: str) -> dict[str, list[str]]:
         return self.climate_options.get(entity_id, {})
 
+    def boost_return_hvac_mode(self, entity_id, snapshot, *, range_target):
+        """Resolve the saved mode independently of the temporary fake state."""
+        mode = snapshot.get("hvac_mode")
+        modes = self.supported_hvac_modes(entity_id)
+        if mode == "off":
+            mode = next((candidate for candidate in modes if candidate != "off" and (
+                self.supports_range_in_mode(entity_id, candidate) if range_target
+                else self.supports_single_temperature_target(entity_id, candidate, ensure_on=True)
+            )), None)
+        if not isinstance(mode, str) or mode not in modes:
+            raise ValueError(f"Missing or unsupported saved HVAC mode for {entity_id} Boost return")
+        return mode
+
+    def boost_return_options(self, entity_id, snapshot, block_options, *, hvac_mode):
+        """Keep saved optional controls unless the active block replaces them."""
+        options = {key: snapshot[key] for key in (
+            "fan_mode", "preset_mode", "swing_mode", "swing_horizontal_mode", "humidity"
+        ) if snapshot.get(key) is not None}
+        options.update(block_options)
+        return options
+
     def effective_hvac_mode(
         self,
         entity_id: str,

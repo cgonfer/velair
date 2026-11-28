@@ -9,8 +9,8 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.0-beta.10 |
-| Última sincronización | 2026-11-05 |
+| Versión de referencia | 1.9.3-beta.5 |
+| Última sincronización | 2026-11-25 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
 
@@ -35,7 +35,7 @@ Room Assist funciona localmente y mediante eventos. Velair no realiza sondeo con
 
 Velair conserva el objetivo programado como objetivo real del usuario, pero ajusta temporalmente el objetivo enviado a la entidad de climatización a partir del sensor externo de habitación y la lectura propia del equipo.
 
-Para un objetivo único en `heat` o `cool` fijos, una banda muerta distinta de cero crea dos límites de conmutación. Room Assist recuerda hacia qué límite avanza y solo cambia de dirección cuando el sensor externo alcanza el límite opuesto. Así crea un ciclo real de histéresis basado en el sensor externo, en lugar de permitir que el sensor interno del equipo inicie otro ciclo cerca del objetivo central. El Ajuste máximo de control limita la corrección con signo calculada desde el límite activo.
+Para un objetivo único en `heat` o `cool` fijos, una banda muerta distinta de cero crea dos límites de conmutación. Con el frenado **Predeterminado**, Room Assist recuerda hacia qué límite avanza y solo cambia de dirección cuando el sensor externo alcanza el límite opuesto. Así crea un ciclo real de histéresis basado en el sensor externo, en lugar de permitir que el sensor interno del equipo inicie otro ciclo cerca del objetivo central. El Ajuste máximo de control limita la corrección con signo calculada desde el límite activo. Los niveles opcionales de frenado retiran la demanda con más firmeza; **Alto** empieza a retirarla en el objetivo programado, en vez de esperar al límite de conmutación más alejado.
 
 Los objetivos únicos `auto` y `heat_cool` y los intervalos nativos `heat_cool` conservan su comportamiento neutro o de margen del intervalo. Velair no obliga a esos modos a alternar entre calefacción y refrigeración activas mediante un ciclo de histéresis de temperatura única.
 
@@ -43,7 +43,7 @@ La entidad de climatización sigue siendo el actuador. Velair no crea una entida
 
 Para dos consignas en `heat` o `cool` fijo, selecciona primero **Consigna de referencia** para ese equipo y modo en **Ajustes → Equipos y grupos**. Elige **Consigna inferior** o **Consigna superior** según el valor que use realmente tu equipo; Velair no lo deduce de su capacidad de intervalos. El Preacondicionamiento adaptativo comparte esta selección.
 
-Room Assist utiliza el límite elegido como objetivo fijo de calefacción o refrigeración, incluidos el ciclo de histéresis de una consigna y la protección del objetivo programado. Mueve ambas consignas la misma cantidad, conservando su separación. Las dos deben ajustarse al paso y a los límites físicos del equipo, por lo que el otro límite puede restringir la corrección disponible. Los avisos de limitación existentes siguen aplicándose.
+Room Assist utiliza el límite elegido como objetivo fijo de calefacción o refrigeración, incluidos el ciclo de histéresis de una consigna y la protección del objetivo programado. Mueve ambas consignas la misma cantidad, conservando su separación. Las dos deben ajustarse al paso y a los límites físicos del equipo, por lo que el otro límite puede restringir la corrección disponible. La información sobre límites físicos sigue disponible en el gráfico y en **Datos técnicos**.
 
 Con **Sin configurar**, los pares de modo fijo se envían sin cambios ni corrección de Room Assist. Los intervalos en `auto` siguen sin admitir asistencia; las bandas nativas `heat_cool` conservan su comportamiento. Se mantienen los ajustes guardados. Cambiar referencia o modo elimina la asistencia obsoleta sin restaurar un objetivo corregido antiguo sobre la nueva intención.
 
@@ -57,10 +57,90 @@ Con **Sin configurar**, los pares de modo fijo se envían sin cambios ni correcc
 4. Activa Control por sensor de estancia.
 5. Ajusta la banda muerta de Room Assist para definir los límites inferior y superior de conmutación en calor o frío fijo alrededor de su objetivo único o referencia de intervalo elegida, o el margen neutro para modos automáticos de una consigna y bandas nativas `heat_cool`.
 6. Modifica Ajuste máximo de control si el valor predeterminado es insuficiente para esa habitación o menor que la diferencia de consigna que el termostato puede necesitar para dejar de calentar o enfriar.
-7. Ajusta Retraso de actualización si las actualizaciones de sensores parecen demasiado lentas o frecuentes.
+7. Opcionalmente, elige **Frenado: Moderado** o **Alto** para retirar la demanda con más firmeza. Estos niveles requieren una banda muerta de Room Assist mayor que cero. **Predeterminado** conserva el comportamiento existente.
+8. Opcionalmente, configura **Margen mínimo de control** si las correcciones pequeñas no hacen responder al termostato. Aumenta primero el Ajuste máximo de control si hace falta; el margen no puede superarlo. Déjalo en `0` para conservar el comportamiento existente.
+9. Ajusta Retraso de actualización si las actualizaciones de sensores parecen demasiado lentas o frecuentes.
 
 Solo se muestra la opción seleccionada. Si **Sensor fijo** ya es la modalidad guardada, cambiar su sensor se guarda inmediatamente. Alternar entre **Sensor fijo** y **Por horario** cambia un borrador: **Guardar** aplica la modalidad y sus ajustes, y **Cancelar** restaura la configuración guardada. Al alternar se conservan el sensor fijo y la programación guardada; no se activan ambos a la vez.
 
+
+<a id="optional-braking"></a>
+
+### Frenado opcional
+
+El frenado modifica la consigna enviada al equipo y conserva la temperatura programada como objetivo real de la habitación. Está disponible en **Calor** y **Frío** fijos, incluidos los equipos de dos consignas con una consigna de referencia configurada. No modifica los modos automáticos de consigna única ni las bandas nativas `heat_cool`.
+
+**T** es el objetivo programado, **H** la banda muerta de Room Assist y **S** el paso efectivo de consigna del equipo:
+
+| Frenado | Calefacción: retirar demanda | Calefacción: volver a pedir calor | Refrigeración: retirar demanda | Refrigeración: volver a pedir frío |
+| --- | --- | --- | --- | --- |
+| Predeterminado | Comportamiento existente | Comportamiento existente | Comportamiento existente | Comportamiento existente |
+| Moderado | A T + H | A T − H | A T − H | A T + H |
+| Alto | A T | A T − H | A T | A T + H |
+
+Durante la retirada de demanda, **Moderado** limita la consigna de calefacción a un máximo de **T − S**, o la de refrigeración a un mínimo de **T + S**. **Alto** utiliza **dos pasos** por defecto. Si el cálculo existente ya retira más demanda, Velair conserva ese resultado más intenso. Son límites fijos mientras el frenado está activo: las actualizaciones del sensor no restan ni suman otro paso cada vez.
+
+Para cambiar la intensidad de Alto en una zona, abre **Ajustes → Equipos y grupos** y configura **Pasos de frenado Alto** para ese equipo o grupo. El ajuste acepta números enteros de `2` a `10` y muestra la diferencia de temperatura equivalente según el paso efectivo de consigna del equipo y su unidad actual. Se guarda de forma independiente por zona y solo se aplica al seleccionar **Alto** en Room Assist. **Predeterminado** y **Moderado** no utilizan este ajuste.
+
+Por ejemplo, `3` pasos de `0.5 °C` equivalen a una diferencia de `1.5 °C`. Tres pasos de `1 °F` equivalen a `3 °F`. El número de pasos no es una temperatura y no cambia al convertir entre Celsius y Fahrenheit; la diferencia equivalente sigue el paso efectivo del equipo. Room Assist conserva su selector y muestra el número configurado y la diferencia equivalente.
+
+Por ejemplo, con un objetivo de calefacción de `20.5 °C`, una banda muerta de `0.5 °C` y un paso del equipo de `0.5 °C`:
+
+- **Moderado** retira demanda a `21 °C`, con una consigna del equipo no superior a `20 °C`.
+- **Alto**, con sus dos pasos predeterminados, retira demanda a `20.5 °C`, con una consigna del equipo no superior a `19.5 °C`.
+- Con **Pasos de frenado Alto** en `3`, Alto sigue retirando demanda a `20.5 °C`, pero la consigna del equipo no supera `19 °C`.
+- Ambos vuelven a pedir calor cuando el sensor externo alcanza `20 °C`.
+
+Cambiar el número de pasos de Alto modifica el límite de consigna, no las temperaturas de retirada o reactivación. En refrigeración, el límite correspondiente se sitúa por encima del objetivo programado en lugar de por debajo. Es un ajuste fijo: no aumenta progresivamente mientras la habitación permanece fuera de la banda.
+
+Antes de retirar demanda, el cálculo de asistencia existente no cambia. El frenado permanece activo hasta alcanzar el límite de reactivación, incluso al cruzar el objetivo central. Si la asistencia se inicia o reinicia con la habitación dentro de su banda, conserva la inicialización prudente existente sin iniciar deliberadamente un ciclo de climatización.
+
+El estado actual muestra las temperaturas efectivas de retirada y reactivación. El gráfico mantiene visible la banda muerta nominal y distingue los umbrales efectivos de frenado. La demanda del suministro compartido sigue la misma fase confirmada.
+
+Elige **Predeterminado** antes de poner la banda muerta a cero. El nivel guardado se conserva si el modo o la referencia de temperatura actuales no permiten usarlo, y el estado explica por qué el frenado adicional está inactivo. Las combinaciones guardadas inválidas suspenden el frenado adicional sin modificar silenciosamente la banda muerta.
+
+Las consignas físicas mínima y máxima pueden limitar el frenado disponible. Con dos consignas se mueve el par completo y cualquiera de sus límites puede restringir el desplazamiento. **Datos técnicos** distingue el resultado solicitado y el aplicado, y el gráfico identifica el límite alcanzado.
+
+El frenado reduce la demanda de calor o frío; no confirma que la válvula, el compresor o el termostato se hayan detenido. El control del equipo, sus tiempos mínimos de funcionamiento y la inercia térmica pueden seguir causando sobrepasos. Este ajuste no aprende ciclos ni retira demanda antes del objetivo programado. Valídalo con ciclos reales de calefacción y refrigeración antes de confiar en un nivel para una habitación concreta.
+
+Las exportaciones portables utilizan el modelo **30** para conservar el número de pasos de frenado Alto, el nivel de frenado, las compensaciones de preparación y el margen mínimo de control. Las importaciones antiguas compatibles sin un número de pasos de Alto utilizan `2`. Guarda una copia de la versión anterior si necesitas volver a ella; las versiones antiguas de Velair no pueden importar archivos del modelo 30.
+
+<a id="minimum-control-margin"></a>
+
+### Margen mínimo de control
+
+Algunos termostatos necesitan una diferencia considerable entre su temperatura interna y la consigna solicitada antes de responder. Un sensor montado en un radiador puede marcar varios grados más que la habitación mientras el sensor externo sigue pidiendo calor. **Margen mínimo de control** solicita al menos esa diferencia durante una corrección de Room Assist en la que se pueda aplicar. Es opcional y su valor predeterminado es `0`.
+
+Estos ajustes tienen funciones distintas:
+
+| Ajuste | Función |
+| --- | --- |
+| Banda de control de Room Assist | Determina la banda de conmutación o neutra del sensor externo de la habitación. |
+| Margen mínimo de control | Refuerza una corrección aplicable respecto a la lectura interna del termostato. |
+| Ajuste máximo de control | Limita esa corrección; aumentar solo el máximo no solicita una corrección mayor. |
+| Frenado | Cambia los umbrales de retirada de demanda y añade una protección de la consigna programada. |
+
+El margen admite `0–10 °C` (`0–18 °F`) y no puede superar el Ajuste máximo de control. Si los ajustes son incompatibles, Velair pide aumentar primero el máximo o reducir el margen. No modifica ninguno automáticamente. Los incrementos del campo siguen el paso efectivo de consigna del equipo.
+
+Por ejemplo, configura un objetivo de calefacción de `19.5 °C`, una banda de control de `±0.3 °C`, frenado **Predeterminado** y tanto el margen como el máximo en `10 °C`. Con una lectura interna de `21.5 °C` y un paso de consigna compatible de `0.5 °C`:
+
+| Sensor externo de la habitación | Fase de Room Assist | Consigna solicitada al equipo |
+| --- | --- | --- |
+| En `19.2 °C` o por debajo | Pedir calor hacia `19.8 °C` | `31.5 °C`: lectura interna + 10 |
+| Sube por la banda | Seguir pidiendo calor | Lectura interna actual + 10 |
+| Alcanza `19.8 °C` | Retirar la demanda de calor hasta `19.2 °C` | `11.5 °C`: lectura interna − 10 |
+
+La lectura interna puede cambiar, por lo que las solicitudes posteriores usan su valor actual. El objetivo de la habitación sigue siendo `19.5 °C`; las consignas elevadas o reducidas del equipo no amplían la banda de confort. El frenado Moderado o Alto conserva sus propios umbrales de parada y reanudación, y mantiene un resultado existente que retire más demanda.
+
+La refrigeración fija funciona en sentido contrario. Con un objetivo de `24 °C`, banda de `±0.3 °C`, lectura interna de `26 °C` y margen/máximo de `10 °C`, Room Assist solicita `16 °C` mientras se necesita refrigeración y `36 °C` cuando la habitación alcanza `23.7 °C`, antes de aplicar los límites del dispositivo. La refrigeración se reanuda en `24.3 °C`. Con banda cero y sin fase retenida, solo se refuerzan correcciones no nulas; la igualdad permanece neutra.
+
+Los modos automáticos de consigna única y los rangos nativos **Calor/frío** solo refuerzan las solicitudes activas de calefacción o refrigeración. Dentro de la banda neutra de la habitación conservan el mantenimiento existente. Bajar mucho la consigna para detener la calefacción podría, de otro modo, iniciar refrigeración en un equipo bidireccional. En los rangos nativos, ambos límites se desplazan juntos y conservan su separación original. Los pares de modo fijo usan la consigna de referencia configurada; las configuraciones de rango no compatibles siguen sin ser compatibles.
+
+El paso y los límites físicos del equipo pueden impedir alcanzar el margen solicitado. Por ejemplo, con lectura interna de `21.7 °C`, margen/máximo de `10 °C` y una rejilla de `0.5 °C`, no existe una consigna válida exactamente a `10 °C` de distancia. Velair elige una corrección válida dentro del máximo cuando es posible e indica que el paso limita el margen. Con dos consignas, conservar la anchura del rango puede restringir aún más el movimiento. La explicación en directo y **Datos técnicos** identifican un margen activo o limitado.
+
+La protección de la consigna programada, el frenado y las compensaciones temporales de preparación pueden producir un desplazamiento final mayor que el Ajuste máximo de control. Ese ajuste limita la corrección de Room Assist, no cada protección o incremento temporal posterior. Durante la preparación, el margen sigue su dirección actual antes de añadir la compensación.
+
+Esta función solicita una diferencia de consigna. No confirma la apertura física de la válvula, el funcionamiento del compresor ni una parada inmediata. Utiliza el menor margen que funcione con tu equipo y comprueba ciclos reales completos de calefacción o refrigeración.
 
 <a id="optional-sensor-schedule-beta"></a>
 
@@ -95,7 +175,7 @@ Retraso de actualización es la espera que agrupa los cambios de temperatura del
 
 La banda muerta de Room Assist es independiente de la diferencia mínima del Preacondicionamiento adaptativo. Su valor predeterminado es `0.3 °C` o `1 °F`, acepta `0` para desactivarla y puede configurarse en pasos de `0.1` grados hasta `5 °C` o `9 °F`. Guardarla mientras Room Assist está activo actualiza inmediatamente el objetivo asistido.
 
-La escala actual de temperatura representa la banda muerta configurada como una franja neutra rayada. Para un objetivo único fijo, sus dos bordes son los límites de conmutación de histéresis y el estado actual identifica hacia cuál avanza Room Assist. En los modos automáticos de temperatura única, la misma franja es un margen neutro. Para un intervalo nativo `heat_cool`, abarca desde el límite inferior menos la banda muerta hasta el superior más la banda muerta. La escala se amplía para mantener visibles ambos bordes. La leyenda traducida completa permanece centrada sobre el intervalo real de banda muerta, aunque este sea más estrecho que su texto, para que su significado no cambie con la anchura del gráfico. La explicación completa también está disponible para tecnologías de asistencia y al situar el puntero encima. Con banda muerta `0`, no se dibuja la franja y la leyenda estática indica explícitamente que no hay banda muerta. El gráfico y la leyenda se actualizan con el valor guardado del backend; ocultar `show_room_assist_deadband` en una tarjeta Lovelace de Room Assist oculta juntos el ajuste, la franja y la leyenda.
+El gráfico actual dibuja la banda muerta nominal como una franja fina rayada inmediatamente encima del eje de temperatura, con una leyenda correspondiente debajo. Los umbrales efectivos de parada y reanudación proceden del estado de control confirmado, por lo que **Alto** puede detener la demanda en el objetivo mientras sigue visible toda la franja nominal. En los modos automáticos de temperatura única representa el margen neutro. Los intervalos nativos `heat_cool` rayan solo los márgenes exteriores junto a la banda nominal, con una leyenda **Margen exterior**. Una banda muerta cero no dibuja zona rayada; la leyenda muestra el margen cero configurado. Estos indicadores describen límites configurados, no el movimiento del sensor. Ocultar `show_room_assist_deadband` en una tarjeta Lovelace de Room Assist oculta juntos el ajuste, la franja y la leyenda.
 
 Al actualizar desde una versión en la que Room Assist compartía la diferencia mínima del Preacondicionamiento adaptativo, Velair copia una sola vez el valor existente a la nueva banda muerta de Room Assist. Conserva así la anchura configurada previamente, incluido un valor histórico que no se ajuste al nuevo incremento de entrada de 0.1 grados; `heat` y `cool` fijos utilizan entonces ese valor con el ciclo de histéresis descrito abajo. Tras migrar, ambos ajustes son independientes: cambiar uno nunca cambia el otro. Una zona nueva o restablecida utiliza el valor predeterminado correspondiente a la unidad indicado arriba.
 
@@ -116,13 +196,13 @@ La pestaña Room Assist indica qué puede hacer Velair actualmente para cada equ
 | **Bloqueado** | Una pausa, Refuerzo, estado Manual u otro estado del programador tiene prioridad sobre Room Assist. |
 | **No disponible** | No puede utilizarse actualmente el equipo gestionado o la capacidad de objetivo necesaria. La interfaz muestra el motivo cuando se conoce. |
 
-Cuando Room Assist está activo, Resumen condensa esta información en **Hacia el límite inferior**, **Hacia el límite superior**, **Activo**, **Manteniendo** o **Protección de consigna**, según corresponda, y muestra los valores programados y aplicados. El mínimo o máximo del termostato es distinto de la protección programada: la pestaña Room Assist muestra una advertencia con los valores solicitados, aplicados y compatibles, y Home Assistant recibe una notificación persistente hasta que deja de alcanzarse ese límite físico.
+Cuando Room Assist está activo, Resumen condensa esta información en **Hacia el límite inferior**, **Hacia el límite superior**, **Activo**, **Manteniendo** o **Protección de consigna**, según corresponda, y muestra los valores programados y aplicados. El mínimo o máximo del termostato es distinto de la protección programada: el gráfico etiqueta el límite físico alcanzado, **Datos técnicos** separa los valores solicitados y aplicados, y Home Assistant recibe una notificación persistente hasta que deja de alcanzarse ese límite físico.
 
 <a id="fixed-heating-hysteresis-example"></a>
 
 ## Ejemplo de histéresis de calefacción fija
 
-Situación:
+Escenario con frenado **Predeterminado**:
 
 - Bloque programado: `21 °C`, `heat`
 - Banda muerta de Room Assist: `±0.3 °C`
@@ -157,7 +237,7 @@ El objetivo visible del horario permanece en `21 °C`. El objetivo temporal es s
 
 La fase de modo fijo solo existe durante la ejecución. Se inicia otro ciclo al cambiar el bloque, objetivo o modo HVAC, limpiar Room Assist o recargar Velair. Si un ciclo nuevo `heat` comienza con la habitación dentro de la banda, avanza hacia el límite inferior para no solicitar calor inmediatamente.
 
-Cuando esta protección cambia el resultado, el estado actual de Room Assist explica ambos valores. Identifica el objetivo calculado y el conservado realmente por Velair, y Resumen muestra el estado compacto `Protección de consigna`. Es un comportamiento de protección normal, no un error del termostato, por lo que no crea una notificación persistente de Home Assistant. Los límites físicos del termostato siguen utilizando su advertencia y notificación independientes.
+Cuando esta protección cambia el resultado, el estado actual de Room Assist explica ambos valores. Identifica el objetivo calculado y el conservado realmente por Velair, y Resumen muestra el estado compacto `Protección de consigna`. Es un comportamiento de protección normal, no un error del termostato, por lo que no crea una notificación persistente de Home Assistant. Los límites físicos del termostato siguen identificados en el gráfico y en **Datos técnicos**, con su notificación independiente.
 
 El dispositivo sigue siendo responsable de la protección del compresor, los tiempos mínimos de funcionamiento y su respuesta física. El ciclo de histéresis da a Velair una estrategia de consignas más firme, pero no garantiza el instante exacto en que cambie de estado el relé, válvula o compresor.
 
@@ -194,7 +274,7 @@ Esto evita que Room Assist envíe objetivos poco realistas al termostato, manten
 
 ## Ejemplo de histéresis de refrigeración fija
 
-Situación:
+Escenario con frenado **Predeterminado**:
 
 - Bloque programado: `24 °C`, `cool`
 - Banda muerta de Room Assist: `±0.5 °C`
@@ -266,15 +346,17 @@ Maximum assist delta:    2.0 °C  -> may be insufficient
 Maximum assist delta:    3.0 °C  -> permits enough inverse correction
 ```
 
-Configurar `3 °C` no aplica inmediatamente una corrección de `3 °C`. Solo permite que Room Assist alcance ese valor cuando la diferencia de la habitación externa lo requiera.
+Con Margen mínimo de control en `0`, configurar `3 °C` no aplica inmediatamente una corrección de `3 °C`. Solo permite que Room Assist alcance ese valor cuando la diferencia de la habitación externa lo requiera.
+
+Este ajuste limita la corrección proporcional, no la consigna final después de proteger el objetivo programado. El frenado opcional refuerza esa protección con su límite de uno o dos pasos; no cambia el Ajuste máximo de control ni aplica todo el máximo en cada actualización. Un [Margen mínimo de control](#minimum-control-margin) distinto de cero puede solicitar una corrección mayor incluso cuando la diferencia de temperatura externa es pequeña.
 
 <a id="why-climate-target-can-differ-from-the-calculation"></a>
 
 ### Por qué la Consigna del termostato puede diferir del cálculo
 
-**Consigna del termostato** es el objetivo que comunica actualmente la entidad cuando Room Assist está listo o bloqueado. Mientras está ajustando o manteniendo un objetivo único aplicado, muestra en cambio la consigna temporal enviada por Velair. Ninguno de esos valores es el objetivo programado de habitación ni el límite activo de histéresis. Un equipo acepta objetivos según sus propios incrementos, por lo que Velair puede necesitar ajustar la consigna final al paso efectivo publicado, último comunicado, manual o predeterminado.
+**Consigna** es el objetivo que comunica actualmente la entidad cuando Room Assist está listo o bloqueado. Mientras está ajustando o manteniendo un objetivo único aplicado, muestra en cambio la consigna temporal enviada por Velair. Ninguno de esos valores es el objetivo programado de habitación ni el límite activo de histéresis. Un equipo acepta objetivos según sus propios incrementos, por lo que Velair puede necesitar ajustar la consigna final al paso efectivo publicado, último comunicado, manual o predeterminado.
 
-Por ejemplo, en refrigeración fija, Room Assist puede calcular `23.9 °C` para un equipo que acepta pasos de `0.5 °C`. Velair aplica `24.0 °C`: la refrigeración se ajusta hacia arriba para no enfriar más de lo calculado. La calefacción fija se ajusta hacia abajo y los modos automáticos de temperatura única utilizan el paso más cercano. El botón de información junto a **Consigna del termostato** adapta su explicación al valor mostrado y, cuando el ajuste al paso cambió realmente la consigna aplicada, muestra el cálculo, el paso efectivo y el valor aplicado. Los límites físicos mínimo o máximo y la protección programada se indican por separado y no se describen como ajuste al paso.
+Por ejemplo, en refrigeración fija, Room Assist puede calcular `23.9 °C` para un equipo que acepta pasos de `0.5 °C`. Velair aplica `24.0 °C`: la refrigeración se ajusta hacia arriba para no enfriar más de lo calculado. La calefacción fija se ajusta hacia abajo y los modos automáticos de temperatura única utilizan el paso más cercano. Expande la etiqueta **Consigna** o abre **Datos técnicos** para consultar el valor mostrado y cualquier información disponible sobre el cálculo, el paso efectivo y el valor aplicado. Si la alineación cambió la consigna confirmada, **Datos técnicos** también muestra el valor anterior a la alineación al paso. Los límites físicos mínimo o máximo y la protección del objetivo programado se indican por separado y no se describen como alineación al paso.
 
 <a id="heatcool-range-example"></a>
 
@@ -300,7 +382,7 @@ El equipo indica `22 °C`, por debajo del límite inferior aplicado, y puede sol
 
 El intervalo aplicado siempre se ajusta al paso del equipo y se desplaza como conjunto al alcanzar los límites físicos del objetivo. Velair nunca ajusta Mínimo y Máximo independientemente.
 
-Si un objetivo único o intervalo calculado supera el mínimo o máximo compatible del termostato, Velair aplica el resultado válido más cercano. El estado actual muestra el objetivo solicitado, el aplicado y el límite alcanzado antes del gráfico. Home Assistant también crea una notificación persistente para el límite activo; las actualizaciones repetidas del sensor no crean duplicados y Velair la retira tras recuperarse.
+Si un objetivo único o intervalo calculado supera el mínimo o máximo compatible del termostato, Velair aplica el resultado válido más cercano. El gráfico etiqueta el límite alcanzado; **Datos técnicos** muestra el objetivo único o intervalo solicitado y aplicado. Home Assistant también crea una notificación persistente para el límite activo; las actualizaciones repetidas del sensor no crean duplicados y Velair la retira tras recuperarse.
 
 <a id="when-velair-does-nothing"></a>
 
@@ -359,9 +441,17 @@ Esto importa porque la hora actual puede seguir perteneciendo a un bloque anteri
 
 Cuando Room Sensor Assist está activado, el Preacondicionamiento adaptativo también utiliza el sensor de habitación seleccionado como fuente efectiva de temperatura para sus decisiones y aprendizaje.
 
+Las compensaciones opcionales independientes de calefacción y refrigeración se configuran en Preacondicionamiento. Room Assist calcula el objetivo base a partir del objetivo original de la habitación y después Velair aplica el extra de preparación. Los límites del equipo reducen el extra; las bandas de dos consignas conservan su anchura. Una compensación positiva configurada conserva temporalmente la dirección de preparación hasta el umbral original de la habitación, aunque el extra efectivo sea cero o Room Assist haya heredado una fase sin demanda. Tras ese umbral o el inicio programado, el extra termina y se reanudan la histéresis y el frenado ordinarios. Los intervalos nativos `heat_cool` conservan sus limitaciones existentes de compatibilidad con el frenado.
+
+Room Assist confirma su demanda efectiva de calefacción o refrigeración junto con el objetivo aplicado. Durante la preparación incluye la solicitud temporal y conserva por separado su fase ordinaria de histéresis. Suministro climático compartido sigue esa demanda efectiva mediante su integración existente con Room Assist; no añade otra compensación, histéresis ni regla de preparación. Cuando termina el extra, vuelve la demanda ordinaria de Room Assist. Una orden fallida o sustituida no confirma una solicitud nueva, y una restauración fallida no puede dejar que la preparación retirada solicite suministro indefinidamente. Consulta [Suministro climático compartido](shared-climate-supply.es.md#room-assist).
+
+El gráfico distingue el objetivo nominal de la consigna final de Room Assist más preparación. Su insignia de extra incluye un `0` limitado; **Datos técnicos** separa la base, el extra solicitado, el efectivo y la orden final. Durante la preparación, el umbral **Fin de preparación** tiene un botón de información que explica el margen de llegada configurado. Un objetivo de `21 °C` con margen de llegada `0.1 °C` termina la preparación de calefacción en `20.9 °C`; esto es independiente de la banda de control de Room Assist. Consulta [Compensación temporal de consigna](adaptive-preconditioning.es.md#temporary-setpoint-offset) para ver ejemplos de calefacción, refrigeración y límites físicos.
+
 <a id="automation-events"></a>
 
 ## Eventos de automatización
+
+Los eventos de actualización también pueden incluir un objeto `braking` con el nivel configurado y efectivo, la fase activa, las temperaturas efectivas de frenado y reanudación, el límite de consigna y el motivo de inactividad, si existe. Estos campos adicionales describen la política de demanda confirmada, no la actividad física del equipo. Consulta [Actualización de Room Sensor Assist](automation-events.es.md#room-sensor-assist-updated) para ver un ejemplo.
 
 Velair emite el evento estándar de Home Assistant `velair_event`.
 
@@ -444,9 +534,15 @@ entities:
   - climate.living_room
 ```
 
-La escala actual de temperatura separa dos relaciones. Para un objetivo único, la línea superior compara el sensor de habitación con el objetivo programado y la línea inferior de control compara la lectura del equipo con su consigna. En `heat` o `cool` fijos, la banda rayada marca ambos límites de histéresis y el estado identifica el activo. En modos automáticos de temperatura única sigue siendo un margen neutro. Para un intervalo nativo, los corchetes rojos y azules identifican las bandas programada y aplicada completas, incluidos ambos límites. Un conector de `Desplazamiento del rango` con signo une sus centros para representar el movimiento de toda la banda, no solo de uno de sus bordes. Estos indicadores solo describen la consigna enviada por Velair; no afirman que el termostato, válvula o compresor esté calentando o enfriando activamente.
+El panel lateral y las tarjetas usan el mismo gráfico en directo. Las etiquetas compactas **Habitación**, **Objetivo**, **Equipo** y **Consigna** se conectan verticalmente con sus posiciones de temperatura. Pasa el cursor, enfoca o pulsa una etiqueta para ver los detalles. **Normal** muestra la solicitud actual y el siguiente umbral; **Detallado** añade la diferencia entre habitación y objetivo, el ajuste total y cualquier extra de preparación ya incluido en ese total. Las etiquetas de medida se sitúan sobre sus líneas cuando hay espacio y debajo en caso contrario.
 
-En columnas estrechas del panel, la escala de temperatura puede desplazarse horizontalmente para mantener legibles los marcadores.
+Una flecha continua representa la calefacción o refrigeración solicitada. Una flecha discontinua representa la espera y apunta al umbral de reanudación. Estas flechas describen la demanda de Room Assist, no una tendencia de temperatura medida ni una prueba de que funcione una válvula o compresor. Si no hay demanda aceptada disponible, el gráfico indica esa incertidumbre en lugar de inventar una solicitud o un estado de espera.
+
+La franja rayada inmediatamente encima del eje conserva la banda de control nominal y su leyenda. Una parada efectiva por frenado se marca por separado; la franja no implica que la demanda continúe más allá de esa parada. La etiqueta de consigna identifica el frenado solo cuando su protección ha cambiado realmente la orden aplicada. Para un intervalo nativo `heat_cool`, corchetes separados muestran las bandas completas de objetivo y aplicada, con rayado en los márgenes exteriores de Room Assist. Los límites físicos están etiquetados.
+
+El gráfico muestra la solicitud en su insignia de estado, las lecturas en las etiquetas de temperatura y el umbral de parada o reanudación junto a la flecha. Si falta la lectura de la habitación y no se puede dibujar esa relación, el umbral permanece en la insignia de estado. **Explicación** abre un contexto breve debajo del gráfico: cómo difieren las lecturas de los sensores, por qué un ciclo continúa tras alcanzar el objetivo de confort o qué preparación, frenado o límite del equipo afecta al ajuste. Añade contexto sin repetir las temperaturas, la solicitud ni la ayuda de la banda de control. El gráfico no tiene un resumen independiente repetido debajo.
+
+**Datos técnicos** agrupa las etapas de la consigna del equipo, los límites de control y el origen y momento en la misma zona de detalle. Las lecturas permanecen en el gráfico en lugar de repetirse en otra tabla. Los valores consecutivos calculado, solicitado, anterior al ajuste de paso y aplicado comparten una fila cuando coinciden, conservando los nombres de todas las etapas; los valores distintos se mantienen separados. Las órdenes de intervalo y la información de su consigna de referencia única permanecen diferenciadas. Los valores de parada y reanudación no se repiten como siguiente umbral ni como un límite nominal idéntico, y la dirección del ciclo se muestra sin repetir su temperatura. Siguen disponibles el paso del equipo y las protecciones o límites físicos pertinentes. El extra de preparación tiene su propio grupo, incluidos los valores solicitado y aplicado cuando difieren y un cero limitado. Origen y momento muestra la entidad del sensor y el inicio del bloque con fecha; si no hay fecha, utiliza solo la hora. Los grupos se apilan en paneles y tarjetas estrechos. Solo puede abrirse una vista de detalle a la vez; vuelve a seleccionar su botón o pulsa Escape para cerrarla. Los botones funcionan con teclado y pantalla táctil, y el detalle permanece debajo del gráfico sin cubrir otros controles. Abrir o cerrar un detalle no cambia la solicitud de control. El gráfico se adapta a columnas estrechas sin cambiar la escala de temperatura ni desplazar una lectura de su posición real.
 
 La tarjeta Lovelace de Room Assist también puede ocultar partes individuales si quieres una vista compacta solo para el panel:
 

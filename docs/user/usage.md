@@ -35,6 +35,30 @@ from the sidebar Settings. It does not rename Home Assistant entities or change
 their IDs, schedules or climate commands. Earlier Home Assistant versions retain
 their existing names when structured naming metadata is unavailable.
 
+## Sensor entity IDs
+
+New Velair sensors use the source climate's entity ID and the sensor's purpose
+as the basis for their initial IDs. Home Assistant applies its naming rules and
+resolves any occupied IDs. Climates with the same visible name can therefore
+receive distinguishable sensor IDs. Sensor names remain translated as before.
+
+Existing sensors keep their registered IDs, including custom IDs. Changing
+**Climate name display**, importing Settings or restarting does not rename them.
+
+Administrators can open **Settings → Maintenance → Review sensor entity IDs** to review
+existing sensors. The review shows each source climate, current ID and proposed
+ID, including sensors without a numeric suffix and disabled diagnostic sensors.
+Nothing is selected automatically. Select the changes you want and confirm the
+rename; you can also close the review without making changes. Refreshing the
+review clears its selections. A changed or outdated proposal must be reviewed
+again before it can be applied.
+
+Changing an entity ID can require updates to automations, dashboards, templates
+and external references. Review those references before confirming; Velair does
+not promise to rewrite them. Sensor names, internal identities, settings and
+climate commands are unchanged by this operation. If a batch fails, Velair
+attempts to restore the previous IDs and reports any changes that remain.
+
 ## Panel navigation and direct links
 
 The sidebar panel updates its URL when you change tabs or switch between the
@@ -1221,9 +1245,9 @@ Celsius without asking, keeps the scheduler stopped, and directs the user to
 fresh Fahrenheit defaults. After that upgrade, later Home Assistant unit
 changes use the full explicit conversion described above and preserve data.
 
-Current portable model v26 exports preserve raw values and declare their unit.
-Earlier Velair versions cannot import v26 exports; use a version that supports
-v26 to restore them. Older supported files, including v4, v5, v8, and v9,
+Current portable model v30 exports preserve raw values and declare their unit.
+Earlier Velair versions cannot import v30 exports; use a version that supports
+v30 to restore them. Older supported files, including v4, v5, v8, and v9,
 remain importable. Imports
 convert selected thermal data when the file and the current Home Assistant unit
 differ. Older files without a unit are treated as Celsius because all published
@@ -1240,7 +1264,37 @@ no longer compatible so it can be edited before relying on that schedule.
 The complete upgrade, migration, backup, and recovery behavior is documented in
 [Temperature Units and Migration](temperature-units.md).
 
-When Room Sensor Assist is enabled, the Room Assist tab shows a compact live temperature scale while a managed temperature block is active. For one target it marks the scheduled target, room sensor, climate target, and thermostat reading. A neutral striped band marks the lower and upper deadband limits. With fixed `heat` or `cool`, the status also shows whether control is moving towards the lower or upper limit; with scalar automatic modes, the band remains a neutral margin. For a native `heat_cool` range it extends from the scheduled low minus the deadband to the scheduled high plus the deadband. For a configured fixed Heat or Cool range, it instead marks the selected reference setpoint minus and plus the deadband; separate brackets still show the complete scheduled and applied bands, with one connector between their centers showing the signed movement of the whole range. The room sensor and climate readings remain individual markers. The complete translated legend stays centered on the represented deadband range, including when that range is narrower than the label; a zero deadband removes the surface and is stated explicitly. Hiding `show_room_assist_deadband` hides its setting, band, and legend together. These values are derived from Home Assistant state and Velair runtime state; they are not persisted as a new history. If no managed temperature block is active, the tab shows a waiting state instead of placeholder values. If a sensor is selected but Assist is off, the tab shows that the sensor is saved but not operational.
+When Room Sensor Assist is enabled, its live graph separates **Room**, **Target**,
+**Equipment** and **Setpoint** in compact chips connected vertically to their
+temperature positions. Expand a chip for details. **Normal** shows the current
+request, next effective threshold and any preparation extra; **Detailed** adds
+the room gap, total adjustment and extra already included in that total. Labels
+sit on their measurement lines when space permits and below otherwise. A solid
+arrow represents demand, while a dashed arrow points to resumption during
+waiting; neither represents a measured sensor trend or physical HVAC activity.
+
+A thin hatched strip above the axis shows the nominal control band with its
+legend below. Effective braking thresholds remain separate. A native `heat_cool`
+range hatches only the outer Room Assist margins. For a fixed Heat or Cool range,
+the strip surrounds the selected reference setpoint instead. Separate brackets
+show the complete nominal and applied bands; **Detailed** measures their signed
+common shift when non-zero. A zero deadband draws no hatched area and the legend
+shows zero. Hiding `show_room_assist_deadband` hides the setting, strip and legend.
+
+The graph shows the request once in its status badge and the stop or restart
+threshold beside the arrow. **Explanation** opens concise context below the graph
+without repeating those labels or the temperature readings; **Technical data** groups
+equipment setpoints, control limits, and source/timing in the same
+area. Only one detail is open at a time. Select its button again or press Escape
+to close it; these presentation controls do not change the request.
+Matching calculation/request/application stages share a single value with all
+stage labels preserved; changed values, range reference evidence and preparation
+limits remain distinct. Readings stay in the graph, and preparation extra or
+protection groups appear only when relevant.
+Unknown demand remains unknown. Values come from Home Assistant and Velair
+runtime state, with no new history. Without an active managed temperature block,
+the tab shows a waiting state. A selected sensor with Assist off remains saved
+and is shown as inactive.
 
 Room Sensor Assist is event-driven. Velair does not poll temperatures. It listens only to the configured room sensor and climate entity while assistance is active, debounces changes using the per-climate Refresh delay setting, aligns temporary targets to the effective published, last-reported, or configured temperature step, ignores movements smaller than that step, and restores the real scheduled target when the scheduler is paused, a zone is paused, a boost starts, the block turns off, the sensor becomes unusable, or the feature is disabled. Clearing that runtime state also clears any fixed-mode hysteresis phase. If Adaptive Preconditioning has already started a future block early, Room Sensor Assist follows that future target until the scheduled comfort time instead of falling back to the previous time block.
 
@@ -1448,20 +1502,24 @@ Boost is exposed through Home Assistant services, scripts, automations, and dash
 - boost from a voice assistant;
 - boost with a preferred HVAC mode.
 
-When a boost expires, Velair resolves the affected zone in this order:
+When a boost expires or is cancelled, Velair resolves the affected zone in this order:
 
 1. If there is an active schedule block with an explicit HVAC mode, Velair applies that scheduled target.
 2. If there is an active schedule block that turns the climate off, Velair turns the climate off.
 3. If there is no active schedule block, Velair restores the state captured before the boost.
-4. If the active schedule block uses `Keep`, Velair also restores the state captured before the boost, because `Keep` does not define a new HVAC mode to apply after the temporary override.
+4. If the active temperature block uses `Keep`, Velair applies that block's current temperature or complete range using the HVAC mode saved before the boost. Saved device options are restored unless the current block selects a different value. If the saved mode was off, Keep uses its usual first compatible non-off mode. Incompatible or missing saved modes are reported as delivery errors rather than guessed.
 
-This means a boost should not cause Velair to invent a new heating or cooling target when the current schedule does not explicitly define one.
+For example, a climate in Cool at 24 °C can temporarily Boost in Heat at 22 °C. If the active block is Keep at 20 °C when the Boost ends, Velair returns to Cool at 20 °C, without first sending the old 24 °C. Temperature-only, explicit-mode, mode-only, option-only and Off blocks retain their normal behavior. This return-specific rule does not change Keep during ordinary schedule application.
+
+Velair saves a pending return before removing the Boost. If Home Assistant restarts before delivery is confirmed, that return resumes using the block then in effect, even when **Apply active schedule after startup** is disabled. This completes an already-started return; it does not reactivate the Boost or apply every zone's schedule. Temporary device unavailability uses the existing delivery recovery. New manual control, a Boost, a pause, a Profile or Velair mode change, or disabling/reassigning the zone supersedes the old return.
 
 ## Startup Behavior
 
 By default, Velair restores its stored scheduler state after Home Assistant starts but does not force climate devices to a schedule target.
 
 From Settings, you can enable **Apply active schedule after startup**. When enabled, Velair applies the current active schedule block to managed climates after Home Assistant starts, as long as the scheduler is in automatic mode. A block that started on an earlier day still counts as the active block until the next weekly block starts. Active boosts are respected.
+
+An unfinished Boost return is recovered independently of this setting, as described under [Boost](#boost).
 
 ## Automation Blueprints
 
@@ -1503,10 +1561,12 @@ The file can contain:
 - climate profile definitions.
 - mode definitions.
 
-Current model 26 exports preserve both template link types, preset references,
+Current model 30 exports preserve both template link types, preset references,
 Preconditioning master relationships, target-format and reference policies,
 room-group ownership and shared configuration. Zone settings also retain optional
-Room Assist sensor schedules, independently of thermal schedules and Profiles.
+Room Assist sensor schedules, the selected braking level, per-zone High braking
+step count and the minimum control margin, independently of
+thermal schedules and Profiles.
 Accepted master execution anchors
 remain local and are not exported. Exporting schedules or Profiles includes
 required templates and presets, shown as additional selected sections. If group
@@ -1514,7 +1574,7 @@ data is involved, required room groups, schedules and Profiles are also included
 even when starting from a learning export. Imports validate the combined configuration, including existing
 consumers of replaced shared resources. Presets merge by stable key: matching keys
 are replaced, while local presets absent from the file remain. Existing backups
-remain importable; older Velair versions cannot import model 26 files. Keep a
+remain importable; older Velair versions cannot import model 30 files. Keep a
 backup from the previous version if you might need to downgrade. See
 [the backup example](linked-schedule-examples.md#back-up-the-whole-setup).
 
@@ -1605,7 +1665,7 @@ select another preset for a block.
 
 ### `velair.activate_profile`
 
-Activate one stored climate profile and immediately apply the effective current behavior. This replaces the complete active Profile set; zones not covered by the selected Profile return to their Default schedules. Use the stable profile ID shown by Velair rather than its editable display name. A direct activation sets the Mode selector to `Manual`. Omitting `profile_id` still returns to default schedules for compatibility; new automations should use `velair.deactivate_profile` explicitly.
+Activate one stored climate profile and immediately apply the effective current behavior. This replaces the complete active Profile set; zones not covered by the selected Profile return to their Default schedules. Use the stable profile ID shown by Velair rather than its editable display name. A direct activation sets the Mode selector to `manual`. Omitting `profile_id` still returns to default schedules for compatibility; new automations should use `velair.deactivate_profile` explicitly.
 
 ```yaml
 action: velair.activate_profile
@@ -1714,7 +1774,7 @@ A range Boost uses `target_temp_low` and `target_temp_high` in place of
 
 ### `velair.cancel_boost`
 
-Cancel an active boost early. This always uses the same return behavior as normal expiration: Velair applies the active explicit schedule target when one exists; otherwise, including a `Keep` block, it restores the saved climate state, including supported device options. Calling it when no boost is active has no effect.
+Cancel an active boost early. This uses the same return behavior as normal expiration: a temperature block using `Keep` combines its current target with the pre-Boost HVAC mode, while explicit blocks retain their normal behavior. Without an applicable schedule block, Velair restores the saved climate state, including supported device options. Calling it when no boost is active has no effect.
 
 ```yaml
 action: velair.cancel_boost

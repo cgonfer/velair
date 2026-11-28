@@ -51,6 +51,27 @@ async function navigate(panel: VelairPanel, view: string, subsection?: string) {
 afterEach(() => { document.body.replaceChildren(); vi.restoreAllMocks(); window.history.replaceState(null, "", "/"); });
 
 describe("panel-only shared schedule lifecycle", () => {
+  it.each([
+    { error: { code: "not_loaded", message: "Velair is not loaded" }, expected: "Velair is not loaded" },
+    { error: { code: "unknown_error", message: "Unknown error" }, expected: "No se pudieron cargar los datos (unknown_error)" },
+  ])("renders readable load errors and clears them after recovery: $expected", async ({ error, expected }) => {
+    const mock = backend();
+    mock.hass.language = "es";
+    mock.send.mockRejectedValueOnce(error);
+    mock.hass.connection.subscribeMessage = vi.fn(async () => mock.unsubscribe);
+    const element = await panel(mock); const card = activeCard(element);
+    await flush(); await card.updateComplete;
+    const notice = card.shadowRoot!.querySelector('[data-notice-id="error"]');
+    expect(notice?.textContent).toContain(expected);
+    expect(notice?.textContent).not.toContain("[object Object]");
+    mock.push(schedule(2));
+    // Reconnect the panel to retry its failed initial request.
+    element.remove(); await flush(); document.body.append(element);
+    await element.updateComplete; await flush(); await activeCard(element).updateComplete;
+    expect(internals(activeCard(element))._data?.configuration_revision).toBe(2);
+    expect(internals(activeCard(element))._error).toBeUndefined();
+  });
+
   it("mounts shared supplies in Supply control and retains drafts when leaving is rejected", async () => {
     const element = await panel(backend(), "/velair/supply-control");
     const card = activeCard(element);

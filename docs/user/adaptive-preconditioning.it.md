@@ -9,8 +9,8 @@ Traduzioni: [Originale in inglese](adaptive-preconditioning.md) · [Español](ad
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.6 |
-| Ultima sincronizzazione | 2026-10-28 |
+| Versione di riferimento | 1.9.3-dev.20261120233407 |
+| Ultima sincronizzazione | 2026-11-21 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -47,6 +47,42 @@ Sono supportati gli intervalli nativi `heat_cool`. Sotto l’obiettivo inferiore
 Per due setpoint in `heat` o `cool` fisso, seleziona **Setpoint di riferimento** per dispositivo e modalità in **Impostazioni → Dispositivi e gruppi**. Scegli il limite realmente usato: **Setpoint inferiore** o **Setpoint superiore**. Room Assist condivide questa impostazione. Preparazione e apprendimento usano solo quel limite come obiettivo di riscaldamento o raffrescamento secondo la modalità, anche se scegli il limite superiore per scaldare o quello inferiore per raffrescare. Velair anticipa la coppia nominale completa, anche per Ritorno programmato; non invia mai solo il limite scelto.
 
 Con **Non configurato**, le coppie in modalità fissa mantengono l’orario e non producono campioni termici. Ritorno programmato le applica all’arrivo senza anticipo. Gli intervalli `auto` conservano questa limitazione perché scegliere un limite non definisce il comportamento di riscaldamento o raffrescamento. Il comportamento nativo `heat_cool` non cambia. Cambiare riferimento invalida le osservazioni iniziate con l’interpretazione precedente.
+
+<a id="temporary-setpoint-offset"></a>
+## Scostamento temporaneo della temperatura impostata
+
+**Scostamento riscaldamento** e **Scostamento raffreddamento** aggiungono uno sforzo facoltativo all'attuatore durante la preparazione anticipata. Entrambi partono da `0`, che mantiene il comportamento esistente. Scegli ciascun valore secondo il passo effettivo di temperatura del dispositivo, fino a `5 °C` (`9 °F`). Il massimo selezionabile è il passo compatibile più alto entro questo limite. Sono differenze di temperatura: uno scostamento di riscaldamento di `2 °C` aggiunge due gradi; uno di raffreddamento di `2 °C` sottrae due gradi.
+
+L'obiettivo programmato della stanza e quello di apprendimento restano invariati. Per esempio, preparare un blocco di riscaldamento a `21 °C` con scostamento `2 °C` invia temporaneamente `23 °C`. Preparare un blocco di raffreddamento a `24 °C` con scostamento `1.5 °C` invia temporaneamente `22.5 °C`. Con differenza minima di temperatura `0.1 °C`, queste preparazioni terminano rispettivamente a `20.9 °C` e `24.1 °C`. Lo scostamento viene rimosso anche all'inizio del blocco. Velair riconcilia quindi la programmazione attuale, Room Assist e gli altri controlli attivi tramite il comportamento esistente di invio e recupero.
+
+Per un obiettivo a due setpoint, entrambi i limiti si spostano della stessa quantità. Una fascia di riscaldamento `20–24 °C` con scostamento richiesto `3 °C` e massimo fisico `25 °C` diventa `21–25 °C`: resta larga quattro gradi e lo scostamento effettivo scende a `1 °C`. Il raffreddamento segue la stessa logica al minimo fisico. L'incremento effettivo viene arrotondato per difetto a un passo di differenza compatibile e non supera mai la richiesta. Se non resta margine, uno scostamento positivo configurato può applicare `0 °C`; la preparazione mantiene la propria direzione fino alla soglia originale della stanza.
+
+Cambiare lo scostamento configurato di una direzione azzera solo il suo apprendimento. Predittore, selezione dei campioni e regole di validità delle osservazioni restano invariati. Le sessioni il cui incremento effettivo varia con i limiti del dispositivo o Room Assist restano ammissibili secondo quelle regole. Ripristinare i valori predefiniti del precondizionamento porta entrambi gli scostamenti a zero, azzerando solo le direzioni il cui valore cambia, e conserva le impostazioni separate di Room Assist, inclusa la frenata.
+
+Se il dispositivo segnala poi un passo diverso, Velair conserva la richiesta salvata e riduce solo l'incremento applicato a un passo compatibile. La conversione dell'unità di temperatura conserva la differenza fisica e non azzera l'apprendimento. Il modello portabile `28` associa all'apprendimento esportato lo scostamento configurato della sua direzione; importarlo richiede una configurazione risultante corrispondente. L'apprendimento precedente è considerato a scostamento zero. Un'importazione della sola configurazione che cambia uno scostamento azzera l'apprendimento locale conservato di quella direzione.
+
+Il pannello mantiene **Obiettivo programmato** e il valore attribuito a Velair sull'obiettivo originale. Il marcatore esistente **Obiettivo applicato** mostra il comando finale. Un badge di scostamento attivo mostra l'incremento effettivo con segno, incluso lo zero limitato; i dettagli spiegano obiettivo originale, base Room Assist, incremento richiesto, incremento effettivo, comando finale e possibili limiti del dispositivo.
+
+<a id="after-reaching-the-target"></a>
+## Dopo il raggiungimento dell'obiettivo
+
+Quando una preparazione anticipata accettata raggiunge la soglia di arrivo prima dell'inizio del blocco, Velair mantiene l'obiettivo originale di quel blocco fino all'orario programmato. Lo scostamento temporaneo termina all'arrivo. Funziona anche con scostamento zero, senza Room Assist e quando l'osservazione è troppo breve per diventare un campione di apprendimento.
+
+Per esempio, il blocco attuale è a `20 °C` e la preparazione di un futuro blocco a `21 °C` termina a `20.9 °C`. Panoramica mantiene **Obiettivo** a `21 °C`, invece di tornare a `20 °C` alla fine dell'osservazione. Con scostamento di riscaldamento di `2 °C`, il comando temporaneo a `23 °C` torna al valore nominale di `21 °C`. Se anche **Applicato** è `21 °C`, il duplicato viene nascosto come di consueto. Il raffreddamento segue la stessa logica: un futuro obiettivo di `24 °C` raggiunto a `24.1 °C` conserva il nominale `24 °C` quando termina un comando temporaneo a `22 °C`. Room Assist può applicare la correzione o la frenata ordinaria rispetto a quell'obiettivo nominale.
+
+Velair salva localmente questa preparazione completata e convalida programmazione e contesto di controllo corrispondenti dopo un riavvio. **Applica la programmazione attiva dopo l’avvio** decide ancora se inviare un comando:
+
+| Opzione di avvio | Preparazione completata valida prima del blocco |
+| --- | --- |
+| Abilitata | Applicare l'obiettivo nominale recuperato, per esempio `21 °C`, tramite il normale invio. Non ripristinare lo scostamento di preparazione. |
+| Disabilitata | Recuperare il nominale `21 °C` per il pannello e l'intento attuale senza inviare obiettivo, modalità o altre opzioni del blocco a causa di questo recupero. Mostrare separatamente l'obiettivo realmente applicato se diverso. |
+
+Il recupero non riapre l'apprendimento e non riattiva l'incremento se la temperatura varia mentre Home Assistant è offline. Richiede un completamento salvato correttamente; il solo setpoint riportato non dimostra la fine della preparazione. Un salvataggio fallito non garantisce continuità dopo un successivo riavvio. Pause, regolazione manuale, forzature, preparazione disabilitata e programmazioni o titolarità del controllo sostituite mantengono la precedenza. Cambiare setpoint di riferimento, membri del gruppo stanza o Modalità attiva invalida anche un completamento salvato se il contesto preparato non corrisponde più. All'ora nominale del blocco subentra la normale programmazione.
+
+Senza una preparazione anticipata completata e confermata, resta valida la distinzione esistente: **Obiettivo** `20 °C` e **Applicato** `21 °C` possono descrivere valori diversi della programmazione e del dispositivo. La sola attivazione del precondizionamento non cambia questa distinzione.
+
+<a id="live-predictions"></a>
+## Previsioni in tempo reale
 
 Quando espandi un dispositivo climatico, ogni modalità supportata mostra una scheda di previsione in tempo reale. Usa gli stessi dati backend del prossimo evento della panoramica, gestendo in modo coerente pause, incrementi, modalità non supportate e blocchi che non possono essere precondizionati. Quando esiste un blocco futuro corrispondente, la scheda mostra l’orario di avvio calcolato, l’orario obiettivo, l’anticipo, temperatura e modalità programmate e se Velair usa il modello iniziale o una cronologia locale simile.
 
@@ -228,6 +264,8 @@ Se il sensore esterno non è disponibile quando viene salvato un campione, Velai
 Per impostazione predefinita, il precondizionamento adattivo usa `current_temperature` dell’entità climatica.
 
 Se l’assistenza con sensore ambiente è abilitata per quel dispositivo ed è selezionato un sensore ambiente, il precondizionamento adattivo usa quel sensore come temperatura ambiente effettiva per decisioni e apprendimento.
+
+Durante la preparazione, Room Assist calcola prima il consueto obiettivo di base valido; lo scostamento temporaneo viene aggiunto dopo. Per esempio, un obiettivo nominale di riscaldamento di `21 °C`, una base Room Assist di `22 °C` e uno scostamento riscaldamento di `2 °C` inviano `24 °C` se il dispositivo lo consente. Room Assist non usa mai quel comando temporaneo come obiettivo di apprendimento della stanza. Uno scostamento positivo configurato mantiene temporaneamente attiva la direzione di preparazione anche se Room Assist ha ereditato una fase di isteresi senza richiesta. Raggiunta la soglia originale di preparazione, tornano a valere isteresi normale e livello di frenata scelto. Questa priorità vale anche quando i limiti fisici riducono l'incremento effettivo a zero; configurare zero mantiene il comportamento esistente.
 
 Questo è utile per valvole termostatiche o termostati il cui sensore integrato è troppo vicino a un radiatore, una bocchetta d’aria o un’altra fonte di calore locale. Consulta [Room Assist](room-assist.it.md) per il comportamento dal lato dell’attuatore.
 

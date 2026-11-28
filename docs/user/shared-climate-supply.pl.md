@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](shared-climate-supply.md) · [Esp
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.6 |
-| Ostatnia synchronizacja | 2026-10-28 |
+| Wersja odniesienia | 1.9.3-dev.20261120233407 |
+| Ostatnia synchronizacja | 2026-11-21 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -90,9 +90,15 @@ Obowiązują aktualne cele termostatów, także ręczne i zastosowane przez przy
 
 Niebieski panel informacji na początku **Zapotrzebowania i histerezy**, przed wyborem sposobu działania, wyjaśnia pierwszeństwo Room Assist i to, kiedy obowiązuje histereza zasilania.
 
-Gdy Room Assist steruje aktywnym celem pomieszczenia, wspólne zasilanie podąża za jego zatwierdzonym zamiarem sterowania. Przy stałym ogrzewaniu faza `towards_upper` wymaga ciepła; przy stałym chłodzeniu `towards_lower` wymaga chłodzenia. Jego dotychczasowe progi pozostają nadrzędne, więc histereza zasilania i wyjątek termostatu nie są stosowane ponownie. Natywne sterowanie zakresem podąża za zatwierdzonym kierunkiem. Nieprawidłowy lub oczekujący cel wspomagania jest nieznany do zatwierdzenia poprawnego zamiaru sterowania.
+Gdy Room Assist steruje aktywnym celem pomieszczenia, wspólne zasilanie podąża za jego potwierdzonym efektywnym zapotrzebowaniem. Podczas zwykłej regulacji faza `towards_upper` żąda ciepła przy stałym ogrzewaniu, a `towards_lower` — chłodzenia przy stałym chłodzeniu. Natywna regulacja zakresu podąża za zatwierdzonym kierunkiem. Progi przełączania Room Assist pozostają nadrzędne; histereza zasilania i wyjątki pomieszczeń nie są stosowane drugi raz.
 
-Skorygowany cel termostatu nie jest porównywany z osobnym czujnikiem pokojowym. Room Assist może zakończyć zapotrzebowanie, gdy termostat nadal zgłasza ten sam zmieniony cel.
+Podczas przygotowania z wyprzedzeniem z dodatnio ustawionym przesunięciem nastawy Room Assist uwzględnia również tymczasowe żądanie ogrzewania lub chłodzenia w efektywnym zapotrzebowaniu. Zwykła faza histerezy jest zachowywana osobno. Na przykład cel ogrzewania `21 °C` z marginesem przygotowania `0.1 °C` może żądać ciepła do `20.9 °C`, nawet gdy zwykła faza odpoczywała. Chłodzenie do `24 °C` działa symetrycznie przy `24.1 °C`. Tymczasowa nastawa urządzenia nie jest nowym celem pokoju. Po zakończeniu dodatku Room Assist wraca do zwykłego zapotrzebowania, które może zakończyć lub podtrzymać żądanie. Zasilanie nadal stosuje dotychczasowe opóźnienia, minimalne czasy i agregację pomieszczeń, bez osobnej reguły przygotowania.
+
+Używany jest wyłącznie potwierdzony, bieżący zamiar sterowania. Nieprawidłowy lub oczekujący cel wspomagania pozostaje nieznany do poprawnego zatwierdzenia. Zakończenie przygotowania unieważnia też jego stare tymczasowe żądanie, jeśli przywrócenie zwykłego celu się nie powiedzie.
+
+Skorygowany cel termostatu nie jest porównywany z osobnym czujnikiem pokojowym. Room Assist może zakończyć zapotrzebowanie na zasilanie, mimo że termostat nadal zgłasza tę samą skorygowaną nastawę.
+
+Bez Room Assist zasilanie nadal używa celu zgłaszanego przez termostat i zwykłej histerezy zasilania. Przesunięcie przygotowania może zmienić zgłaszaną nastawę; po jego usunięciu zasilanie zwyczajnie ocenia wynikowy cel. Ta ścieżka nie otrzymuje priorytetu przygotowania ani specjalnego podtrzymania zapotrzebowania.
 
 <a id="timing-and-manual-control"></a>
 ## Czas i sterowanie ręczne

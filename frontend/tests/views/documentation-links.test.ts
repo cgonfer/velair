@@ -59,6 +59,20 @@ function availablePilotGuides() {
 }
 
 describe("documentation and community access", () => {
+  it.each(["es", "fr"])("opens the translated margin section without an English fallback notice in %s", (language) => {
+    const root = container();
+    vi.spyOn(documentation, "documentationDestination").mockImplementation((topic, hass) => resolveDestination(topic, hass, {
+      availability: { "docs/user/room-assist.md": { es: "docs/user/room-assist.es.md", fr: "docs/user/room-assist.fr.md" } },
+      releaseVersion: "1.9.3-beta.4",
+    }));
+    render(renderDocumentationHelp(host({
+      hass: { locale: { language }, states: {} },
+      _t: (key: TranslationKey, values?: Record<string, string | number>) => translate(language, key, values),
+    }), "roomAssistMinimumMargin"), root);
+    const link = root.querySelector<HTMLAnchorElement>("dialog a")!;
+    expect(link.href).toBe(`https://github.com/cgonfer/velair/blob/v1.9.3-beta.4/docs/user/room-assist.${language}.md#minimum-control-margin`);
+    expect(link.querySelector("small")).toBeNull();
+  });
   it.each(["es", "fr"])("localizes available guides and labels each diagnostics link separately in %s", (language) => {
     const root = container();
     availablePilotGuides();
@@ -152,7 +166,7 @@ describe("documentation and community access", () => {
       const file = resolve(process.cwd(), "..", path);
       expect(existsSync(file), path).toBe(true);
       if (url.hash) {
-        const headings = [...readFileSync(file, "utf8").matchAll(/^## (.+)$/gm)]
+        const headings = [...readFileSync(file, "utf8").matchAll(/^#{2,6} (.+)$/gm)]
           .map((match) => `#${match[1].trim().toLowerCase().replaceAll(" ", "-")}`);
         expect(headings, path).toContain(url.hash);
       }

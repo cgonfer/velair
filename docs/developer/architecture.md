@@ -205,7 +205,8 @@ The storage model is intentionally simple and versioned:
         "minimum_delta_temperature": 0.3,
         "room_sensor_assist_enabled": true,
         "room_sensor_assist_deadband": 0.3,
-        "room_sensor_assist_max_delta": 2.0
+        "room_sensor_assist_max_delta": 2.0,
+        "room_sensor_assist_minimum_margin": 0.0
       },
       "comfort": {
         "enabled": true,
@@ -328,16 +329,21 @@ physically applied during startup.
 
 Backend-owned `modes` map stable mode keys and user-editable names to
 stable profile IDs. A single native `SelectEntity` projects this state as
-`select.velair_mode`. Its canonical built-ins are `Default`, which deactivates
-profiles and restores each zone's default schedule, and `Manual`, which clears
+`select.velair_mode`. Its canonical built-in values are `default`, which deactivates
+profiles and restores each zone's default schedule, and `manual`, which clears
 the base Mode marker while retaining base Profiles and exceptions. Custom
 selection atomically activates the mapped base, clears exceptions and records its mode key.
-Direct panel or service activation clears the marker to Manual, including
+Home Assistant translates the built-ins' display labels while options, states,
+service inputs, and state comparisons use the lowercase raw values. Custom Mode
+names remain unchanged. Replacing the former `Default` and `Manual` values is a
+breaking change for literal references; the entity identity and persisted
+selection are unchanged. See [migration guidance](../user/climate-profiles.md#update-existing-mode-automations).
+Direct panel or service activation clears the marker and reports `manual`, including
 same-profile activation without repeating climate actions or emitting a
 duplicate profile change event. Direct activation also replaces the complete
 active set with one Profile, so zones no longer covered resolve to Default.
 
-While exceptions exist the native select shows Manual, but the full response
+While exceptions exist the native select reports `manual`, but the full response
 retains the base Mode identity so the panel can show its name with exceptions.
 Editing that Mode updates its base while retaining exceptions; explicitly
 selecting it clears them. Default requires an empty base and no exceptions.
@@ -351,7 +357,7 @@ or an external state listener. Storage remains canonical across startup.
 `apply_active_schedule_on_startup` remains the only startup gate for physical
 application; restoring a selected mode never causes separate climate calls.
 Deleting the selected mode retains the active profile set and resolves to
-Manual, while deleting an active profile cascades its Modes and removes only
+`manual`, while deleting an active profile cascades its Modes and removes only
 that profile from the active set.
 
 Per-zone control and delivery sensors are projections over these existing
@@ -517,6 +523,7 @@ Velair stores temporary modes as timestamps:
 
 - Global pause suspends every schedule until it expires or the scheduler is resumed.
 - Zone boost stores an override on one zone and suppresses scheduled events only for that zone until the boost expires.
+- Ending or cancelling a Boost atomically replaces its override with a local `pending_boost_return` checkpoint. A thermal Keep block uses its live target and the saved pre-Boost mode; it never restores the saved temperature first. The checkpoint is not an active Boost and is excluded from portable exports. Startup resumes it independently of ordinary schedule-on-startup application. The existing delivery coordinator re-resolves the current target, retries and confirms reported mode/target before guarded asynchronous checkpoint cleanup; no additional polling or timers are used. New control authority supersedes the checkpoint, while availability waits and Keep-to-Keep target changes preserve it. Groups retain their common-mode validation and each delivered member's saved option defaults, overridden by the current block's selected options.
 - Zone pause stores one or more independent reasons on a zone and suppresses scheduled events until the final reason expires or is removed. A reason may optionally turn the climate off. Automated callers can attach a `pause_id`; an identified resume removes only the matching reason, while legacy/manual calls without an ID retain full resume authority. See [Pause, Stop, And Resume](../user/usage.md#pause-stop-and-resume) for the public service contract.
 
 ## Climate Application Rules
@@ -728,16 +735,25 @@ unique id and expected revision under a lock, converts all thermal scopes, and
 persists before replacing runtime data. An exact retry is a no-op and a failed
 write leaves the original runtime untouched.
 
-Model 26 includes optional Room Assist reference schedules in zone configuration.
+Model 30 includes optional Room Assist reference schedules, braking levels,
+per-zone High braking step counts, minimum control margin and separate heating/cooling preparation offsets in zone
+configuration. The margin uses canonical delta conversion and defaults to zero
+for earlier payloads. Exported
+learning directions carry a `setpoint_offset` compatibility tag from confirmed
+configuration. Import validates it against the resulting configuration again
+under the scheduler mutation lock, then removes the portable-only tag. Older or
+untagged learning belongs to offset zero. Changing a configured offset atomically
+clears only that direction's retained history; combined imports install compatible
+supplied learning after clearing incompatible retained history.
 This does not change the internal storage version. Earlier supported portable
-models remain importable; older Velair versions cannot import model 26 exports.
+models remain importable; older Velair versions cannot import model 30 exports.
 
 The current export format is:
 
 ```json
 {
   "format": "velair_portable_data",
-  "model_version": 26,
+  "model_version": 30,
   "temperature_unit": "°F",
   "exported_at": "2026-05-25T00:00:00+00:00",
   "sections": {
@@ -828,6 +844,84 @@ projection but never owns or persists the calculation. Existing and older
 configurations continue to normalize to the Simple rectangular model.
 
 `preconditioning_learning` is an optional incremental section keyed by the exact climate entity ID. Import replaces learning only for matching managed climates contained in the section. Unknown IDs are ignored, while existing learning for local climates absent from the file is preserved.
+
+Temporary preparation control is tracked separately from learning observations.
+An accepted occurrence retains its nominal event/direction and applied offset
+context even when its observation is missing or invalid. Room Assist computes
+its base before applying the extra and retains its ordinary hysteresis phase
+separately from its effective control intent. One producer calculation captures
+the effective direction, demand, source and nominal boundaries alongside the
+target; both become committed runtime state after delivery acceptance or the
+existing equivalent-target no-service commit. Shared supply validates and consumes
+that cached intent through its existing interface. Its reader does not inspect
+the offset, recalculate preparation, advance hysteresis or scan learning history.
+Supply's engine, configuration and timers are unchanged. Without Room Assist,
+supply continues evaluating the device's reported target with its own hysteresis.
+Retirement invalidates the matching temporary intent before awaiting restoration;
+a failed restore remains owned but invalid until current control is confirmed.
+Arrival or scheduled start retires that extra before observation persistence and
+reconciles current authoritative intent through the existing delivery coordinator.
+A runtime retired marker prevents retries from restarting the same occurrence's
+offset. Public applied fields describe final accepted targets while nominal
+target fields keep their original meaning. The predictor and existing delivery
+and startup permission remain unchanged.
+
+Completed nominal continuity reuses
+`SchedulerData.preconditioning_accepted_anchors`, rather than a separate store
+or command journal. An accepted occurrence that reaches its original arrival
+threshold before `target_when` adds an optional four-field completion group:
+aware `completed_at`, exact `weekday`/`start` block locator and a lowercase
+64-character hexadecimal `completion_context` fingerprint. The existing envelope
+supplies accepted start, direction, occurrence identity, target time and dependency
+context. Preserve that legacy dependency hash algorithm. The separate completion
+fingerprint also binds target-range reference, group topology and active Mode
+identity; changing those must not recover a stale own target. Missing or malformed
+completion-group fields strip only that opt-in, preserving legacy source evidence. This
+does not depend on a usable learning session. Legacy anchors without completion
+fields retain their existing dependency meaning and cannot prove arrival.
+
+Resolve a valid completed occurrence in shared backend current-authority
+selection, after stronger authorities and before prediction/current-block
+fallback. Reconstruct its nominal scalar or pair and block options from the
+matching prepared Default/Profile/Mode or Planned Return source. Do not persist
+or replay a boosted setpoint, Room Assist cache/phase, sensor snapshot or elapsed
+observation. Rehydrate a retired, no-offset applied-target marker without opening
+learning or restoring preparation drive. Ordinary Room Assist can calculate its
+current correction against the recovered nominal target. Presentation and
+physical current-intent delivery consume this same resolution; Overview does
+not infer intent from the reported device setpoint.
+
+Require matching managed ownership, automatic authority, enabled preparation,
+prepared configuration/direction/reference, completion fingerprint and episode. Validate ordered aware
+instants in UTC, including DST overlap. Capability or authoritative-source
+hydration that is still pending defers validation through existing listeners;
+it neither consumes startup permission nor falls back prematurely to the old
+block. A valid completion needs no new live arrival reading. Startup apply
+enabled can deliver nominal `21 °C`; disabled restores its presentation/current
+intent without authorizing a target, mode or options command. Neither path
+restores the extra, even after room drift during downtime.
+
+Arrival retires the extra and retains correct nominal intent in memory before
+awaiting persistence. Save completion in the existing producer transaction,
+sharing observation persistence when possible or using one bounded save. A
+failure must not prevent physical withdrawal or in-memory continuity; report
+that restart continuity was not durably saved. A crash before successful commit
+cannot recover that evidence from learning history. Readers remain side-effect
+free and do not create writes, services, phases or timers.
+
+Completion fields are durably revoked within existing authoritative mutation
+flows when pause/manual takeover, override or schedule/selection/configuration
+replacement supersedes the target. Returning to a previous profile or expiring
+an override must not resurrect it. Scope revocation to the affected unit and
+direction/context. Own continuity ends at its `target_when`; accepted-start
+eligibility for dependents continues to use its separate `expires_at`. Expiry
+pruning preserves either still-valid role without extending source eligibility.
+The existing bounded capacity still applies: retain live own completions first,
+then live dependency sources, and fill remaining space with the expired legacy
+tail. Retained entries keep their original dictionary order. Learning-only import/reset does not erase or
+create control continuity. Unit migration invalidates obsolete context rather
+than rebasing a stored temperature snapshot. This local transient evidence is
+excluded from portable data and needs no portable model change.
 
 The complete persistence, conversion, validation, and recovery boundaries are
 documented in [Temperature unit internals](temperature-units.md).

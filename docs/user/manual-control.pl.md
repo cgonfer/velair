@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](manual-control.md) · [Español](
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.9 |
-| Ostatnia synchronizacja | 2026-11-02 |
+| Wersja odniesienia | 1.9.3-beta.3 |
+| Ostatnia synchronizacja | 2026-11-22 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -74,6 +74,8 @@ Przy zmianie stanu każde pole jest osobno porównywane z oczekiwaniami, z uwzgl
 Niektóre urządzenia podczas obsługi jednego polecenia chwilowo wracają do starej nastawy, pokazują wartość pośrednią lub zgłaszają tryb i temperaturę w różnej kolejności. Velair stosuje krótki, ograniczony czas stabilizacji tylko dla zmienionych przez siebie pól, aby takie aktualizacje nie tworzyły fałszywego sterowania ręcznego. Odpowiedź urządzenia nie rozpoczyna tego czasu od nowa; jego termin jest ustalany po zakończeniu całej sekwencji usług Home Assistant. Zmiana wyraźnie pochodząca od użytkownika lub rozpoznawalnego innego skryptu czy automatyzacji pozostaje zewnętrzna, a zmiany po stabilizacji są obsługiwane normalnie.
 
 Jeśli anonimowej aktualizacji podczas stabilizacji nie można wiarygodnie odróżnić od dochodzenia urządzenia do oczekiwanego stanu, Velair zachowuje automatykę. Zapobiega to traktowaniu odrzuconego lub opóźnionego polecenia jako zmiany ręcznej. Stan stabilizacji znika przy restarcie. Jeśli po jej zakończeniu urządzenie nadal różni się od żądanej wartości, automatyka pozostaje aktywna, a Velair zapisuje ostrzeżenie o stabilizacji polecenia. Następny świeży raport Diagnostyki pokazuje oczekiwane i zaobserwowane wartości. Velair nie ponawia polecenia w ciemno ani nie zamienia rozbieżności w opóźnione sterowanie ręczne.
+
+Podczas niedawnego polecenia Off wysłanego przez Velair zmiana pojedynczej nastawy na minimum jawnie zgłoszone przez urządzenie jest również rozpoznawana jako opcjonalny skutek wyłączania. Minimum może nadejść przed zgłoszeniem `off`, razem z nim lub po nim, także gdy polecenie nadal trwa. Wyjątek wymaga prawidłowej granicy minimalnej i maksymalnej oraz utrzymania przez Velair zamiaru Off; nie ukrywa rozpoznawalnych działań użytkowników ani automatyzacji. Obowiązuje ten sam ograniczony czas stabilizacji, a nowsze polecenie temperatury lub trybu HVAC unieważnia starsze dowody pochodzenia. Minimum nie jest wysyłane jako polecenie ani wymagane: termostat zachowujący poprzednią nastawę nadal może normalnie potwierdzić Off. Samo zgłoszenie minimum nie potwierdza wyłączenia termostatu.
 
 Osobny wyjątek obowiązuje, gdy Velair utrzymuje urządzenie sterowane automatycznie w stanie `off`. Niektóre urządzenia zgłaszają zastępczą temperaturę docelową, na przykład `0 °C`, chociaż opublikowane minimum wynosi `5 °C`. Jeśli zmieniają się wyłącznie temperatury docelowe, a wszystkie nowe wartości znajdują się poza zakresem wyznaczonym przez minimum i maksimum jawnie zgłoszone przez urządzenie, Velair ignoruje aktualizację, także gdy nadejdzie po zakończeniu stabilizacji. Nie emituje zdarzenia zmiany zewnętrznej, nie uruchamia regulacji ręcznej ani nie przerywa wykonywania harmonogramu. Obie granice muszą być prawidłowe; jeśli którejś brakuje, działa zwykłe wykrywanie. Prawidłowe zmiany temperatury docelowej, zewnętrzne zmiany trybu HVAC, rozpoznawalne działania użytkowników lub automatyzacji oraz istniejące sesje ręczne zachowują dotychczasowe działanie.
 

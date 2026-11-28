@@ -544,7 +544,7 @@ describe("settings climate row", () => {
     expect(dialog.querySelector("p")?.textContent).toBe("externalChangePolicyDescription");
     expect(dialog.open).toBe(false);
     expect(container.querySelectorAll(".documentation-help-button")).toHaveLength(1);
-    expect(container.querySelector('[role="tooltip"]')).toBeNull();
+    expect(container.querySelector('.settings-external-policy [role="tooltip"]')).toBeNull();
   });
 
   it("groups managed-climate fields and keeps reorder controls in the header on mobile", () => {

@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.2 |
-| Letzte Synchronisierung | 2026-11-12 |
+| Referenzversion | 1.9.3-beta.6 |
+| Letzte Synchronisierung | 2026-11-25 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -31,6 +31,17 @@ In den **Einstellungen** des Seitenleisten-Panels legt **Anzeige der Klimagerät
 **Aktuelle Namen mit Bereichsangabe** behält diese Namen bei und ergänzt den wirksamen Home-Assistant-Bereich separat, wenn verwaltete Klimageräte denselben Namen haben. **Entitätsnamen mit Kontext** verwendet den eigenen Namen der Entität oder bei der Hauptentität eines Geräts den Gerätenamen. Bei wiederholten Namen wird separater Home-Assistant-Kontext angezeigt. Bei einem Gerät namens `Test` und einer Entität namens `Test 2` lautet das aktuelle Format `Test Test 2`; das Entitätsformat lautet `Test 2`, bei Bedarf mit Bereichs- oder Gerätekontext. Der eigene Bereich einer Entität hat Vorrang vor dem Bereich ihres Geräts.
 
 Wenn der Bereichs- oder Gerätekontext wiederholte Namen nicht unterscheiden kann, bleibt die Entitäts-ID als Referenz verfügbar. Native Auswahllisten zeigen den Kontext in derselben Zeile. Benutzerdefinierte Kartennamen und Raumgruppennamen behalten Vorrang. Velair speichert diese Einstellung und teilt sie zwischen Browsern und Karten; ändere sie in den Einstellungen des Seitenleisten-Panels. Sie benennt keine Home-Assistant-Entitäten um und verändert weder deren IDs noch Zeitpläne oder Klimabefehle. Frühere Home-Assistant-Versionen behalten die bisherigen Namen bei, wenn strukturierte Namensmetadaten fehlen.
+
+<a id="sensor-entity-ids"></a>
+## Entitäts-IDs der Sensoren
+
+Neue Velair-Sensoren verwenden die Entitäts-ID des zugehörigen Klimageräts und den Zweck des Sensors als Grundlage für ihre anfänglichen IDs. Home Assistant wendet seine Namensregeln an und löst Konflikte mit bereits belegten IDs. Klimageräte mit demselben sichtbaren Namen können dadurch unterscheidbare Sensor-IDs erhalten. Sensornamen bleiben wie bisher übersetzt.
+
+Bestehende Sensoren behalten ihre registrierten IDs, einschließlich benutzerdefinierter IDs. Das Ändern von **Anzeige der Klimagerätenamen**, das Importieren von Einstellungen oder ein Neustart benennt sie nicht um.
+
+Administratoren können unter **Einstellungen → Wartung → Sensor-Entitäts-IDs prüfen** bestehende Sensoren überprüfen. Die Übersicht zeigt das zugehörige Klimagerät sowie die aktuelle und die vorgeschlagene ID, auch für Sensoren ohne numerisches Suffix und deaktivierte Diagnosesensoren. Nichts wird automatisch ausgewählt. Wähle die gewünschten Änderungen aus und bestätige die Umbenennung; du kannst die Übersicht auch ohne Änderungen schließen. Beim Aktualisieren der Übersicht wird die Auswahl aufgehoben. Ein geänderter oder veralteter Vorschlag muss vor dem Anwenden erneut geprüft werden.
+
+Das Ändern einer Entitäts-ID kann Anpassungen an Automationen, Dashboards, Vorlagen und externen Verweisen erfordern. Prüfe diese Verweise vor dem Bestätigen; Velair verspricht nicht, sie umzuschreiben. Sensornamen, interne Identitäten, Einstellungen und Klimabefehle bleiben dabei unverändert. Schlägt eine Stapeländerung fehl, versucht Velair, die vorherigen IDs wiederherzustellen, und meldet verbleibende Änderungen.
 
 <a id="panel-navigation-and-direct-links"></a>
 ## Navigation im Panel und direkte Links
@@ -561,15 +572,19 @@ Zeitpläne, Vorlagen, aktuelle und vorherige Übersteuerungssollwerte, Komfortgr
 
 Das einmalige Upgrade früher veröffentlichter, ausschließlich Celsius unterstützender Velair-Daten ist anders. Verwendet Home Assistant bereits Fahrenheit, nimmt Velair für die Altdaten ohne Rückfrage Celsius an, hält den Zeitplaner gestoppt und verweist auf **Velair zurücksetzen**. Dies verwirft die alte Konfiguration und erstellt atomar neue Fahrenheit-Standardwerte. Spätere Home-Assistant-Einheitenwechsel nach diesem Upgrade verwenden die vollständige ausdrückliche Umrechnung oben und erhalten Daten.
 
-Aktuelle Exporte des portablen Modells v26 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v26 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
+Aktuelle Exporte des portablen Modells v30 erhalten Rohwerte und geben deren Einheit an. Frühere Velair-Versionen können v30 nicht importieren; verwende zur Wiederherstellung eine unterstützende Version. Ältere unterstützte Dateien, darunter v4, v5, v8 und v9, bleiben importierbar. Beim Import werden ausgewählte Temperaturdaten umgerechnet, wenn Datei und aktuelle Home-Assistant-Einheit abweichen. Ältere Dateien ohne Einheit gelten als Celsius, da alle veröffentlichten Versionen, die diese Dateien erzeugten, Celsius speicherten. Export bleibt bei gestoppter Zeitplanung wegen einer Einheitenaktualisierung verfügbar, sodass vor einem Reset eine Referenzkopie gespeichert und danach importiert werden kann.
 
-War eine Klimaentität bei Migration oder Import nicht verfügbar, prüft Velair ihre Grenzen und wirksame Temperaturschrittweite. Ein gültiges, aktuell von Home Assistant veröffentlichtes `target_temp_step` hat Vorrang vor der zuletzt gemeldeten Schrittweite und danach dem manuellen Zonen-Fallback. Das Panel warnt bei nicht mehr kompatiblen gespeicherten Zeitplansollwerten, damit du sie vor der Nutzung korrigieren können.
+War eine Klimaentität bei Migration oder Import nicht verfügbar, prüft Velair ihre Grenzen und wirksame Temperaturschrittweite. Ein gültiges, aktuell von Home Assistant veröffentlichtes `target_temp_step` hat Vorrang vor der zuletzt gemeldeten Schrittweite und danach dem manuellen Zonen-Fallback. Das Panel warnt bei nicht mehr kompatiblen gespeicherten Zeitplansollwerten, damit du sie vor der Nutzung korrigieren kannst.
 
 Das vollständige Upgrade-, Migrations-, Sicherungs- und Wiederherstellungsverhalten beschreibt [Temperatureinheiten und Migration](temperature-units.de.md).
 
-Bei aktiviertem Room Sensor Assist zeigt dessen Tab eine kompakte Live-Temperaturskala, solange ein verwalteter Temperaturblock aktiv ist. Bei einem einzelnen Sollwert markiert sie Zeitplansollwert, Raumsensor, Klimasollwert und Thermostatmesswert. Ein neutrales gestreiftes Band zeigt die untere und obere Totbandgrenze. Bei festem `heat` oder `cool` zeigt der Status auch die Richtung zur unteren oder oberen Grenze; bei einzelnen automatischen Sollwerten bleibt das Band ein neutraler Spielraum.
-Bei nativen Bereichen reicht es von geplanter Untergrenze minus Totband bis geplanter Obergrenze plus Totband. Separate Klammern zeigen weiterhin vollständige geplante und angewandte Bereiche; eine Verbindung ihrer Mittelpunkte stellt die vorzeichenbehaftete Bewegung des gesamten Bereichs dar. Raum- und Klimamesswert bleiben einzelne Markierungen. Die vollständig übersetzte Legende bleibt auf dem dargestellten Totband zentriert, auch wenn dieses schmaler als die Beschriftung ist. Bei Totband null entfällt die Fläche und dies wird ausdrücklich angegeben. Ausblenden von `show_room_assist_deadband` entfernt gemeinsam Einstellung, Band und Legende.
-Die Werte stammen aus Home-Assistant- und Velair-Laufzeitzustand und werden nicht als neuer Verlauf gespeichert. Ohne aktiven verwalteten Temperaturblock zeigt der Tab einen Wartezustand statt Platzhalterwerten. Ist ein Sensor gewählt, Assist aber ausgeschaltet, zeigt er, dass der Sensor gespeichert, jedoch nicht wirksam ist. Bei einem konfigurierten festen Heiz- oder Kühlbereich liegt das Totband stattdessen um den gewählten Referenzsollwert, jeweils minus und plus Totband.
+Bei aktivierter Raumsensorunterstützung trennt die Livegrafik **Raum**, **Ziel**, **Gerät** und **Sollwert** in kompakten Chips, die senkrecht mit ihren Temperaturpositionen verbunden sind. Klappe einen Chip für Details auf. **Normal** zeigt aktuelle Anforderung, nächste wirksame Schwelle und gegebenenfalls Vorbereitungszusatz; **Detailliert** ergänzt Raumdifferenz, Gesamtanpassung und den darin bereits enthaltenen Zusatz. Beschriftungen stehen bei genügend Platz auf ihren Messlinien, sonst darunter. Ein durchgezogener Pfeil stellt Anforderung dar, ein gestrichelter Pfeil zeigt während des Wartens zur Wiederaufnahme. Keiner zeigt einen gemessenen Sensortrend oder physischen HVAC-Betrieb.
+
+Ein dünner schraffierter Streifen über der Achse zeigt das nominale Regelband mit Legende darunter. Wirksame Bremsschwellen bleiben getrennt. Ein nativer `heat_cool`-Bereich schraffiert nur die äußeren Room-Assist-Ränder. Bei einem festen Heiz- oder Kühlbereich liegt der Streifen stattdessen um den gewählten Referenzsollwert. Separate Klammern zeigen vollständige nominale und angewendete Bänder; **Detailliert** misst ihre gemeinsame Verschiebung mit Vorzeichen, wenn sie nicht null ist. Bei Totband null gibt es keine schraffierte Fläche und die Legende zeigt null. Ausblenden von `show_room_assist_deadband` blendet Einstellung, Streifen und Legende aus.
+
+Die Grafik zeigt die Anforderung einmal im Statusabzeichen und die Abschalt- oder Wiedereinschaltschwelle neben dem Pfeil. **Erklärung** öffnet unter der Grafik einen kurzen Kontext, ohne diese Beschriftungen oder Temperaturmesswerte zu wiederholen. **Technische Daten** gruppieren Gerätesollwerte, Regelgrenzen sowie Quelle und Zeitangaben im selben Bereich. Es ist nur eine Detailansicht gleichzeitig geöffnet. Wähle ihre Schaltfläche erneut oder drücke Escape zum Schließen; diese Darstellungsfunktionen ändern die Anforderung nicht. Übereinstimmende Berechnungs-, Anforderungs- und Anwendungsstufen teilen sich einen Wert unter Beibehaltung aller Stufenbezeichnungen. Abweichende Werte, Nachweise des Bereichsreferenzwerts und Vorbereitungsgrenzen bleiben getrennt. Messwerte bleiben in der Grafik; Gruppen für Vorbereitungszusatz oder Schutz erscheinen nur bei Bedarf.
+
+Unbekannte Anforderung bleibt unbekannt. Die Werte stammen aus Home Assistant und Velairs Laufzeitzustand, ohne neuen Verlauf. Ohne aktiven verwalteten Temperaturblock zeigt der Tab einen Wartezustand. Ein ausgewählter Sensor bleibt bei ausgeschalteter Unterstützung gespeichert und wird als inaktiv angezeigt.
 
 Room Sensor Assist arbeitet ereignisgesteuert, ohne regelmäßige Temperaturabfragen. Bei aktiver Unterstützung hört Velair nur auf den gewählten Raumsensor und die Klimaentität. Änderungen werden anhand der zonenbezogenen Aktualisierungsverzögerung gebündelt. Temporäre Sollwerte werden an die wirksame veröffentlichte, zuletzt gemeldete oder konfigurierte Schrittweite angepasst; kleinere Bewegungen werden ignoriert.
 Der echte Zeitplansollwert wird wiederhergestellt, wenn der Zeitplaner oder eine Zone pausiert, eine temporäre Anpassung beginnt, ein Block ausschaltet, der Sensor unbrauchbar wird oder die Funktion deaktiviert wird. Löschen dieses Laufzeitzustands löscht auch die Hysteresephase fester Modi. Hat Vorkonditionierung einen zukünftigen Block vorzeitig gestartet, folgt Room Sensor Assist bis zum geplanten Komfortzeitpunkt diesem zukünftigen Sollwert statt dem vorherigen Zeitblock.
@@ -698,14 +713,16 @@ Temporäre Anpassungen sind über Home-Assistant-Dienste, Skripte, Automatisieru
 - über einen Sprachassistenten starten;
 - einen bevorzugten HVAC-Modus verwenden.
 
-Beim Ablauf bestimmt Velair das Verhalten der betroffenen Zone in dieser Reihenfolge:
+Beim Ablauf oder Abbrechen einer temporären Anpassung bestimmt Velair das Verhalten der betroffenen Zone in dieser Reihenfolge:
 
 1. Gibt es einen aktiven Zeitplanblock mit ausdrücklichem HVAC-Modus, wendet es dessen Sollwert an.
 2. Schaltet ein aktiver Block die Klimaentität aus, wird sie ausgeschaltet.
 3. Ohne aktiven Block wird der vor der Anpassung erfasste Zustand wiederhergestellt.
-4. Verwendet der aktive Block `Keep`, wird ebenfalls der erfasste Zustand wiederhergestellt, da `Keep` keinen neuen HVAC-Modus für die Zeit nach der Übersteuerung vorgibt.
+4. Verwendet der aktive Temperaturblock `Keep`, wendet Velair dessen aktuelle Temperatur oder vollständigen Bereich mit dem vor der temporären Anpassung gespeicherten HVAC-Modus an. Gespeicherte Geräteoptionen werden wiederhergestellt, sofern der aktuelle Block keinen anderen Wert auswählt. War der gespeicherte Modus Aus, verwendet Keep wie üblich den ersten kompatiblen Modus außer Aus. Unvereinbare oder fehlende gespeicherte Modi werden als Übertragungsfehler gemeldet, statt einen Modus zu erraten.
 
-Die Anpassung soll Velair daher keinen neuen Heiz- oder Kühlsollwert erfinden lassen, wenn der aktuelle Zeitplan keinen ausdrücklich festlegt.
+Beispielsweise kann ein Klimagerät in Kühlen bei 24 °C vorübergehend mit Heizen bei 22 °C angepasst werden. Ist beim Ende der Anpassung Keep bei 20 °C aktiv, kehrt Velair zu Kühlen bei 20 °C zurück, ohne zuvor die alten 24 °C zu senden. Reine Temperaturblöcke, Blöcke mit ausdrücklichem Modus, reine Modus- oder Optionsblöcke und Aus-Blöcke behalten ihr normales Verhalten. Diese Rückkehrregel ändert Keep bei der gewöhnlichen Zeitplananwendung nicht.
+
+Velair speichert eine ausstehende Rückkehr, bevor es die temporäre Anpassung entfernt. Startet Home Assistant vor Bestätigung der Übertragung neu, wird die Rückkehr mit dem dann gültigen Block fortgesetzt, auch wenn **Aktiven Zeitplan nach dem Start von Home Assistant anwenden** deaktiviert ist. Damit wird eine bereits begonnene Rückkehr abgeschlossen; die temporäre Anpassung wird weder erneut aktiviert noch werden die Zeitpläne aller Zonen angewendet. Vorübergehend nicht verfügbare Geräte nutzen die bestehende Übertragungswiederherstellung. Neue manuelle Steuerung, eine temporäre Anpassung, eine Pause, ein Profil- oder Velair-Moduswechsel sowie Deaktivieren oder Neuzuordnen der Zone ersetzen die alte Rückkehr.
 
 <a id="startup-behavior"></a>
 ## Startverhalten
@@ -713,6 +730,8 @@ Die Anpassung soll Velair daher keinen neuen Heiz- oder Kühlsollwert erfinden l
 Standardmäßig stellt Velair nach dem Home-Assistant-Start seinen gespeicherten Zeitplanerzustand wieder her, zwingt Geräte aber nicht auf einen Zeitplansollwert.
 
 In den Einstellungen kannst du **Aktiven Zeitplan nach dem Start von Home Assistant anwenden** aktivieren. Dann wendet Velair nach dem Start den derzeit aktiven Block auf verwaltete Klimaentitäten an, sofern der Zeitplaner automatisch läuft. Auch ein an einem früheren Tag gestarteter Block gilt bis zum nächsten Wochenblock als aktiv. Aktive temporäre Anpassungen werden respektiert.
+
+Eine nicht abgeschlossene Rückkehr nach einer temporären Anpassung wird unabhängig von dieser Einstellung wiederhergestellt, wie unter [Temporäre Anpassung](#boost) beschrieben.
 
 <a id="automation-blueprints"></a>
 ## Automatisierungs-Blueprints
@@ -741,7 +760,7 @@ Die Einstellungen können eine versionierte JSON-Datei exportieren und importier
 - Klimaprofildefinitionen;
 - Modusdefinitionen.
 
-Aktuelle Exporte des Modells 26 erhalten beide Vorlagenverknüpfungen, Presetreferenzen, Vorkonditionierungs-Masterbeziehungen, Zielformat- und Referenzrichtlinien sowie Raumgruppenzuständigkeit und gemeinsame Konfiguration. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne, unabhängig von Temperaturzeitplänen und Profilen. Akzeptierte Master-Ausführungsanker bleiben lokal. Zeitplan- oder Profilexporte enthalten benötigte Vorlagen und Presets als zusätzliche Auswahl. Sind Gruppen beteiligt, werden erforderliche Raumgruppen, Zeitpläne und Profile ebenfalls eingeschlossen, auch bei einem Lernexport. Importe prüfen die Gesamtkonfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden nach stabilem Schlüssel zusammengeführt: passende ersetzt, nicht enthaltene lokale erhalten. Alte Sicherungen bleiben importierbar; ältere Velair-Versionen können Modell 26 nicht importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
+Aktuelle Exporte des Modells 30 erhalten beide Vorlagenverknüpfungen, Presetreferenzen, Vorkonditionierungs-Masterbeziehungen, Zielformat- und Referenzrichtlinien sowie Raumgruppenzuständigkeit und gemeinsame Konfiguration. Zoneneinstellungen erhalten auch optionale Room-Assist-Sensorzeitpläne, die gewählte Bremsstufe, die zonenspezifische Schrittzahl für Stark und den Mindestregelabstand, unabhängig von Temperaturzeitplänen und Profilen. Akzeptierte Master-Ausführungsanker bleiben lokal. Zeitplan- oder Profilexporte enthalten benötigte Vorlagen und Presets als zusätzliche Auswahl. Sind Gruppen beteiligt, werden erforderliche Raumgruppen, Zeitpläne und Profile ebenfalls eingeschlossen, auch bei einem Lernexport. Importe prüfen die Gesamtkonfiguration einschließlich bestehender Nutzer ersetzter gemeinsamer Ressourcen. Presets werden nach stabilem Schlüssel zusammengeführt: passende ersetzt, nicht enthaltene lokale erhalten. Alte Sicherungen bleiben importierbar; ältere Velair-Versionen können Modell 30 nicht importieren. Bewahre eine Sicherung der vorherigen Version auf, falls du zu ihr zurückkehren musst. Siehe [Sicherungsbeispiel](linked-schedule-examples.de.md#back-up-the-whole-setup).
 
 Beim Import wählst du die zu überschreibenden Bereiche. Ausgewählte Daten werden ersetzt; exportiere vorher, wenn ein Wiederherstellungspunkt nötig ist. Profil- und Modusdefinitionen sind portabel, ihre aktive Auswahl nicht. Velair behält aktive Profil-IDs, die noch existieren, und kehrt nur dann zu Standardzeitplänen zurück, wenn keine übrig bleiben.
 
@@ -801,7 +820,7 @@ Aktualisiert ein gespeichertes gemeinsames Preset über seinen stabilen `preset_
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Aktiviert ein gespeichertes Klimaprofil und wendet sofort das wirksame aktuelle Verhalten an. Die gesamte aktive Profilauswahl wird ersetzt; nicht abgedeckte Zonen kehren zu Standardzeitplänen zurück. Verwende die von Velair gezeigte stabile Profil-ID statt des bearbeitbaren Anzeigenamens. Direkte Aktivierung setzt den Moduswähler auf `Manual`. Weglassen von `profile_id` kehrt aus Kompatibilitätsgründen weiterhin zu Standardzeitplänen zurück; neue Automatisierungen sollten ausdrücklich `velair.deactivate_profile` verwenden.
+Aktiviert ein gespeichertes Klimaprofil und wendet sofort das wirksame aktuelle Verhalten an. Die gesamte aktive Profilauswahl wird ersetzt; nicht abgedeckte Zonen kehren zu Standardzeitplänen zurück. Verwende die von Velair gezeigte stabile Profil-ID statt des bearbeitbaren Anzeigenamens. Direkte Aktivierung setzt den Moduswähler auf `manual`. Weglassen von `profile_id` kehrt aus Kompatibilitätsgründen weiterhin zu Standardzeitplänen zurück; neue Automatisierungen sollten ausdrücklich `velair.deactivate_profile` verwenden.
 
 ```yaml
 action: velair.activate_profile
@@ -904,7 +923,7 @@ Eine Bereichsanpassung verwendet `target_temp_low` und `target_temp_high` statt 
 <a id="velaircancel_boost"></a>
 ### `velair.cancel_boost`
 
-Beendet eine aktive temporäre Anpassung vorzeitig. Es gilt immer dasselbe Rückkehrverhalten wie beim normalen Ablauf: Ein vorhandener aktiver ausdrücklicher Zeitplansollwert wird angewendet; andernfalls, auch bei einem `Keep`-Block, wird der gespeicherte Klimazustand einschließlich unterstützter Geräteoptionen wiederhergestellt. Ohne aktive Anpassung hat der Aufruf keine Wirkung.
+Beendet eine aktive temporäre Anpassung vorzeitig. Es gilt dasselbe Rückkehrverhalten wie beim normalen Ablauf: Ein Temperaturblock mit `Keep` verbindet seinen aktuellen Sollwert mit dem HVAC-Modus vor der temporären Anpassung; ausdrückliche Blöcke behalten ihr normales Verhalten. Ohne passenden Zeitplanblock stellt Velair den gespeicherten Klimazustand einschließlich unterstützter Geräteoptionen wieder her. Ohne aktive temporäre Anpassung hat der Aufruf keine Wirkung.
 
 ```yaml
 action: velair.cancel_boost

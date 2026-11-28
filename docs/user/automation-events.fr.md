@@ -9,8 +9,8 @@ Traductions: [Original en anglais](automation-events.md) · [Español](automatio
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.0-beta.2 |
-| Dernière synchronisation | 2026-10-17 |
+| Version de référence | 1.9.3-beta.2 |
+| Dernière synchronisation | 2026-11-15 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
 
@@ -693,7 +693,22 @@ deadband_high: 21.3
 reason: scheduled_event
 ```
 
-Pour une consigne unique fixe `heat` ou `cool` avec bande morte non nulle, les quatre champs d’hystérésis identifient la phase d’exécution appliquée, son bord actif et toute la bande de commutation. Ils sont omis sans bande morte, pour les modes automatiques à consigne unique et les plages natives. La phase reste inchangée lorsque la pièce traverse la consigne centrale et s’inverse seulement après que le capteur externe atteint le bord opposé.
+Pour une consigne unique fixe `heat` ou `cool` avec une bande morte non nulle, les quatre champs d’hystérésis identifient la phase d’exécution appliquée, son bord actif et la bande nominale. Ils sont omis avec une bande morte nulle, pour les modes automatiques à consigne unique et les plages natives. Avec les niveaux de freinage Par défaut ou Modéré, la phase reste inchangée lorsque la pièce traverse la consigne centrale et s’inverse seulement lorsque le capteur externe atteint le bord opposé. Élevé commence la phase sans demande à la consigne programmée tout en conservant le seuil de réactivation existant.
+
+Un événement de mise à jour peut aussi inclure des métadonnées supplémentaires `braking` décrivant la politique appliquée, y compris lorsqu’une plage en mode fixe utilise une référence configurée :
+
+```yaml
+braking:
+  configured_level: high
+  effective_level: high
+  active: true
+  stop_temperature: 20.5
+  resume_temperature: 20
+  setpoint_bound: 19.5
+  reason: null
+```
+
+Cet exemple décrit le chauffage avec une consigne de `20.5 °C`, une bande morte de `0.5 °C` et un pas de l’équipement de `0.5 °C`. Le niveau effectif est `default` lorsque le freinage supplémentaire ne peut pas s’appliquer ; le niveau configuré est conservé et `reason` en explique la raison. Les seuils ou la limite de consigne peuvent valoir `null` lorsqu’ils sont indisponibles. Ces métadonnées décrivent le retrait de la demande, et non un arrêt physique confirmé de l’équipement. Les consommateurs d’événements existants peuvent ignorer cet objet. Consultez [Freinage facultatif](room-assist.fr.md#optional-braking) pour les règles de commutation.
 
 Lorsque la consigne programmée protège un résultat de chauffage ou de refroidissement fixe, la mise à jour à consigne unique ajoute deux champs facultatifs :
 

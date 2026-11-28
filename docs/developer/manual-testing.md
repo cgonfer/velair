@@ -1,5 +1,142 @@
 # Manual Testing
 
+## Room Assist minimum control margin
+
+1. Compare existing behavior with a missing margin and an explicit zero. Set
+   **Minimum control margin** above Maximum assist delta, then try reducing the
+   maximum below the saved margin: both edits must show validation without
+   changing another setting or persisting an invalid combination.
+2. With fixed Heat, target 19.5, deadband 0.3, internal reading 21.5, step 0.5
+   and margin/maximum 10, verify requests 31.5 while driving and 11.5 after the
+   external room reaches 19.8; resume at 19.2. Mirror the cycle in fixed Cool.
+   Check all braking levels and a zero-deadband equality without forced demand.
+3. Exercise scalar automatic modes and native Heat/Cool ranges across heating,
+   holding and cooling. The margin must not turn withdrawal into opposite demand
+   or move a valid stable holding range. Fixed-mode pairs must preserve width
+   for either configured reference in each direction.
+4. Check step/cap conflicts (internal 21.7, step 0.5, margin/maximum 10), a cap
+   narrower than the grid, physical saturation and width-constrained pairs.
+   Inspect requested/applied values and minimum-margin limitation metadata.
+   Repeat with Fahrenheit deltas and a missing published-step fallback.
+5. Change the margin during an active phase and preparation. Preserve valid
+   phase and preparation direction; add temporary offsets only after the base
+   correction. Failed saves, failed/superseded commands and status-only reads
+   must not confirm a new demand state or change Supply thresholds.
+6. Restart, restore unrelated preconditioning defaults and round-trip portable
+   model v29 with standalone zones and groups. Preserve the margin and canonical
+   units; older files without the field use zero. Older consumers must reject
+   the new model rather than lose a non-default request.
+7. On mobile, tablet and desktop in both themes, check the field, validation,
+   disabled/saving states, keyboard focus, short help and explicit English link
+   to the Minimum control margin guide section. Check the live graph's limited
+   state without interpreting it as confirmed physical actuator activity.
+
+## Temporary preparation offsets
+
+1. Configure independent heat/cool deltas, including zero, `0.2–0.3 °C` where
+   the climate step permits them, and the largest compatible step up to `5 °C`
+   / `9 °F`. Reject off-grid edits and verify a later step change preserves the
+   saved request while reducing only the effective extra.
+2. Prepare scalar heat/cool and native `heat_cool` bands, plus fixed-mode pairs
+   using each selectable reference. Compare the nominal target, Room Assist
+   base and final accepted command. Exercise partial and zero physical capacity;
+   preserve band width. Change Room Assist correction during the same session.
+3. Reach the nominal arrival threshold before the block, including a session
+   shorter than three minutes and a failed observation save. Remove the learning
+   session independently, then reach the threshold or scheduled start. Extra and
+   temporary direction priority must end. Check preset preservation and existing
+   temperature-last service ordering. Report delays must not show an old applied
+   target or allow retired work to return.
+4. With each braking level, inherit a non-driving phase before preparation and
+   verify Room Assist retains that ordinary phase while confirming effective
+   preparation demand alongside its target. Shared Climate Supply must consume
+   that accepted intent through its existing path, including opposite fixed-range
+   references, with no independent preparation calculation. After arrival, ordinary
+   demand and braking resume; native ranges keep their existing support limits.
+   Fail or supersede delivery and fail restoration: never expose a new unaccepted
+   request or a retired temporary request. Repeated monitor/status reads must not
+   recalculate control, read history, send commands or schedule extra work.
+   Without Room Assist, verify supply uses the reported temporary target and then
+   the resulting target after withdrawal, with its existing hysteresis and timing.
+5. Change one offset during preparation: clear that direction's learning, preserve
+   the opposite direction, and reconcile current physical intent. Hold/fail/cancel
+   persistence while a sample completes or an import waits. A rollback restores
+   the old rule; no incompatible sample may survive a successful rule change.
+6. Round-trip portable model v29, including zones-only, learning-only, combined
+   imports and groups. Require matching converted direction tags, treat old or
+   absent tags as zero, preserve compatible supplied history and clear only
+   changed retained directions. Unit migration must preserve the physical delta.
+7. Compare graph, Overview, card, diagnostics and entity attributes. Scheduled
+   targets remain nominal; applied markers and badge details describe the final
+   accepted target, including saturated zero. Verify touch/keyboard help and
+   narrow phone/tablet layouts. Restart and unavailable/reconnect cases must use
+   existing startup/delivery policy with the offset when applicable.
+
+## Completed preparation continuity
+
+1. Use a current heat block at `20 °C` and a future block at `21 °C`, with
+   Minimum temperature delta `0.1 °C`. Confirm early delivery, then reach
+   `20.9 °C` before the future block. With Room Assist disabled, Overview must
+   retain nominal **Target** `21 °C` after the observation closes. Actual
+   `21 °C` hides duplicate **Applied**; the room reading remains `20.9 °C`.
+   Repeat with offset zero and positive `2 °C`, retiring `23 °C` to `21 °C`.
+2. Mirror cooling: current `25 °C`, future `24 °C`, arrival `24.1 °C`, extra
+   `2 °C`. Retire temporary `22 °C`, retain nominal `24 °C`. Repeat scalar,
+   native range and each supported fixed-mode range reference, with Room Assist
+   on/off. Restore nominal band width/options and ordinary Room Assist policy.
+3. Finish before the three-minute learning minimum, discard the observation
+   independently and fail its save in separate runs. Completion must not depend
+   on a usable sample. Fail the continuity save: withdrawal and in-memory nominal
+   target still proceed, with bounded missing-durability evidence. Do not claim
+   recovery from a completion write that never committed.
+4. Restart **after arrival**, before block time, with **Apply active schedule
+   after startup** enabled. Verify actual services resolve the completed nominal
+   `21 °C`, never previous `20 °C` or temporary `23 °C`. Repeat offset zero and
+   positive offsets, heating/cooling, ranges and Planned Return. Do not replace
+   this case with restart during a still-pending preparation.
+5. Repeat with startup application disabled and a differing live setpoint.
+   Recover nominal **Target** `21 °C` and display actual **Applied** separately.
+   Check the service log: checkpoint hydration sends no target, HVAC mode or
+   block options. Stronger persisted Manual/pause/external authority still wins
+   with either checkbox state. Do not infer who changed a setpoint while offline.
+6. Let the room drift away from arrival while HA is offline. Restore completed
+   nominal intent without a new observation, preparation extra or preparation
+   demand. A missing live room reading does not erase verified completion;
+   ordinary Room Assist availability handling still applies.
+7. Restart with device/capabilities or authoritative prepared context initially
+   unavailable, then restore readiness. Pending validation must not consume
+   startup permission, prematurely send the old block, or accept a stale payload.
+   Repeat missing/corrupt completion fields, unknown ownership, mismatched
+   occurrence/reference/profile/Mode/episode and expired timestamps.
+   The completion group requires `completed_at`, `weekday`, `start` and a valid
+   lowercase 64-character hexadecimal `completion_context`. Remove or corrupt
+   each field: strip only completion opt-in, retaining valid legacy dependency
+   `context` and accepted-start evidence. A reference, topology or active Mode
+   identity change must reject own continuity without changing the legacy source
+   context algorithm or invalidating old accepted-start evidence merely on upgrade.
+8. Pause, take Manual control, apply an override, replace the effective schedule
+   or selection, disable preparation, and change ownership in separate runs.
+   Persist/restart, then expire the override or return to the original selection:
+   superseded completion must not return. Fail a mutation save and verify the
+   existing rollback preserves the previously authoritative state.
+9. Let dependency-source `expires_at` precede its own completed `target_when`,
+   and reverse that ordering. Pruning must preserve each still-valid role without
+   prolonging source eligibility. Legacy master anchors without completion fields
+   still release valid dependents but never recover an invented own arrival.
+   Exceed the existing anchor cap: live own completion takes priority over later
+   live sources, and live sources take priority over expired completed records.
+   Retained entries preserve their original order within the existing bound.
+10. Import/reset learning only and verify control continuity remains. Configuration
+    import, full reset and unit migration follow their existing authority/context
+    invalidation. Export contains no transient completion evidence. Check nominal
+    takeover at/after the target instant, midnight and DST overlap; never reuse
+    the same wall-clock block in another weekly occurrence.
+11. Repeat UI/current-intent/monitor reads and inspect writes, services and timers:
+    readers must produce none. Keep a negative comparison with preconditioning
+    disabled, and enabled without confirmed early delivery: legitimate **Target**
+    `20 °C` / **Applied** `21 °C` remains unchanged. Record real HA state/service
+    evidence for both startup checkbox values before accepting restart recovery.
+
 ## Event-driven recovery and bounded work
 
 1. Hold a schedule save for the affected zone across a due weekly early start.
@@ -53,7 +190,7 @@ Home Assistant installation before treating physical-device recovery as verified
    no silent change to a different room.
 6. Verify advance preparation does not cross a source boundary and is recalculated
    afterward. Learning readiness and samples must match the effective source.
-7. Export/import portable model v26, including a saved disabled schedule. Reject
+7. Export/import portable model v29, including a saved disabled schedule. Reject
    overlapping periods without replacing configuration. Verify native group
    references and preserve the fixed sensor when disabling the schedule.
 8. Switch between **Fixed sensor** and **By schedule**, edit both setups, and
@@ -65,6 +202,56 @@ Home Assistant installation before treating physical-device recovery as verified
    Check the editor, Save/Cancel and source status in mobile/tablet layouts and
    the optional Room Assist card. Verify responsiveness in the actual Home
    Assistant installation, including schedule transitions and editor interactions.
+
+## Room Assist braking
+
+1. In fixed Heat and Cool, exercise Default, Moderate and High with a known
+   external room sensor, target T, positive deadband H and effective step S.
+   Default must preserve existing regulation. Moderate withdraws heat at T + H
+   or cooling at T − H; High withdraws at T. Both request heat again at T − H
+   or cooling at T + H. Include equality, crossing the center and repeated
+   identical readings. Before withdrawal, assistance must remain unchanged.
+2. Check the non-driving equipment target: Moderate uses a heating ceiling
+   T − S or cooling floor T + S; High uses two steps by default. In Settings,
+   configure three High steps for one zone and retain two for another. Verify
+   the equivalent difference (for example, 1.5 °C for three 0.5 °C steps or
+   3 °F for three 1 °F steps), and confirm the Room Assist selector and status
+   reflect the saved value without changing switching thresholds. Count-only
+   saves must retain a still-valid hysteresis phase and recalculate its guard;
+   unrelated Adaptive Preconditioning resets must preserve the saved count.
+   Existing stronger inverse
+   corrections must remain unchanged, and repeated updates must not accumulate
+   more braking. Test physical min/max limits and fixed-mode ranges with a
+   selected reference; preserve pair width and show requested/applied limits.
+3. Require a positive deadband before selecting Moderate or High. Return to
+   Default before saving band zero. Fail a settings write and confirm the saved
+   level and phase remain authoritative. Level changes reset phase; H-only
+   changes reset Moderate/High while Default retains its established phase
+   behavior. Reject non-integer High step counts, booleans and values outside
+   2–10; a failed save must preserve the committed setting and calculation.
+   Reload and round-trip portable model v30, including missing-level older data
+   that defaults to Default, missing High counts that default to two, and
+   opposite-unit imports that retain the count without temperature conversion.
+4. Compare the panel, narrow Room Assist card, shared graph and Supply live
+   demand. Nominal band limits remain centered on T; High's effective stop and
+   both levels' resume temperatures must match the committed backend phase.
+   Opening or refreshing status views must not send commands or advance phase.
+   Check phone/tablet widths, keyboard access and explanatory text.
+5. Switch to a native temperature reference or an unsupported automatic mode.
+   Retain the saved level while explaining why additional braking is inactive.
+   Remove room-sensor and climate-temperature readings separately; expose an
+   explicit inactivity reason instead of an active prediction. Restore readings
+   and verify current intent resumes without replaying an obsolete correction.
+6. Change the effective equipment step while a target is committed. Until the
+   control refresh succeeds, show the accepted braking bound rather than a
+   preview based on the new step. Exercise failed and superseded delivery,
+   pause/Boost/manual control and source changes without duplicate orders or
+   stale metadata. Additional braking must introduce no periodic polling,
+   history reads or per-reading configuration writes.
+7. Observe physical heating and cooling cycles separately from command reports.
+   Confirm the help describes demand withdrawal without promising compressor,
+   relay or valve shutdown. Record remaining overshoot and device limitations;
+   no synthetic or command-acceptance result proves real thermal performance.
 
 ## Room groups
 
@@ -87,7 +274,7 @@ Home Assistant installation before treating physical-device recovery as verified
    the entire room is targeted once. Reject unmanaged climates. Remove members
    and dissolve the group; check inherited schedules/Profiles and cleared
    temporary actions. Options must reject removal of a still-grouped climate.
-7. Export/import portable model v26, including empty groups, the same group graph,
+7. Export/import portable model v29, including empty groups, the same group graph,
    imported learning, changed Profiles and active selection reconciliation. Test
    restart/reload, temperature conversion and per-member boost restoration.
 8. Reorder groups and members; reload and check Settings, scheduling selectors
@@ -915,13 +1102,23 @@ external adjustment.
     inside the chooser can be clicked without closing or crashing the browser.
     Confirm the chooser closes after selection, with Escape, and when clicking
     outside it. Repeat at desktop and mobile widths.
-    Confirm `Default` and `Manual` cannot be renamed or deleted.
+    Confirm **Default** and **Manual** cannot be renamed or deleted.
 18. Select each custom value through `select.velair_mode` and confirm its
-    mapped Profiles change once. For compatibility, select Manual through the
-    native entity and confirm the current set remains active; select Default
-    and confirm it is emptied.
+    mapped Profiles change once. Send raw `manual` through the native entity
+    and confirm the current set remains active; send raw `default` and confirm
+    it is emptied. In Developer Tools, confirm both option values and states
+    remain lowercase. In the native selector, confirm the display labels are
+    translated, for example **Default**/**Manual** in English,
+    **Predeterminado**/**Manual** in Spanish, and **Standard**/**Manuell** in
+    German. Changing the user language must not change raw states, options,
+    entity identity, or custom Mode names, including names with spaces or accents.
+    Confirm `select.select_option` rejects the old `Default` and `Manual` values.
+    Localized labels must also be rejected as options unless the exact text is
+    an existing custom Mode name. Check the [upgrade instructions](../user/climate-profiles.md#update-existing-mode-automations)
+    against existing actions, state triggers, conditions, templates and scenes;
+    Velair must not rewrite these user configurations.
 19. Change Profile through **Modes** and through `velair.activate_profile`; confirm
-    the native selector reports Manual, including direct reactivation of the
+    the native selector reports `manual`, including direct reactivation of the
     already active profile without repeating climate calls or events.
     Confirm this direct selection replaces every other active Profile instead
     of extending the set.

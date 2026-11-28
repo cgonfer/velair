@@ -8,8 +8,8 @@ Traduzioni: [Originale in inglese](manual-control.md) · [Español](manual-contr
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.0-beta.9 |
-| Ultima sincronizzazione | 2026-11-02 |
+| Versione di riferimento | 1.9.3-beta.3 |
+| Ultima sincronizzazione | 2026-11-22 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
 
@@ -90,7 +90,11 @@ Quando l’entità cambia, Velair correla ogni campo modificato con quelle aspet
 
 Alcuni dispositivi comunicano più valori elaborando un comando. Possono tornare brevemente a un vecchio obiettivo, pubblicarne uno intermedio o comunicare modalità e temperatura fuori ordine. Velair conserva un breve periodo limitato di assestamento solo per i campi modificati, così quegli aggiornamenti non creano erroneamente una regolazione manuale. Il periodo non ricomincia all’arrivo di una conferma; viene finalizzato quando termina l’intera sequenza di servizi Home Assistant. Una modifica chiaramente originata da un utente Home Assistant, o da un altro script o automazione identificabile, resta esterna; le modifiche dopo l’assestamento vengono gestite normalmente.
 
-Quando un aggiornamento anonimo durante l’assestamento non può essere distinto affidabilmente dalla convergenza del dispositivo, Velair mantiene prudentemente il controllo automatico. Evita così di trasformare un proprio comando rifiutato o ritardato in una falsa regolazione manuale. L’assestamento esiste solo in esecuzione ed è cancellato al riavvio. Se il dispositivo differisce ancora dal valore richiesto alla fine dell’assestamento, Velair mantiene il controllo automatico e registra un avviso di assestamento. La successiva istantanea aggiornata di Diagnostica espone l’avviso; il rapporto include valori attesi e osservati. Velair non riprova ciecamente il comando né trasforma la discordanza in una regolazione manuale differita.
+Quando un aggiornamento anonimo durante l’assestamento non può essere distinto affidabilmente dalla convergenza del dispositivo, Velair mantiene prudentemente il controllo automatico. Evita così di trasformare un proprio comando rifiutato o ritardato in una falsa regolazione manuale. L’assestamento esiste solo in esecuzione ed è cancellato al riavvio.
+
+Durante un recente comando di spegnimento di Velair, anche il ripristino di una temperatura impostata singola al minimo dichiarato esplicitamente dal dispositivo viene riconosciuto come effetto facoltativo dello spegnimento. Il minimo può essere comunicato prima, insieme o dopo lo stato `off`, anche mentre il comando è ancora in esecuzione. Questa eccezione richiede limiti minimo e massimo validi e che l’intento attuale di Velair resti lo spegnimento; non nasconde azioni identificabili di utenti o automazioni. Usa lo stesso periodo limitato di assestamento e un nuovo comando di temperatura o modalità HVAC invalida le prove precedenti. Il minimo non viene comandato né è obbligatorio: un termostato che conserva la temperatura impostata precedente può comunque confermare normalmente lo spegnimento. La sola comunicazione del minimo non conferma che il termostato si sia spento.
+
+Se il dispositivo differisce ancora dal valore richiesto alla fine dell’assestamento, Velair mantiene il controllo automatico e registra un avviso di assestamento. La successiva istantanea aggiornata di Diagnostica espone l’avviso; il rapporto include valori attesi e osservati. Velair non riprova ciecamente il comando né trasforma la discordanza in una regolazione manuale differita.
 
 Si applica un’eccezione separata mentre Velair mantiene un dispositivo sotto programmazione automatica in `off`. Alcuni dispositivi comunicano un obiettivo sostitutivo, ad esempio `0 °C` quando il minimo pubblicato è `5 °C`. Se cambiano solo gli obiettivi e tutti i nuovi valori sono al di fuori del minimo e del massimo dichiarati esplicitamente dal dispositivo, Velair ignora l’aggiornamento, anche quando arriva dopo l’assestamento. Non emette un evento di modifica esterna, non avvia una regolazione manuale e non interrompe l’esecuzione della programmazione. Entrambi i limiti devono essere validi; se ne manca uno, resta attivo il rilevamento abituale. Le modifiche valide degli obiettivi, le modifiche esterne della modalità HVAC, le azioni identificabili di utenti o automazioni e le sessioni manuali esistenti mantengono il comportamento abituale.
 
