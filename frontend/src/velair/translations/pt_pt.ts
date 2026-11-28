@@ -1,4 +1,6 @@
 export const pt_pt = {
+  "roomAssistClimate": "Termóstato do Room Assist",
+  "roomAssistClimateDescription": "Mostra um termóstato apenas para aquecimento no Home Assistant. As alterações de temperatura são válidas até ao próximo bloco do horário.",
   "highBrakingSteps": "Passos da travagem Elevada",
   "highBrakingStepsUnit": "passos",
   "highBrakingStepsHelp": "Número de passos da temperatura definida do equipamento utilizados pela travagem Elevada nesta zona (2–10; predefinição 2). Utilizado apenas quando Elevada está selecionada no Room Assist. No aquecimento, reduz a temperatura definida; no arrefecimento, aumenta-a. Moderada continua a utilizar um passo. Os limites físicos podem reduzir o efeito e são mantidas as correções existentes mais fortes. A travagem é fixa, sem ajuste progressivo.",

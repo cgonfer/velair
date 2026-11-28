@@ -1,5 +1,7 @@
 import type { TranslationDictionary } from "./types";
 export const translationTemplate = {
+  "roomAssistClimate": "",
+  "roomAssistClimateDescription": "",
   "highBrakingSteps": "",
   "roomSensorAssistBrakingConfigurableHelp": "",
   "highBrakingStepsUnit": "",

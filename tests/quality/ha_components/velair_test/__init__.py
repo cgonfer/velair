@@ -40,6 +40,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         vol.Optional("available"): cv.boolean,
         vol.Optional("delay_ms"): vol.All(vol.Coerce(float), vol.Range(min=0, max=30000)),
         vol.Optional("current_temperature"): vol.Coerce(float),
+        vol.Optional("current_humidity"): vol.Any(None, vol.Coerce(float)),
         vol.Optional("temperature"): vol.Coerce(float),
         vol.Optional("target_temp_low"): vol.Coerce(float),
         vol.Optional("target_temp_high"): vol.Coerce(float),
@@ -104,6 +105,7 @@ class FixtureEntity(Entity):
             raise HomeAssistantError("Unsupported HVAC mode for CI fixture")
         fields = {"available": "_attr_available", "delay_ms": "delay_ms",
                   "current_temperature": "_attr_current_temperature", "temperature": "_attr_target_temperature",
+                  "current_humidity": "_attr_current_humidity",
                   "target_temp_low": "_attr_target_temperature_low", "target_temp_high": "_attr_target_temperature_high",
                   "brightness": "_attr_brightness", "position": "_attr_current_cover_position"}
         for key, attribute in fields.items():

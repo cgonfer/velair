@@ -1,4 +1,6 @@
 export const nl = {
+  "roomAssistClimate": "Room Assist-thermostaat",
+  "roomAssistClimateDescription": "Toont een thermostaat voor alleen verwarming in Home Assistant. Een gewijzigde doeltemperatuur geldt tot het volgende planningsblok.",
   "highBrakingSteps": "Afremstappen voor Hoog",
   "highBrakingStepsUnit": "stappen",
   "highBrakingStepsHelp": "Aantal instelstappen van het apparaat voor afremniveau Hoog in deze zone (2–10; standaard 2). Alleen gebruikt wanneer Hoog is geselecteerd in Room Assist. Verwarmen verlaagt het instelpunt en koelen verhoogt het. Gemiddeld gebruikt nog steeds één stap. Fysieke grenzen kunnen het effect beperken; bestaande sterkere correcties blijven behouden. Dit is vaste afremming, geen geleidelijke aanpassing.",

@@ -19,10 +19,11 @@ def project_next_effective_events(owner, now: datetime, *, weekly_events=None) -
     weekly = {}
     candidates = (owner._schedule_projection.future(now)
                   if weekly_events is None else weekly_events)
-    for event in candidates:
-        if dt_util.as_utc(event.when) <= dt_util.as_utc(now) and not _is_due_preconditioning_event(event, now):
+    for raw_event in candidates:
+        if owner._is_applied_preconditioning_event(raw_event):
             continue
-        if owner._is_applied_preconditioning_event(event):
+        event = owner._event_after_room_assist_hold(raw_event, now)
+        if dt_util.as_utc(event.when) <= dt_util.as_utc(now) and not _is_due_preconditioning_event(event, now):
             continue
         previous = weekly.get(event.entity_id)
         if previous is None or dt_util.as_utc(event.when) < dt_util.as_utc(previous.when):

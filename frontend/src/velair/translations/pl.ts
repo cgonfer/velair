@@ -1,4 +1,6 @@
 export const pl = {
+  "roomAssistClimate": "Termostat Room Assist",
+  "roomAssistClimateDescription": "Pokazuje w Home Assistant termostat tylko do ogrzewania. Zmiana temperatury zadanej obowiązuje do następnego bloku harmonogramu.",
   "highBrakingSteps": "Kroki silnego hamowania",
   "highBrakingStepsUnit": "kroki",
   "highBrakingStepsHelp": "Liczba kroków nastawy urządzenia używana przy hamowaniu Silne w tej strefie (2–10; domyślnie 2). Ma zastosowanie tylko po wybraniu Silne w Room Assist. Ogrzewanie obniża nastawę, a chłodzenie ją podwyższa. Umiarkowane nadal używa jednego kroku. Fizyczne limity mogą ograniczyć efekt, a silniejsze dotychczasowe korekty pozostają zachowane. Jest to hamowanie o stałej wartości, a nie stopniowe dostosowywanie.",

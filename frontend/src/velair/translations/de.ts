@@ -1,4 +1,6 @@
 export const de = {
+  "roomAssistClimate": "Room Assist-Thermostat",
+  "roomAssistClimateDescription": "Zeigt in Home Assistant ein Thermostat nur zum Heizen. Sollwertänderungen gelten bis zum nächsten Zeitplanblock.",
   "highBrakingSteps": "Bremsschritte für Stark",
   "highBrakingStepsUnit": "Schritte",
   "highBrakingStepsHelp": "Anzahl der Gerätesollwertschritte für die Bremsstufe Stark in dieser Zone (2–10; Standard 2). Wird nur verwendet, wenn in Room Assist Stark ausgewählt ist. Beim Heizen wird der Sollwert gesenkt, beim Kühlen erhöht. Moderat verwendet weiterhin einen Schritt. Physische Grenzen können die Wirkung verringern; stärkere bestehende Korrekturen bleiben erhalten. Die Bremsung ist fest und wird nicht schrittweise verstärkt.",

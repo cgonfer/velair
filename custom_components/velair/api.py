@@ -262,6 +262,7 @@ PRECONDITIONING_SCHEMA = vol.Schema(
         vol.Optional("room_temperature_entity_id"): vol.Any(None, cv.entity_id),
         vol.Optional("room_sensor_schedule"): normalize_room_sensor_schedule,
         vol.Optional("room_sensor_assist_enabled"): bool,
+        vol.Optional("room_assist_climate_enabled"): bool,
         vol.Optional("room_sensor_assist_braking_level"): vol.In(("default", "moderate", "high")),
         vol.Optional("room_sensor_assist_high_braking_steps"): _high_braking_steps,
         vol.Optional("room_sensor_assist_deadband"): vol.All(
@@ -3385,6 +3386,8 @@ def _normalize_import_zones(
             if entity_id in matched_entities
             else deepcopy(zone)
         )
+        if entity_id in matched_entities:
+            merged.pop("room_assist_target_override", None)
         # Execution ownership is installation-local and intentionally absent
         # from portable exports. Importing a schedule must not silently hand an
         # externally owned climate back to Velair.
@@ -3424,6 +3427,9 @@ def _validate_portable_zone_schedules(
         preconditioning = zone.get("preconditioning")
         if preconditioning is not None and not isinstance(preconditioning, dict):
             raise ValueError(f"Preconditioning for {entity_id} is not valid")
+        if isinstance(preconditioning, dict) and "room_assist_climate_enabled" in preconditioning:
+            if not isinstance(preconditioning["room_assist_climate_enabled"], bool):
+                raise ValueError(f"Room Assist thermostat setting for {entity_id} must be a boolean")
         if isinstance(preconditioning, dict) and "room_sensor_schedule" in preconditioning:
             normalize_room_sensor_schedule(preconditioning["room_sensor_schedule"])
         if isinstance(preconditioning, dict) and "master_entity_id" in preconditioning:

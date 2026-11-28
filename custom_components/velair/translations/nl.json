@@ -12,6 +12,7 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Velair-thermostaten voor kamerondersteuning kunnen niet als apparaat worden geselecteerd.",
       "no_climate_entities": "Selecteer minimaal één klimaatentiteit."
     },
     "abort": {
@@ -30,11 +31,17 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Velair-thermostaten voor kamerondersteuning kunnen niet als apparaat worden geselecteerd.",
       "no_climate_entities": "Selecteer minimaal één klimaatentiteit.",
       "grouped_climate_entities": "Verwijder deze klimaatapparaten uit hun kamergroepen in de Velair-instellingen voordat je ze uit de integratie verwijdert."
     }
   },
   "entity": {
+    "climate": {
+      "room_assist_thermostat": {
+        "name": "{zone} – Thermostaat voor kamerondersteuning"
+      }
+    },
     "sensor": {
       "next_climate_event": {
         "name": "Volgende geplande gebeurtenis"

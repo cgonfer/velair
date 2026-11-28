@@ -12,6 +12,7 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Velair-Raumassistenz-Thermostate können nicht als Geräte ausgewählt werden.",
       "no_climate_entities": "Wähle mindestens eine Klima-Entität aus."
     },
     "abort": {
@@ -30,11 +31,17 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Velair-Raumassistenz-Thermostate können nicht als Geräte ausgewählt werden.",
       "no_climate_entities": "Wähle mindestens eine Klima-Entität aus.",
       "grouped_climate_entities": "Entferne diese Klimageräte in den Velair-Einstellungen aus ihren Raumgruppen, bevor du sie aus der Integration entfernst."
     }
   },
   "entity": {
+    "climate": {
+      "room_assist_thermostat": {
+        "name": "{zone} – Raumassistenz-Thermostat"
+      }
+    },
     "sensor": {
       "next_climate_event": {
         "name": "Nächstes geplantes Ereignis"

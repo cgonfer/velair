@@ -633,6 +633,7 @@ def _snap_migrated_editable_temperatures(
                     for block in blocks:
                         for key in ("temperature", "target_temp_low", "target_temp_high"):
                             snap_target(block, key)
+        snap_target(zone.get("room_assist_target_override"), "temperature")
         override = zone.get("override")
         for key in ("temperature", "target_temp_low", "target_temp_high"):
             snap_target(override, key)
@@ -707,7 +708,7 @@ def _convert_scheduler_temperatures(
                     _convert_blocks(blocks, source, target)
             pending = zone.get("pending_boost_return")
             ended_boost = pending.get("boost") if isinstance(pending, dict) else None
-            for override in (zone.get("override"), ended_boost):
+            for override in (zone.get("override"), ended_boost, zone.get("room_assist_target_override")):
                 if not isinstance(override, dict):
                     continue
                 for key in ("temperature", "target_temp_low", "target_temp_high"):

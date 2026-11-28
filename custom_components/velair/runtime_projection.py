@@ -257,6 +257,10 @@ class RuntimeScheduleProjection:
         item = self.schedules.get(entity)
         return item.current(now, copy=copy) if item is not None and item.is_current_horizon(now) else None
 
+    def next_nominal(self, entity, now):
+        item = self.schedules.get(entity)
+        return item.next_nominal(now) if item is not None and item.is_current_horizon(now) else None
+
     def block(self, entity, weekday, start):
         item = self.schedules.get(entity)
         return item.blocks.get((weekday, start)) if item is not None else None

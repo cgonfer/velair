@@ -12,6 +12,7 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Os termostatos de assistência ambiente do Velair não podem ser selecionados como equipamentos.",
       "no_climate_entities": "Selecione pelo menos uma entidade de climatização."
     },
     "abort": {
@@ -30,11 +31,17 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Os termostatos de assistência ambiente do Velair não podem ser selecionados como equipamentos.",
       "no_climate_entities": "Selecione pelo menos uma entidade de climatização.",
       "grouped_climate_entities": "Remova estes dispositivos de climatização dos grupos de cômodo nas Configurações do Velair antes de removê-los da integração."
     }
   },
   "entity": {
+    "climate": {
+      "room_assist_thermostat": {
+        "name": "{zone} – Termostato de assistência ambiente"
+      }
+    },
     "sensor": {
       "next_climate_event": {
         "name": "Próximo evento agendado"

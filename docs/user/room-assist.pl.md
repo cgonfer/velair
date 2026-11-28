@@ -11,9 +11,11 @@ Tłumaczenia: [Oryginał w języku angielskim](room-assist.md) · [Español](roo
 | Wersja odniesienia | 1.9.3-beta.5 |
 | Ostatnia synchronizacja | 2026-11-25 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
-| Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
+| Zgodność z oryginałem | Zmiany oczekujące na uwzględnienie |
 
 </details>
+
+> Oryginał został zmieniony; to tłumaczenie może być nieaktualne. [Oryginał w języku angielskim](room-assist.md)
 
 ---
 <!-- velair-docs:end -->

@@ -12,9 +12,11 @@ Traducciones: [Original en inglés](room-assist.md) · [Español](room-assist.es
 | Versión de referencia | 1.9.3-beta.5 |
 | Última sincronización | 2026-11-25 |
 | Revisión lingüística | Traducción asistida por IA |
-| Respecto al original | Sin cambios pendientes respecto al original inglés. |
+| Respecto al original | Cambios pendientes |
 
 </details>
+
+> El original ha cambiado; esta traducción puede estar desactualizada. [Original en inglés](room-assist.md)
 
 ---
 <!-- velair-docs:end -->
