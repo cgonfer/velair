@@ -27,7 +27,7 @@ For a single target in fixed `heat` or `cool`, a non-zero deadband creates two s
 
 Scalar `auto` and `heat_cool` targets, and native `heat_cool` ranges, retain their neutral or range-margin behavior. Velair does not force those modes to alternate between active heating and cooling across a scalar hysteresis cycle.
 
-The climate entity remains the actuator. Velair does not create a virtual climate entity and does not bypass device firmware. If your thermostat or TRV supports binding an external sensor directly, that device-native option is still usually the best first choice.
+The managed climate remains the actuator. Even if you expose a Room Assist thermostat in Home Assistant, Velair still uses the managed climate and does not bypass device firmware. If your thermostat or TRV supports binding an external sensor directly, that device-native option is still usually the best first choice.
 
 For two setpoints in fixed `heat` or `cool`, first select **Reference setpoint**
 for that climate and mode in **Settings → Climates and groups**. Choose **Lower
@@ -65,6 +65,28 @@ an old corrected target over the new intent.
 9. Adjust Refresh delay if sensor updates feel too slow or too chatty.
 
 Only the selected option is shown. When **Fixed sensor** is already the saved mode, changing its sensor saves immediately. Switching between **Fixed sensor** and **By schedule** changes a draft: **Save** applies the mode and its settings, and **Cancel** restores the saved configuration. Switching options retains the fixed sensor and the saved schedule; it does not activate both at once.
+
+### Optional Room Assist thermostat
+
+In the Room Assist tab, expand a room and turn on **Room Assist thermostat**.
+Velair adds a `climate.*` entity for that room or room group. Use it in a
+Home Assistant thermostat card or call `climate.set_temperature` on it.
+The entity shows the active room sensor reading and the room target, not the
+corrected setpoint sent to the heating equipment.
+
+Changing the target keeps Room Assist active and leaves the schedule unchanged.
+The change survives a restart during the same block and expires at the next
+schedule block, even if that block has the same scheduled temperature. Adaptive
+Preconditioning does not take over early while the temporary target is active.
+
+The thermostat is available only while Room Assist can use an external reading
+on a regular, single-target heating block. It is unavailable during cooling,
+range blocks, Boost, pauses, preparation or when the room sensor is unavailable.
+It cannot switch HVAC modes or turn the equipment on or off. It also cannot be
+selected as Velair equipment or as a Room Assist temperature reference.
+
+Turn off **Room Assist thermostat** to remove the entity and cancel its temporary
+target. This does not turn off Room Assist itself.
 
 ### Optional braking
 

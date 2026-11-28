@@ -12,6 +12,7 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Los termostatos de asistencia de estancia de Velair no pueden seleccionarse como equipos.",
       "no_climate_entities": "Selecciona al menos una entidad de climatización."
     },
     "abort": {
@@ -30,11 +31,17 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Los termostatos de asistencia de estancia de Velair no pueden seleccionarse como equipos.",
       "no_climate_entities": "Selecciona al menos una entidad de climatización.",
       "grouped_climate_entities": "Quita estos equipos de sus grupos de habitación en Ajustes de Velair antes de eliminarlos de la integración."
     }
   },
   "entity": {
+    "climate": {
+      "room_assist_thermostat": {
+        "name": "{zone} – Termostato de asistencia de estancia"
+      }
+    },
     "sensor": {
       "next_climate_event": {
         "name": "Próximo evento programado"

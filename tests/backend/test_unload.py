@@ -58,6 +58,7 @@ def _load_integration_init():
         "custom_components.velair.config_helpers": _module(
             "custom_components.velair.config_helpers",
             get_configured_climate_entities=lambda _entry: [],
+            velair_climate_entity_ids=lambda _hass: [],
             should_apply_active_schedule_on_startup=lambda _entry: False,
         ),
         "custom_components.velair.entity_registry": _module(

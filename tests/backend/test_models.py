@@ -698,6 +698,7 @@ class ScheduleBlockNormalizationTest(unittest.TestCase):
                 "outdoor_temperature_entity_id": None,
                 "room_temperature_entity_id": None,
                 "room_sensor_assist_enabled": False,
+                "room_assist_climate_enabled": False,
                 "room_sensor_assist_braking_level": "default",
                 "room_sensor_assist_high_braking_steps": 2,
                 "room_sensor_assist_deadband": 0.3,

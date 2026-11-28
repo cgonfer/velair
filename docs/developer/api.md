@@ -1200,6 +1200,13 @@ invalid rather than a stale request or a fallback to the elevated device target.
 This adds no persisted setting or portable field. Without Room Assist, supply's
 reported-target and hysteresis path remains unchanged.
 
+Set `preconditioning.room_assist_climate_enabled` to `true` to expose a Home
+Assistant thermostat for a locally managed room or room group. It defaults to
+`false`. The entity accepts `climate.set_temperature` for an active single-target
+heating block and does not change the schedule or the equipment's HVAC mode.
+The flag is portable; a temporary room target is local runtime state and is
+not exported. See [Room Assist thermostat](../user/room-assist.md#optional-room-assist-thermostat).
+
 The optional `preconditioning.room_sensor_schedule` object adds a weekly Room
 Assist reference schedule. It contains `enabled`, `default_source`, and `periods`;
 each period contains `weekdays`, `start`, `end`, and `source`. Sources are

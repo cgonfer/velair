@@ -1,4 +1,6 @@
 export const es = {
+  "roomAssistClimate": "Termostato de Room Assist",
+  "roomAssistClimateDescription": "Muestra un termostato solo de calefacción en Home Assistant. Los cambios de consigna duran hasta el siguiente bloque del horario.",
   "highBrakingSteps": "Pasos de frenado Alto",
   "highBrakingStepsUnit": "pasos",
   "highBrakingStepsHelp": "Número de pasos de consigna del equipo que utiliza el frenado Alto en esta zona (2–10; 2 por defecto). Solo se aplica al seleccionar Alto en Room Assist. En calefacción baja la consigna y en refrigeración la sube. Moderado sigue utilizando un paso. Los límites físicos pueden reducir el efecto y se conservan las correcciones existentes más fuertes. Es un frenado fijo, no un ajuste progresivo.",

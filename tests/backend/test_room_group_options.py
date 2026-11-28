@@ -39,6 +39,7 @@ class RoomGroupOptionsTests(unittest.IsolatedAsyncioTestCase):
         self.flow.async_show_form = Mock(side_effect=lambda **kwargs: {"type": "form", **kwargs})
         self.flow.add_suggested_values_to_schema = Mock(return_value={})
         self.module._climate_entities_schema = Mock(return_value={})
+        self.module.velair_climate_entity_ids = Mock(return_value=[])
 
     async def test_deselecting_group_member_returns_actionable_form_error(self):
         result = await self.flow.async_step_init({"climate_entities": ["climate.one"]})
@@ -49,6 +50,13 @@ class RoomGroupOptionsTests(unittest.IsolatedAsyncioTestCase):
     async def test_unchanged_members_and_additional_climate_are_allowed(self):
         result = await self.flow.async_step_init({"climate_entities": ["climate.one", "climate.two", "climate.three"]})
         self.assertEqual(result["type"], "create_entry")
+
+    async def test_cannot_manage_a_renamed_room_assist_thermostat(self):
+        self.module.velair_climate_entity_ids.return_value = ["climate.renamed"]
+        result = await self.flow.async_step_init({"climate_entities": ["climate.one", "climate.two", "climate.renamed"]})
+        self.assertEqual(result["errors"], {"climate_entities": "room_assist_climate_entity"})
+        self.module._climate_entities_schema.assert_called_once_with(["climate.renamed"])
+        self.flow.async_create_entry.assert_not_called()
 
     async def test_unloaded_integration_reads_ownership_from_store(self):
         self.flow.config_entry.runtime_data = None

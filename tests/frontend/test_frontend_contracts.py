@@ -288,6 +288,7 @@ def _loaded_velair_integration(frontend_module):
     install_module(
         "custom_components.velair.config_helpers",
         get_configured_climate_entities=lambda _entry: [],
+        velair_climate_entity_ids=lambda _hass: [],
         should_apply_active_schedule_on_startup=lambda _entry: False,
     )
     install_module(

@@ -1,4 +1,6 @@
 export const en = {
+  "roomAssistClimate": "Room Assist thermostat",
+  "roomAssistClimateDescription": "Show a heating-only thermostat in Home Assistant. Target changes last until the next schedule block.",
   "highBrakingSteps": "High braking steps",
   "highBrakingStepsUnit": "steps",
   "highBrakingStepsHelp": "Number of equipment setpoint steps used by High braking in this zone (2–10; default 2). Used only when High is selected in Room Assist. Heating lowers the setpoint and cooling raises it. Moderate still uses one step. Physical limits may reduce the effect, and stronger existing corrections are retained. This is fixed braking, not progressive adjustment.",

@@ -42,6 +42,7 @@ def _install_homeassistant_stubs() -> None:
         SENSOR="sensor",
         SELECT="select",
         SWITCH="switch",
+        CLIMATE="climate",
     )
     sys.modules["homeassistant.const"] = const
 
@@ -333,6 +334,7 @@ class FakeClimateManager:
         preset_mode: str | None = None,
         swing_mode: str | None = None,
         swing_horizontal_mode: str | None = None,
+        temperature_only: bool = False,
     ) -> None:
         options = {
             "fan_mode": fan_mode,
@@ -341,6 +343,8 @@ class FakeClimateManager:
             "swing_mode": swing_mode,
             "swing_horizontal_mode": swing_horizontal_mode,
         }
+        if temperature_only:
+            options["temperature_only"] = True
         if any(value is not None for value in options.values()):
             self.calls.append((
                 "set_temperature",

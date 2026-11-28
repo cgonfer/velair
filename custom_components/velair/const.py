@@ -156,6 +156,7 @@ PLATFORMS: tuple[Platform, ...] = (
     Platform.SENSOR,
     Platform.SELECT,
     Platform.SWITCH,
+    Platform.CLIMATE,
 )
 
 ZONE_SENSOR_UNIQUE_ID_SUFFIXES = (

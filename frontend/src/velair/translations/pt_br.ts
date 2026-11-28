@@ -1,4 +1,6 @@
 export const pt_br = {
+  "roomAssistClimate": "Termostato do Room Assist",
+  "roomAssistClimateDescription": "Mostra um termostato apenas para aquecimento no Home Assistant. As alterações de temperatura valem até o próximo bloco da programação.",
   "highBrakingSteps": "Passos da frenagem Alta",
   "highBrakingStepsUnit": "passos",
   "highBrakingStepsHelp": "Número de passos da temperatura definida do equipamento usados pela frenagem Alta nesta zona (2–10; padrão 2). Usado somente quando Alta está selecionada no Room Assist. No aquecimento, reduz a temperatura definida; na refrigeração, aumenta. Moderada continua usando um passo. Os limites físicos podem reduzir o efeito, e correções existentes mais fortes são mantidas. A frenagem é fixa, sem ajuste progressivo.",

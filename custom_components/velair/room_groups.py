@@ -96,6 +96,7 @@ def _clear_temporary(zone: dict[str, Any]) -> dict[str, Any]:
     result = deepcopy(zone)
     result["override"] = None
     result["pauses"] = []
+    result.pop("room_assist_target_override", None)
     return result
 
 
@@ -209,7 +210,7 @@ def build_group_candidate(data: dict[str, Any], physical_ids: list[str], group: 
     settings["unit_order"] = list(dict.fromkeys(owners.get(entity, entity) for entity in order if owners.get(entity, entity) in candidate["zones"]))
     settings["unit_order"].extend(entity for entity in candidate["zones"] if entity not in settings["unit_order"])
     return candidate, {"group": deepcopy(group), "source_entity_id": source, "conflicts": conflicts, "removed_members": removed, "learning_reset": changed,
-                       "temporary_control_reset": changed and any(data["zones"].get(entity, {}).get("override") or data["zones"].get(entity, {}).get("pauses") for entity in [source, *group["members"]]),
+                       "temporary_control_reset": changed and any(any(data["zones"].get(entity, {}).get(field) for field in ("override", "pauses", "room_assist_target_override")) for entity in [source, *group["members"]]),
                        "configuration_revision": data.get("configuration_revision", 0)}
 
 

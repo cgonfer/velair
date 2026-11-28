@@ -1,4 +1,6 @@
 export const it = {
+  "roomAssistClimate": "Termostato Room Assist",
+  "roomAssistClimateDescription": "Mostra un termostato di solo riscaldamento in Home Assistant. Le modifiche alla temperatura valgono fino al blocco successivo.",
   "highBrakingSteps": "Passi di frenata Alto",
   "highBrakingStepsUnit": "passi",
   "highBrakingStepsHelp": "Numero di passi del setpoint del dispositivo usati dalla frenata Alto in questa zona (2–10; 2 per impostazione predefinita). Si applica solo quando Alto è selezionato in Room Assist. In riscaldamento abbassa il setpoint e in raffreddamento lo alza. Moderato continua a usare un passo. I limiti fisici possono ridurne l’effetto e le correzioni esistenti più forti vengono conservate. È una frenata fissa, non una regolazione progressiva.",

@@ -20,6 +20,7 @@ from .climate_change_monitor import ClimateChangeMonitor
 from .config_helpers import (
     get_configured_climate_entities,
     should_apply_active_schedule_on_startup,
+    velair_climate_entity_ids,
 )
 from .const import DOMAIN, PLATFORMS
 from .entity_registry import cleanup_entity_registry
@@ -76,7 +77,8 @@ async def async_setup_entry(
     entry: VelairConfigEntry,
 ) -> bool:
     """Set up Velair from a config entry."""
-    climate_entities = get_configured_climate_entities(entry)
+    proxies = set(velair_climate_entity_ids(hass))
+    climate_entities = [entity for entity in get_configured_climate_entities(entry) if entity not in proxies]
     storage = VelairStorage(hass, entry.entry_id)
     data = await storage.async_load(climate_entities)
     execution_authority = ExecutionAuthority(data)

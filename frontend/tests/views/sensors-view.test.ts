@@ -500,6 +500,24 @@ describe("sensors view", () => {
     );
   });
 
+  it("opts in to the thermostat for just the selected room", () => {
+    const { saveZonePreconditioning, viewHost } = host({
+      expandedZoneIds: ["climate.first", "climate.second"],
+    });
+    const container = document.createElement("div");
+    render(renderSensorsView(viewHost, ["climate.first", "climate.second"]), container);
+    const switches = Array.from(container.querySelectorAll<HTMLElement & { checked: boolean }>(
+      '.room-assist-climate-row ha-switch[aria-label="roomAssistClimate"]',
+    ));
+    expect(switches.map((toggle) => toggle.checked)).toEqual([false, false]);
+    const bedroomSwitch = switches[1];
+    bedroomSwitch.checked = true;
+    bedroomSwitch.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(saveZonePreconditioning).toHaveBeenCalledExactlyOnceWith(
+      "climate.second", { room_assist_climate_enabled: true },
+    );
+  });
+
   it("shows and persists the Room Assist refresh delay", () => {
     const { saveZonePreconditioning, viewHost } = host({
       assistEnabled: true,
@@ -871,7 +889,7 @@ describe("scheduled Room Assist references", () => {
     const read = referenceStore(viewHost, saveZonePreconditioning);
     const { container, reference } = await mountReference(viewHost);
     expect(container.querySelectorAll("velair-room-sensor-schedule")).toHaveLength(1);
-    expect(container.querySelectorAll("ha-switch")).toHaveLength(1);
+    expect(container.querySelectorAll(".sensor-enable-control ha-switch")).toHaveLength(1);
     expect(reference.shadowRoot!.querySelector("ha-switch")).toBeNull();
     expect(reference.shadowRoot!.querySelector('[data-field="fixed-source"]')).not.toBeNull();
     expect(reference.shadowRoot!.querySelector(".schedule-fields")).toBeNull();
@@ -888,7 +906,7 @@ describe("scheduled Room Assist references", () => {
     settings.room_sensor_schedule = { enabled: true, default_source: null, periods: [{ weekdays: ["monday"], start: "08:00", end: "17:00", source: "sensor.bedroom_temperature" }] };
     const read = referenceStore(viewHost, saveZonePreconditioning);
     const { container, reference } = await mountReference(viewHost);
-    expect(container.querySelectorAll("ha-switch")).toHaveLength(1);
+    expect(container.querySelectorAll(".sensor-enable-control ha-switch")).toHaveLength(1);
     expect(reference.shadowRoot!.querySelector("ha-switch")).toBeNull();
     expect(reference.shadowRoot!.querySelector('[data-field="fixed-source"]')).toBeNull();
     expect(reference.shadowRoot!.querySelectorAll("[data-period]")).toHaveLength(1);

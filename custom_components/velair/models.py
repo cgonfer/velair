@@ -216,6 +216,7 @@ class PreconditioningData(TypedDict):
     room_temperature_entity_id: str | None
     room_sensor_schedule: NotRequired[dict[str, Any]]
     room_sensor_assist_enabled: bool
+    room_assist_climate_enabled: bool
     room_sensor_assist_deadband: float
     room_sensor_assist_braking_level: str
     room_sensor_assist_high_braking_steps: int
@@ -386,6 +387,31 @@ class TemplateLinkData(TypedDict):
     bindings: NotRequired[dict[str, dict[str, Any]]]
 
 
+class RoomAssistTargetOverride(TypedDict):
+    """Temporary room target owned by one concrete schedule occurrence."""
+
+    temperature: float
+    block_at: str
+    until: str
+
+
+def _normalize_room_assist_target_override(raw: object) -> RoomAssistTargetOverride | None:
+    if not isinstance(raw, dict):
+        return None
+    value = raw.get("temperature")
+    if type(value) not in (int, float):
+        return None
+    try:
+        temperature = float(value)
+        start = datetime.fromisoformat(raw["block_at"])
+        end = datetime.fromisoformat(raw["until"])
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+    if not isfinite(temperature) or start.tzinfo is None or end.tzinfo is None or end <= start:
+        return None
+    return {"temperature": temperature, "block_at": start.isoformat(), "until": end.isoformat()}
+
+
 class ZoneData(TypedDict):
     """Stored state for one climate zone."""
 
@@ -395,6 +421,7 @@ class ZoneData(TypedDict):
     day_layout_key: NotRequired[str]
     override: NotRequired[ZoneOverride | None]
     pending_boost_return: NotRequired[PendingBoostReturn]
+    room_assist_target_override: NotRequired[RoomAssistTargetOverride]
     pauses: NotRequired[list[ZonePauseReason]]
     preconditioning: PreconditioningData
     comfort: ComfortData
@@ -624,6 +651,8 @@ class ClimateEvent:
     preconditioning_diagnostics: PreconditioningPredictionDiagnostics | None = None
     preconditioning_dependency: dict[str, Any] | None = None
     temperature_only: bool = False
+    # Present only for a Room Assist hold; this is the setpoint to use without correction.
+    room_assist_nominal_temperature: float | None = None
 
 
 def empty_week_schedule() -> dict[str, list[ScheduleBlock]]:
@@ -919,6 +948,9 @@ def normalize_schedule_data(
                 zone_data.get("external_change_policy")
             ),
         }
+        room_target = _normalize_room_assist_target_override(zone_data.get("room_assist_target_override"))
+        if room_target is not None and preconditioning["room_assist_climate_enabled"] and preconditioning["room_sensor_assist_enabled"]:
+            zones[entity_id]["room_assist_target_override"] = room_target
         from .day_layouts import normalize_day_layout_key
         pending_return = _normalize_pending_boost_return(zone_data.get("pending_boost_return"))
         if pending_return is not None and override is None and not pauses:
@@ -2014,6 +2046,7 @@ def normalize_preconditioning_data(raw_data: Any) -> PreconditioningData:
             data.get("room_temperature_entity_id")
         ),
         "room_sensor_assist_enabled": bool(data.get("room_sensor_assist_enabled", False)),
+        "room_assist_climate_enabled": data.get("room_assist_climate_enabled") is True,
         "room_sensor_assist_braking_level": (
             data.get("room_sensor_assist_braking_level", "default")
             if data.get("room_sensor_assist_braking_level", "default") in ("default", "moderate", "high")

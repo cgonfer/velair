@@ -194,7 +194,7 @@ function renderSensorConfiguration(
   settings: PreconditioningSettings,
   options: RoomSensorViewOptions,
 ) {
-  if (!options.showRoomSensor && !options.showDeadband && !options.showMaxDelta && !options.showDebounce) {
+  if (!options.showRoomSensor && !options.showDeadband && !options.showMaxDelta && !options.showDebounce && !options.showAssistSwitch) {
     return nothing;
   }
 
@@ -209,6 +209,7 @@ function renderSensorConfiguration(
               .language=${host._language?.() ?? ""} .showLiveStatus=${options.showLiveStatus}
             ></velair-room-sensor-schedule>`
           : nothing}
+        ${options.showAssistSwitch ? renderRoomAssistClimateSwitch(host, entityId, settings) : nothing}
         ${options.showDeadband || options.showMaxDelta || options.showDebounce ? html`
         <section class="sensor-assist-settings" aria-label=${host._t("roomSensorAssistSettings")}>
           <h4>${host._t("roomSensorAssistSettings")}</h4>
@@ -283,6 +284,27 @@ function renderSensorConfiguration(
         </section>` : nothing}
       </div>
     </section>
+  `;
+}
+
+function renderRoomAssistClimateSwitch(host: SensorsViewHost, entityId: string, settings: PreconditioningSettings) {
+  const descriptionId = `room-assist-thermostat-${entityId.replace(".", "-")}`;
+  return html`
+    <div class="sensor-config-row room-assist-climate-row">
+      <div>
+        <span>${host._t("roomAssistClimate")}</span>
+        <small id=${descriptionId}>${host._t("roomAssistClimateDescription")}</small>
+      </div>
+      <ha-switch
+        aria-label=${host._t("roomAssistClimate")}
+        aria-describedby=${descriptionId}
+        .checked=${settings.room_assist_climate_enabled ?? false}
+        ?disabled=${host._settingsSaving}
+        @change=${(event: Event) => host._saveZonePreconditioning(entityId, {
+          room_assist_climate_enabled: Boolean((event.target as HTMLInputElement).checked),
+        })}
+      ></ha-switch>
+    </div>
   `;
 }
 

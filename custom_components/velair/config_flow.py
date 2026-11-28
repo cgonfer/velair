@@ -12,6 +12,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 from homeassistant.helpers.storage import Store
 
+from .config_helpers import velair_climate_entity_ids
 from .const import CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP, CONF_CLIMATE_ENTITIES, DOMAIN
 
 
@@ -36,11 +37,14 @@ class VelairConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="already_configured")
 
         errors: dict[str, str] = {}
+        proxies = velair_climate_entity_ids(self.hass)
 
         if user_input is not None:
             climate_entities = user_input.get(CONF_CLIMATE_ENTITIES, [])
             if not climate_entities:
                 errors[CONF_CLIMATE_ENTITIES] = "no_climate_entities"
+            elif set(climate_entities).intersection(proxies):
+                errors[CONF_CLIMATE_ENTITIES] = "room_assist_climate_entity"
             else:
                 return self.async_create_entry(
                     title="Velair",
@@ -55,7 +59,7 @@ class VelairConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_climate_entities_schema(),
+            data_schema=_climate_entities_schema(proxies),
             errors=errors,
         )
 
@@ -69,6 +73,7 @@ class VelairOptionsFlow(OptionsFlowWithReload):
     ) -> ConfigFlowResult:
         """Manage integration options."""
         errors: dict[str, str] = {}
+        proxies = velair_climate_entity_ids(self.hass)
 
         if user_input is not None:
             climate_entities = user_input.get(CONF_CLIMATE_ENTITIES, [])
@@ -82,6 +87,8 @@ class VelairOptionsFlow(OptionsFlowWithReload):
                        for member in group.get("members", [])}
             if not climate_entities:
                 errors[CONF_CLIMATE_ENTITIES] = "no_climate_entities"
+            elif set(climate_entities).intersection(proxies):
+                errors[CONF_CLIMATE_ENTITIES] = "room_assist_climate_entity"
             elif grouped - set(climate_entities):
                 errors[CONF_CLIMATE_ENTITIES] = "grouped_climate_entities"
             else:
@@ -107,9 +114,9 @@ class VelairOptionsFlow(OptionsFlowWithReload):
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
-                _climate_entities_schema(),
+                _climate_entities_schema(proxies),
                 {
-                    CONF_CLIMATE_ENTITIES: current_climate_entities,
+                    CONF_CLIMATE_ENTITIES: [entity_id for entity_id in current_climate_entities if entity_id not in proxies],
                     CONF_APPLY_ACTIVE_SCHEDULE_ON_STARTUP: apply_on_startup,
                 },
             ),
@@ -117,7 +124,7 @@ class VelairOptionsFlow(OptionsFlowWithReload):
         )
 
 
-def _climate_entities_schema() -> vol.Schema:
+def _climate_entities_schema(excluded_entities: list[str]) -> vol.Schema:
     """Return the climate entity selector schema."""
     return vol.Schema(
         {
@@ -125,6 +132,7 @@ def _climate_entities_schema() -> vol.Schema:
                 selector.EntitySelectorConfig(
                     domain="climate",
                     multiple=True,
+                    exclude_entities=excluded_entities,
                 )
             ),
             vol.Optional(

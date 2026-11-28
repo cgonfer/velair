@@ -387,6 +387,7 @@ export type PreconditioningSettings = {
   room_temperature_entity_id: string | null;
   room_sensor_schedule?: RoomSensorSchedule | RoomSensorScheduleSummary;
   room_sensor_assist_enabled: boolean;
+  room_assist_climate_enabled?: boolean;
   room_sensor_assist_deadband: number;
   room_sensor_assist_braking_level?: RoomAssistBrakingLevel;
   room_sensor_assist_high_braking_steps?: number;

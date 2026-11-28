@@ -1,4 +1,6 @@
 export const fr = {
+  "roomAssistClimate": "Thermostat Room Assist",
+  "roomAssistClimateDescription": "Affiche un thermostat de chauffage dans Home Assistant. La consigne modifiée reste valable jusqu’au prochain bloc du programme.",
   "highBrakingSteps": "Pas de freinage Élevé",
   "highBrakingStepsUnit": "pas",
   "highBrakingStepsHelp": "Nombre de pas de consigne de l’appareil utilisés par le freinage Élevé dans cette zone (2–10 ; 2 par défaut). S’applique uniquement lorsque Élevé est sélectionné dans Room Assist. Le chauffage abaisse la consigne et le refroidissement l’augmente. Modéré utilise toujours un pas. Les limites physiques peuvent réduire l’effet et les corrections existantes plus fortes sont conservées. Il s’agit d’un freinage fixe, pas d’un ajustement progressif.",

@@ -12,6 +12,7 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Velair Room Assist thermostats cannot be selected as equipment.",
       "no_climate_entities": "Select at least one climate entity."
     },
     "abort": {
@@ -30,11 +31,17 @@
       }
     },
     "error": {
+      "room_assist_climate_entity": "Velair Room Assist thermostats cannot be selected as equipment.",
       "no_climate_entities": "Select at least one climate entity.",
       "grouped_climate_entities": "Remove these climates from their room groups in Velair Settings before removing them from the integration."
     }
   },
   "entity": {
+    "climate": {
+      "room_assist_thermostat": {
+        "name": "{zone} – Room Assist thermostat"
+      }
+    },
     "sensor": {
       "next_climate_event": {
         "name": "Next scheduled event"

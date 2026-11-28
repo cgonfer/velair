@@ -229,6 +229,16 @@ export const sensorsStyles = css`
   border-top: 0;
 }
 
+.room-assist-climate-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.room-assist-climate-row small {
+  display: block;
+  color: var(--secondary-text-color);
+  margin-top: 4px;
+}
+
 .sensor-assist-settings {
   border-top: 1px solid var(--divider-color);
   margin-top: 22px;

@@ -11,9 +11,11 @@
 | Referenzversion | 1.9.3-beta.5 |
 | Letzte Synchronisierung | 2026-11-25 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
-| Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
+| Vergleich mit dem Original | Änderungen ausstehend |
 
 </details>
+
+> Das Original wurde geändert; diese Übersetzung ist möglicherweise nicht mehr aktuell. [Englisches Original](room-assist.md)
 
 ---
 <!-- velair-docs:end -->
