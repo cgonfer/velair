@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { test, expect } from "@playwright/test";
 import { assertFitsViewport, connect, openPanel, readState } from "./helpers.mjs";
 import { isolatedZones, setWeek } from "./control-helpers.mjs";
@@ -64,6 +65,73 @@ test("Room Assist thermostat opt-in exposes a room target without changing the s
           room_assist_climate_enabled: prior.room_assist_climate_enabled ?? false });
       }
     });
+  } finally {
+    api.close();
+  }
+});
+
+test("Room group rename refreshes the thermostat default without changing its HA identity or custom name", async () => {
+  const api = await connect(state);
+  const zone = state.climate_entities[0];
+  const read = () => api.call({ type: "velair/get_schedule" });
+  const mutateGroup = async (command) => api.call({
+    ...command, expected_revision: (await read()).configuration_revision,
+  });
+  const setGroup = (group, source) => mutateGroup({
+    type: "velair/set_room_group", group, ...(source ? { source_entity_id: source } : {}),
+  });
+  const optIn = (groupId, enabled) => api.call({
+    type: "velair/update_zone_preconditioning", entity_id: groupId,
+    preconditioning: { room_assist_climate_enabled: enabled },
+  });
+  const states = () => api.call({ type: "get_states" });
+  const thermostatName = (name) => `${name} – Room Assist thermostat`;
+  const findOriginal = async (name) => (await states()).find(({ entity_id, attributes }) =>
+    entity_id.startsWith("climate.") && attributes.friendly_name?.endsWith(thermostatName(name)));
+  const initialName = "Rename test room";
+  const groupId = `group.quality_thermostat_rename_${randomUUID().replaceAll("-", "")}`;
+  const group = { id: groupId, name: initialName, members: [zone], temperature_entity_id: zone, delivery_mode: "all" };
+
+  try {
+    try {
+      await setGroup(group, zone);
+      await optIn(groupId, true);
+      await expect.poll(() => findOriginal(initialName)).toBeTruthy();
+      const { entity_id: entityId } = await findOriginal(initialName);
+      const registryEntry = () => api.call({ type: "config/entity_registry/get", entity_id: entityId });
+      const customize = (name) => api.call({ type: "config/entity_registry/update", entity_id: entityId, name });
+      const friendlyName = async () => (await states()).find(({ entity_id }) => entity_id === entityId)?.attributes.friendly_name;
+      const { id: registryId } = await registryEntry();
+      expect(registryId).toBeTruthy();
+
+      const renamed = "Renamed test room";
+      await setGroup({ ...group, name: renamed });
+      await expect.poll(friendlyName).toMatch(/Renamed test room – Room Assist thermostat$/);
+      expect(await registryEntry()).toMatchObject({ id: registryId, entity_id: entityId, original_name: thermostatName(renamed), name: null });
+
+      const customName = "My HA thermostat";
+      await customize(customName);
+      await expect.poll(friendlyName).toContain(customName);
+      const customFriendlyName = await friendlyName();
+      const renamedAgain = "Renamed again test room";
+      await setGroup({ ...group, name: renamedAgain });
+      await expect.poll(registryEntry).toMatchObject({
+        id: registryId, entity_id: entityId, original_name: thermostatName(renamedAgain), name: customName,
+      });
+      expect(await friendlyName()).toBe(customFriendlyName);
+      await customize(null);
+      await expect.poll(friendlyName).toMatch(/Renamed again test room – Room Assist thermostat$/);
+
+      await optIn(groupId, false);
+      await expect.poll(async () => (await api.call({ type: "config/entity_registry/list" }))
+        .some(({ entity_id }) => entity_id === entityId)).toBe(false);
+      expect((await states()).some(({ entity_id }) => entity_id === entityId)).toBe(false);
+    } finally {
+      if ((await read()).room_groups[groupId]) {
+        await optIn(groupId, false);
+        await mutateGroup({ type: "velair/remove_room_group", group_id: groupId });
+      }
+    }
   } finally {
     api.close();
   }

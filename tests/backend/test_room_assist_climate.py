@@ -1,5 +1,6 @@
 """Room Assist thermostat targets are distinct from physical and scheduled targets."""
 
+import asyncio
 from copy import deepcopy
 from datetime import timedelta
 from types import SimpleNamespace
@@ -11,7 +12,9 @@ from .helpers import (
     FakeClimateManager, FakeHass, NOW, VelairScheduler, normalize_schedule_data,
     scheduler_module,
 )
-from custom_components.velair.models import ClimateEvent, empty_week_schedule, serialize_schedule_data
+from custom_components.velair import climate_delivery
+from custom_components.velair.delivery_guard import check_delivery
+from custom_components.velair.models import empty_week_schedule, serialize_schedule_data
 
 
 class RoomAssistClimateTests(unittest.IsolatedAsyncioTestCase):
@@ -38,7 +41,11 @@ class RoomAssistClimateTests(unittest.IsolatedAsyncioTestCase):
             "preconditioning": {"room_temperature_entity_id": self.sensor, "room_sensor_assist_enabled": True},
         }}}, [self.room])
         self.save = AsyncMock()
-        self.scheduler = VelairScheduler(self.hass, self.data, self.climate, self.save)
+        self.delivery_statuses = []
+        coordinator = climate_delivery.ClimateDeliveryCoordinator(
+            self.hass, lambda _, status, details: self.delivery_statuses.append(status),
+        )
+        self.scheduler = VelairScheduler(self.hass, self.data, self.climate, self.save, climate_delivery=coordinator)
 
     async def asyncTearDown(self):
         await self.scheduler.async_stop()
@@ -156,14 +163,43 @@ class RoomAssistClimateTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await self.scheduler.async_apply_current_schedule(self.room))
         self.assertEqual(self.applied_temperatures()[-1], 20)
 
-    async def test_timer_waits_for_nominal_block_instead_of_early_preparation_during_hold(self):
+    async def assert_preparation_rearmed(self, *, opt_out):
+        await self.scheduler.async_update_zone_preconditioning(self.room, {
+            "enabled": True, "max_lead_minutes": 35,
+        })
         await self.opt_in()
-        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 20)
+        preparation = self.now + timedelta(minutes=25)
         arrival = self.now + timedelta(hours=1)
-        early = ClimateEvent(self.room, self.now, 24, "tuesday", "19:00",
-                             hvac_mode="heat", target_when=arrival)
-        with patch.object(self.scheduler, "_iter_future_events", return_value=[early]):
-            self.assertEqual(self.scheduler._calculate_next_action_time(self.now), arrival)
+        with patch.object(scheduler_module, "async_track_point_in_time", return_value=lambda: None) as track:
+            self.scheduler.async_schedule_next_event()
+            self.assertEqual(track.call_args.args[-1], preparation)
+            self.assertEqual(self.scheduler.get_next_effective_events()[0]["when"], preparation)
+            await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+            self.assertEqual(track.call_args.args[-1], arrival)
+            self.assertEqual(self.scheduler.get_next_event_for_zone(self.room).when, arrival)
+            self.assertEqual(self.scheduler.calculate_next_event(self.now).when, arrival)
+            self.assertIsNone(self.scheduler.get_next_event_for_zone(self.room).target_when)
+            self.assertEqual(self.scheduler.get_next_effective_events()[0]["when"], arrival)
+
+            if opt_out:
+                await self.scheduler.async_update_zone_preconditioning(self.room, {"room_assist_climate_enabled": False})
+            else:
+                await self.scheduler.async_set_room_assist_climate_temperature(self.room, 19)
+            self.assertNotIn("room_assist_target_override", self.data["zones"][self.room])
+            self.assertEqual(track.call_args.args[-1], preparation)
+            self.assertEqual(self.scheduler.get_next_event_for_zone(self.room).when, preparation)
+            self.assertEqual(self.scheduler.get_next_event_for_zone(self.room).target_when, arrival)
+            self.assertEqual(self.scheduler.calculate_next_event(self.now).when, preparation)
+            self.assertEqual(self.scheduler.get_next_effective_events()[0]["when"], preparation)
+            self.now = preparation
+            await track.call_args.args[1](preparation)
+            self.assertEqual(self.applied_temperatures()[-1], 19)
+
+    async def test_opt_out_rearms_preparation_and_updates_next_event_preview(self):
+        await self.assert_preparation_rearmed(opt_out=True)
+
+    async def test_setting_nominal_target_releases_hold_and_rearms_preparation(self):
+        await self.assert_preparation_rearmed(opt_out=False)
 
     async def test_moving_next_block_before_now_replaces_the_hold_immediately(self):
         await self.opt_in()
@@ -232,14 +268,222 @@ class RoomAssistClimateTests(unittest.IsolatedAsyncioTestCase):
         await self.scheduler.async_apply_current_schedule()
         self.assertEqual(self.scheduler.room_assist_climate_temperatures(self.room), (18, 20))
 
-    async def test_opt_out_reverts_target_without_turning_off_assist(self):
+    async def opt_out(self):
+        return await self.scheduler.async_update_zone_preconditioning(self.room, {"room_assist_climate_enabled": False})
+
+    def turn_equipment_off(self):
+        self.hass.states[self.room].state = "off"
+        self.climate.current_hvac_modes[self.room] = "off"
+
+    async def test_opt_out_restores_temperature_only_without_turning_off_assist(self):
         await self.opt_in()
-        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 21)
-        await self.scheduler.async_update_zone_preconditioning(self.room, {"room_assist_climate_enabled": False})
+        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+        self.climate.calls.clear()
+        await self.opt_out()
+        self.assertEqual(len(self.climate.calls), 1)
+        self.assert_temperature_only(self.climate.calls[0], 23)
         self.assertEqual(self.scheduler.room_assist_climate_zones(), {})
         self.assertEqual(self.scheduler.get_room_sensor_assist_status(self.room)["target_temperature"], 19)
         await self.opt_in()
         self.assertEqual(self.scheduler.room_assist_climate_temperatures(self.room), (17, 19))
+
+    async def test_opt_out_does_not_restore_when_equipment_switches_off_during_save(self):
+        await self.opt_in()
+        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+        self.climate.calls.clear()
+        self.save.side_effect = self.turn_equipment_off
+        await self.opt_out()
+        self.assertEqual(self.hass.states[self.room].state, "off")
+        self.assertEqual(self.scheduler.room_assist_climate_zones(), {})
+        self.assertEqual(self.climate.calls, [])
+
+    async def test_opt_out_combined_with_assist_settings_never_restores_mode(self):
+        await self.opt_in()
+        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+        self.climate.calls.clear()
+        self.save.side_effect = self.turn_equipment_off
+        await self.scheduler.async_update_zone_preconditioning(self.room, {
+            "room_assist_climate_enabled": False, "room_sensor_assist_deadband": 0.5,
+        })
+        self.assertEqual(self.scheduler.room_assist_climate_zones(), {})
+        self.assertEqual(self.climate.calls, [])
+
+    async def test_opt_out_checks_mode_at_physical_delivery(self):
+        await self.opt_in()
+        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+        self.climate.calls.clear()
+        original = self.climate.async_set_temperature
+
+        async def switch_off_before_service(*args, **kwargs):
+            self.turn_equipment_off()
+            check_delivery()  # The real climate manager checks at the service boundary.
+            await original(*args, **kwargs)
+
+        with patch.object(self.climate, "async_set_temperature", side_effect=switch_off_before_service) as write:
+            await self.opt_out()
+            write.assert_awaited_once()
+        self.assertEqual(self.climate.calls, [])
+        self.assertEqual(self.scheduler.room_assist_climate_zones(), {})
+
+    def assert_temperature_only(self, call, temperature):
+        operation, entity, target, ensure_on, mode, options = call
+        self.assertEqual((operation, entity, target, ensure_on, mode),
+                         ("set_temperature", self.room, temperature, False, None))
+        self.assertEqual({key: value for key, value in options.items() if value is not None}, {"temperature_only": True})
+
+    async def assert_recovery(self, *, opt_out, repeat):
+        await self.opt_in()
+        await self.scheduler.async_apply_current_schedule(self.room)
+
+        async def set_hold():
+            await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+
+        if opt_out:
+            await set_hold()
+        self.climate.calls.clear()
+        action = self.opt_out if opt_out else set_hold
+        expected = 19 if opt_out else 14
+        statuses = self.delivery_statuses
+        original = self.climate.async_set_temperature
+        delivered = asyncio.Event()
+        first = True
+
+        async def fail_first_write(*args, **kwargs):
+            nonlocal first
+            if first:
+                first = False
+                raise scheduler_module.HomeAssistantError("climate unavailable")
+            await original(*args, **kwargs)
+            delivered.set()
+
+        with (
+            patch.object(climate_delivery, "RETRY_DELAYS", (60,) if repeat else (0,)),
+            patch.object(self.climate, "async_set_temperature", side_effect=fail_first_write) as write,
+        ):
+            # A physical error is reported as delivery failure/retry, not as
+            # failure of the committed settings operation.
+            with self.assertLogs(climate_delivery.__name__, level="WARNING"):
+                await action()
+            save_count = self.save.await_count
+            self.assertEqual("failed", statuses[-1])
+            self.assertEqual(self.climate.calls, [])
+            self.assertEqual(self.scheduler.room_assist_climate_zones(), {} if opt_out else {self.room: self.room})
+            if not opt_out:
+                self.assertEqual(self.scheduler.room_assist_climate_temperatures(self.room), (17, expected))
+            if repeat:
+                await action()
+            else:
+                await asyncio.wait_for(delivered.wait(), timeout=1)
+                self.assertIn("retrying", statuses)
+            self.assertEqual(statuses[-1], "success")
+            self.assertEqual(self.scheduler.get_room_sensor_assist_status(self.room)["target_temperature"], expected)
+            self.assert_temperature_only(self.climate.calls[-1], 23 if opt_out else 14)
+            await action()
+            self.assertEqual(self.save.await_count, save_count)
+            self.assertEqual(write.await_count, 2)
+
+    async def test_hold_recovers_after_failed_delivery(self):
+        await self.assert_recovery(opt_out=False, repeat=False)
+
+    async def test_opt_out_recovers_after_failed_delivery(self):
+        await self.assert_recovery(opt_out=True, repeat=False)
+
+    async def test_repeating_failed_hold_reconciles_without_resaving(self):
+        await self.assert_recovery(opt_out=False, repeat=True)
+
+    async def test_repeating_failed_opt_out_reconciles_without_resaving(self):
+        await self.assert_recovery(opt_out=True, repeat=True)
+
+    async def test_opt_out_supersedes_a_failed_hold_even_if_the_write_may_have_landed(self):
+        await self.opt_in()
+        await self.scheduler.async_apply_current_schedule(self.room)
+        self.climate.calls.clear()
+        original = self.climate.async_set_temperature
+
+        async def accept_then_fail(*args, **kwargs):
+            await original(*args, **kwargs)
+            raise scheduler_module.HomeAssistantError("uncertain delivery")
+
+        with patch.object(climate_delivery, "RETRY_DELAYS", (0,)):
+            with patch.object(self.climate, "async_set_temperature", side_effect=accept_then_fail):
+                with self.assertLogs(climate_delivery.__name__, level="WARNING"):
+                    await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+            await self.opt_out()
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+        self.assertEqual([call[2] for call in self.climate.calls], [14, 23])
+        self.assertEqual(self.scheduler.get_room_sensor_assist_status(self.room)["target_temperature"], 19)
+
+    async def test_new_hold_supersedes_failed_opt_out(self):
+        await self.opt_in()
+        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+        self.climate.calls.clear()
+        with patch.object(climate_delivery, "RETRY_DELAYS", (0,)):
+            with patch.object(self.climate, "async_set_temperature", side_effect=scheduler_module.HomeAssistantError("offline")):
+                with self.assertLogs(climate_delivery.__name__, level="WARNING"):
+                    await self.opt_out()
+            await self.opt_in()
+            await self.scheduler.async_set_room_assist_climate_temperature(self.room, 15)
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+        self.assertEqual(len(self.climate.calls), 1)
+        self.assertEqual(self.scheduler.room_assist_climate_temperatures(self.room), (17, 15))
+        self.assertEqual(self.scheduler.get_room_sensor_assist_status(self.room)["target_temperature"], 15)
+
+    async def test_opt_out_retry_rechecks_current_mode(self):
+        await self.opt_in()
+        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+        self.climate.calls.clear()
+        with (
+            patch.object(climate_delivery, "RETRY_DELAYS", (0,)),
+            patch.object(self.climate, "async_set_temperature", side_effect=scheduler_module.HomeAssistantError("offline")) as write,
+        ):
+            with self.assertLogs(climate_delivery.__name__, level="WARNING"):
+                await self.opt_out()
+            self.turn_equipment_off()
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            self.assertEqual(self.delivery_statuses[-1], "cancelled")
+            write.assert_awaited_once()
+        self.assertEqual(self.climate.calls, [])
+
+    async def test_opt_out_fences_a_hold_waiting_at_the_service_boundary(self):
+        await self.opt_in()
+        writing = asyncio.Event()
+        release = asyncio.Event()
+        saved = asyncio.Event()
+        original = self.climate.async_set_temperature
+
+        async def delay_hold(*args, **kwargs):
+            if args[1] == 14:
+                writing.set()
+                await release.wait()
+            check_delivery()
+            await original(*args, **kwargs)
+
+        with patch.object(self.climate, "async_set_temperature", side_effect=delay_hold):
+            hold = asyncio.create_task(self.scheduler.async_set_room_assist_climate_temperature(self.room, 14))
+            await asyncio.wait_for(writing.wait(), timeout=1)
+            self.save.side_effect = saved.set
+            opt_out = asyncio.create_task(self.opt_out())
+            try:
+                await asyncio.wait_for(saved.wait(), timeout=1)
+            finally:
+                release.set()
+                await asyncio.gather(hold, opt_out)
+        self.assertEqual(len(self.climate.calls), 1)
+        self.assert_temperature_only(self.climate.calls[0], 23)
+        self.assertEqual(self.scheduler.room_assist_climate_zones(), {})
+
+    async def test_failed_opt_out_save_keeps_hold_and_does_not_write(self):
+        await self.opt_in()
+        await self.scheduler.async_set_room_assist_climate_temperature(self.room, 14)
+        self.climate.calls.clear()
+        self.save.side_effect = OSError("write failed")
+        with self.assertRaisesRegex(OSError, "write failed"):
+            await self.opt_out()
+        self.assertEqual(self.scheduler.room_assist_climate_temperatures(self.room), (17, 14))
+        self.assertEqual(self.climate.calls, [])
 
     async def test_rejects_non_heating_and_invalid_targets(self):
         await self.opt_in()

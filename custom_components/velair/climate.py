@@ -8,12 +8,17 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_platform, entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.typing import UNDEFINED
 
 from . import VelairConfigEntry
 from .const import DOMAIN, SIGNAL_SCHEDULER_UPDATED
 from .entity import VelairEntity
 
 _KEY = "room_assist_thermostat"
+
+
+def _thermostat_key(zone: str) -> str:
+    return f"{zone.replace('.', '_')}_{_KEY}"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: VelairConfigEntry, _add_entities) -> None:
@@ -40,16 +45,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: VelairConfigEntry, _add_
                         and item.unique_id.endswith(f"_{_KEY}") and item.unique_id not in wanted):
                     registry.async_remove(item.entity_id)
             new = []
-            for zone in zones.keys() - entities.keys():
-                entity = entities[zone] = RoomAssistClimate(entry, zone, zones[zone])
-                new.append(entity)
-            await platform.async_add_entities(new)
+            for zone, name in zones.items():
+                if zone not in entities:
+                    entity = entities[zone] = RoomAssistClimate(entry, zone, name)
+                    new.append(entity)
+                elif entities[zone].zone_name != name:
+                    entities[zone].async_set_zone_name(name, registry)
+            if new:
+                await platform.async_add_entities(new)
 
     @callback
     def handle_update() -> None:
         nonlocal dirty, task
         # Ordinary scheduler observations don't need to touch the registry.
-        if (task is None or task.done()) and entities.keys() == scheduler.room_assist_climate_zones().keys():
+        if (task is None or task.done()) and scheduler.room_assist_climate_zones() == {
+            zone: entity.zone_name for zone, entity in entities.items()
+        }:
             return
         dirty = True
         if task is None or task.done():
@@ -72,13 +83,29 @@ class RoomAssistClimate(VelairEntity, ClimateEntity):
 
     @staticmethod
     def unique_id_for(entry: VelairConfigEntry, zone: str) -> str:
-        return f"{entry.entry_id}_{zone.replace('.', '_')}_{_KEY}"
+        return f"{entry.entry_id}_{_thermostat_key(zone)}"
 
     def __init__(self, entry: VelairConfigEntry, zone: str, name: str) -> None:
-        super().__init__(entry, f"{zone.replace('.', '_')}_{_KEY}")
+        super().__init__(entry, _thermostat_key(zone))
         self._zone = zone
         self._attr_translation_placeholders = {"zone": name}
         self._temperatures: tuple[float | None, float | None] = (None, None)
+
+    @property
+    def zone_name(self) -> str:
+        return self._attr_translation_placeholders["zone"]
+
+    @callback
+    def async_set_zone_name(self, name: str, registry: er.EntityRegistry) -> None:
+        """Refresh HA's translated default without changing user registry fields."""
+        self._attr_translation_placeholders = {"zone": name}
+        # HA caches the translated name separately from its placeholders.
+        self.__dict__.pop("name", None)
+        entity_id = registry.async_get_entity_id("climate", DOMAIN, self.unique_id)
+        if entity_id is not None:
+            original_name = self.name
+            # The registry update also refreshes the state of an enabled entity.
+            registry.async_update_entity(entity_id, original_name=None if original_name is UNDEFINED else original_name)
 
     @property
     def suggested_object_id(self) -> str:
