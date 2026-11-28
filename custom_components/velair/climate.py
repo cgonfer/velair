@@ -11,7 +11,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.typing import UNDEFINED
 
 from . import VelairConfigEntry
-from .const import DOMAIN, SIGNAL_SCHEDULER_UPDATED
+from .const import DOMAIN, SIGNAL_COMFORT_UPDATED, SIGNAL_SCHEDULER_UPDATED
 from .entity import VelairEntity
 
 _KEY = "room_assist_thermostat"
@@ -73,7 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: VelairConfigEntry, _add_
 
 
 class RoomAssistClimate(VelairEntity, ClimateEntity):
-    """Show an external room temperature and adjust only its comfort target."""
+    """Show room readings and adjust only the room temperature target."""
 
     _attr_translation_key = _KEY
     _attr_hvac_modes = [HVACMode.HEAT]
@@ -151,12 +151,27 @@ class RoomAssistClimate(VelairEntity, ClimateEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(
+            self.hass, SIGNAL_COMFORT_UPDATED, self._handle_comfort_update))
+        self._refresh_readings()
+
+    def _refresh_readings(self) -> None:
         self._temperatures = self.scheduler.room_assist_climate_temperatures(self._zone)
+        self._attr_current_humidity = self.scheduler.room_assist_climate_humidity(self._zone)
 
     @callback
     def _handle_scheduler_update(self) -> None:
-        self._temperatures = self.scheduler.room_assist_climate_temperatures(self._zone)
+        self._refresh_readings()
         super()._handle_scheduler_update()
+
+    @callback
+    def _handle_comfort_update(self, entities: frozenset[str]) -> None:
+        if self.scheduler.room_assist_climate_comfort_entity(self._zone) not in entities:
+            return
+        humidity = self.scheduler.room_assist_climate_humidity(self._zone)
+        if humidity != self._attr_current_humidity:
+            self._attr_current_humidity = humidity
+            self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs) -> None:
         if kwargs.get("hvac_mode", HVACMode.HEAT) != HVACMode.HEAT or ATTR_TEMPERATURE not in kwargs:

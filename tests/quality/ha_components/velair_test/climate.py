@@ -26,6 +26,7 @@ class TestClimate(FixtureEntity, ClimateEntity):
         super().reset()
         self._attr_hvac_mode = HVACMode.OFF
         self._attr_native_current_temperature = 20.0
+        self._attr_current_humidity = None
         self._attr_native_target_temperature = 21.0
         self._attr_native_target_temperature_low = 19.0
         self._attr_native_target_temperature_high = 24.0

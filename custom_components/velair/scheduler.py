@@ -10971,6 +10971,21 @@ class VelairScheduler:
             return room, None
         return room, target.temperature
 
+    def room_assist_climate_comfort_entity(self, entity_id: str) -> str:
+        """Use a group's native reference for its otherwise independent Comfort settings."""
+        group = self._data.get("room_groups", {}).get(entity_id)
+        return group["temperature_entity_id"] if group is not None else entity_id
+
+    def room_assist_climate_humidity(self, entity_id: str) -> float | None:
+        """Return the current indoor Comfort humidity, not a humidity target."""
+        source = self.room_assist_climate_comfort_entity(entity_id)
+        humidity = self._comfort_projection.current(source, detached=False).get("humidity")
+        if isinstance(humidity, dict) and humidity.get("availability") == "current":
+            value = humidity.get("value")
+            if isinstance(value, float):
+                return value
+        return None
+
     async def async_set_room_assist_climate_temperature(self, entity_id: str, temperature: float) -> None:
         """Persist and apply a temporary room target under normal Room Assist control."""
         async with self._profile_mutation_lock:

@@ -1204,6 +1204,9 @@ Set `preconditioning.room_assist_climate_enabled` to `true` to expose a Home
 Assistant thermostat for a locally managed room or room group. It defaults to
 `false`. The entity accepts `climate.set_temperature` for an active single-target
 heating block and does not change the schedule or the equipment's HVAC mode.
+The read-only `current_humidity` attribute uses the current indoor Comfort
+reading for the physical climate (the native temperature reference member for
+room groups). Missing or stale humidity does not make the entity unavailable.
 The flag is portable; a temporary room target is local runtime state and is
 not exported. See [Room Assist thermostat](../user/room-assist.md#optional-room-assist-thermostat).
 

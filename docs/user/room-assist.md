@@ -74,6 +74,14 @@ Home Assistant thermostat card or call `climate.set_temperature` on it.
 The entity shows the active room sensor reading and the room target, not the
 corrected setpoint sent to the heating equipment.
 
+The thermostat also reports current indoor humidity using the room's
+[Comfort settings](comfort.md), including any configured humidity fallback.
+For a room group, it uses the Comfort settings of the member chosen as the
+**Temperature reference**. If Comfort or humidity monitoring is off, or there is
+no current reading, the humidity is omitted.
+The thermostat stays available if only humidity is lost. Humidity is read-only;
+there is no humidity target, and the reading does not affect heating.
+
 Changing the target keeps Room Assist active and leaves the schedule unchanged.
 The change survives a restart during the same block and expires at the next
 schedule block, even if that block has the same scheduled temperature. Adaptive

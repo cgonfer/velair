@@ -23,11 +23,12 @@ class TestSensor(FixtureEntity, SensorEntity):
 
     def reset(self):
         super().reset()
-        self._attr_current_temperature = 20.0 if self.kind == "temperature" else 45.0
+        self._attr_current_temperature = 20.0
+        self._attr_current_humidity = 45.0
 
     @property
     def native_value(self):
-        return self._attr_current_temperature
+        return self._attr_current_temperature if self.kind == "temperature" else self._attr_current_humidity
 
 
 class LoopLagSensor(FixtureEntity, SensorEntity):
