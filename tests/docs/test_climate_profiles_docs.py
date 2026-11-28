@@ -53,10 +53,20 @@ class ClimateProfilesDocumentationTest(unittest.TestCase):
             "Away · Bedrooms",
             "person.resident",
             "option: Away",
-            "option: Default",
+            "option: default",
             "different zones",
         ):
             self.assertIn(required, guide)
+
+    def test_builtin_mode_migration_covers_raw_values_and_saved_references(self) -> None:
+        guide = GUIDE.read_text(encoding="utf-8")
+        for required in (
+            "`Default`", "`default`", "`Manual`", "`manual`",
+            "Breaking change", "automations", "conditions", "templates",
+            "scenes", "external", "Velair does not rewrite user automations",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, guide)
 
     def test_usage_documents_both_writable_control_entities(self) -> None:
         usage = USAGE.read_text(encoding="utf-8")

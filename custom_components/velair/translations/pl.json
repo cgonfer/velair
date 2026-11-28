@@ -148,7 +148,11 @@
     },
     "select": {
       "mode": {
-        "name": "Tryb"
+        "name": "Tryb",
+        "state": {
+          "default": "Domyślny",
+          "manual": "Ręczny"
+        }
       }
     },
     "switch": {

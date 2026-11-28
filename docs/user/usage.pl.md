@@ -8,7 +8,7 @@ Tłumaczenia: [Oryginał w języku angielskim](usage.md) · [Español](usage.es.
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.3-beta.5 |
+| Wersja odniesienia | 1.9.3-beta.6 |
 | Ostatnia synchronizacja | 2026-11-25 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
@@ -772,7 +772,7 @@ Aktualizuje zapisany wspólny preset przy użyciu stałego `preset_key`. Aktuali
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Aktywuje jeden zapisany Profil klimatyczny i od razu stosuje jego zachowanie obowiązujące w danej chwili. Zastępuje cały aktywny zestaw Profili; strefy nieobjęte wybranym Profilem wracają do swoich harmonogramów domyślnych. Użyj stałego identyfikatora Profilu pokazywanego przez Velair, a nie jego nazwy, którą można edytować. Bezpośrednia aktywacja ustawia wybór Trybu na `Manual`. Pominięcie `profile_id` nadal przywraca harmonogramy domyślne dla zgodności z wcześniejszymi automatyzacjami; w nowych używaj jawnie `velair.deactivate_profile`.
+Aktywuje jeden zapisany Profil klimatyczny i od razu stosuje jego zachowanie obowiązujące w danej chwili. Zastępuje cały aktywny zestaw Profili; strefy nieobjęte wybranym Profilem wracają do swoich harmonogramów domyślnych. Użyj stałego identyfikatora Profilu pokazywanego przez Velair, a nie jego nazwy, którą można edytować. Bezpośrednia aktywacja ustawia wybór Trybu na `manual`. Pominięcie `profile_id` nadal przywraca harmonogramy domyślne dla zgodności z wcześniejszymi automatyzacjami; w nowych używaj jawnie `velair.deactivate_profile`.
 
 ```yaml
 action: velair.activate_profile

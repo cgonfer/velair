@@ -24,7 +24,7 @@ async def async_setup_entry(
 
 
 class VelairModeSelect(VelairEntity, SelectEntity):
-    """Native selector for Default, Manual, and user-defined modes."""
+    """Native selector with stable built-in values and user-defined mode names."""
 
     _attr_translation_key = "mode"
 

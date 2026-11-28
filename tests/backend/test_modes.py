@@ -125,7 +125,9 @@ class VelairModeModelTest(unittest.TestCase):
         self.assertEqual(normalize_modes([], {"away"}), [])
         for reserved_name in (
             "Default",
+            "default",
             "predeterminado",
+            "Manual",
             "manual",
             "unknown",
             "UNAVAILABLE",
@@ -753,19 +755,69 @@ class VelairModeSelectEntityTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(entity._attr_unique_id, "entry_mode")
         self.assertEqual(entity._attr_translation_key, "mode")
-        self.assertEqual(entity.options, ["Default", "Manual", "Away"])
-        self.assertEqual(entity.current_option, "Default")
+        self.assertEqual(entity.options, ["default", "manual", "Away"])
+        self.assertEqual(entity.current_option, "default")
         scheduler.active_profile_ids = ["away"]
-        self.assertEqual(entity.current_option, "Manual")
+        self.assertEqual(entity.current_option, "manual")
         scheduler.active_mode_id = "away-mode"
         self.assertEqual(entity.current_option, "Away")
 
         await entity.async_select_option("Away")
         scheduler.async_select_velair_mode.assert_awaited_once_with("away-mode")
-        await entity.async_select_option("Manual")
+        await entity.async_select_option("manual")
         scheduler.async_clear_velair_mode.assert_awaited_once_with()
-        await entity.async_select_option("Default")
+        await entity.async_select_option("default")
         scheduler.async_deactivate_profile.assert_awaited_once_with(source="select")
+
+    async def test_legacy_and_localized_labels_are_not_option_values(self) -> None:
+        scheduler = SimpleNamespace(
+            temperature_migration_blocked=False,
+            active_profile_ids=[],
+            active_mode_id=None,
+            get_modes=lambda: [],
+            async_deactivate_profile=AsyncMock(),
+            async_clear_velair_mode=AsyncMock(),
+            async_select_velair_mode=AsyncMock(),
+        )
+        entry = SimpleNamespace(
+            entry_id="entry", runtime_data=SimpleNamespace(scheduler=scheduler)
+        )
+        entity = select_module.VelairModeSelect(entry)
+
+        for label in ("Default", "Manual", "Predeterminado", "Standard", "Manuell"):
+            with self.subTest(label=label):
+                self.assertNotIn(label, entity.options)
+                with self.assertRaisesRegex(ValueError, "Unknown mode option"):
+                    await entity.async_select_option(label)
+
+        scheduler.async_deactivate_profile.assert_not_awaited()
+        scheduler.async_clear_velair_mode.assert_not_awaited()
+        scheduler.async_select_velair_mode.assert_not_awaited()
+
+    async def test_custom_name_and_profile_selection_survive_builtin_key_change(self) -> None:
+        scheduler = SimpleNamespace(
+            temperature_migration_blocked=False,
+            active_profile_ids=["away"],
+            active_mode_id="away-mode",
+            profile_selection={"zone_profile_overrides": {"climate.salon": None}},
+            get_modes=lambda: [
+                {"key": "away-mode", "name": "Día festivo", "profile_ids": ["away"]}
+            ],
+            async_select_velair_mode=AsyncMock(),
+        )
+        entry = SimpleNamespace(
+            entry_id="entry", runtime_data=SimpleNamespace(scheduler=scheduler)
+        )
+        entity = select_module.VelairModeSelect(entry)
+
+        self.assertEqual(entity.options, ["default", "manual", "Día festivo"])
+        self.assertEqual(entity.current_option, "manual")
+        self.assertEqual(scheduler.active_mode_id, "away-mode")
+        self.assertEqual(scheduler.active_profile_ids, ["away"])
+        scheduler.profile_selection["zone_profile_overrides"].clear()
+        self.assertEqual(entity.current_option, "Día festivo")
+        await entity.async_select_option("Día festivo")
+        scheduler.async_select_velair_mode.assert_awaited_once_with("away-mode")
 
 
 class VelairModePortableApiTest(unittest.TestCase):

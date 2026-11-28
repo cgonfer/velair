@@ -8,7 +8,7 @@ Traduções: [Original em inglês](usage.md) · [Español](usage.es.md) · [Fran
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.3-beta.5 |
+| Versão de referência | 1.9.3-beta.6 |
 | Última sincronização | 2026-11-25 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
@@ -795,7 +795,7 @@ Atualize um preset compartilhado salvo usando sua `preset_key` estável. Atualiz
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Ative um perfil de climatização armazenado e aplique imediatamente o comportamento efetivo atual. Isso substitui o conjunto inteiro de perfis ativos; zonas não cobertas pelo perfil selecionado voltam às programações Padrão. Use o ID estável do perfil mostrado pelo Velair, não seu nome de exibição editável. Uma ativação direta define o seletor de modo como `Manual`. Omitir `profile_id` ainda retorna às programações padrão por compatibilidade; novas automações devem usar explicitamente `velair.deactivate_profile`.
+Ative um perfil de climatização armazenado e aplique imediatamente o comportamento efetivo atual. Isso substitui o conjunto inteiro de perfis ativos; zonas não cobertas pelo perfil selecionado voltam às programações Padrão. Use o ID estável do perfil mostrado pelo Velair, não seu nome de exibição editável. Uma ativação direta define o seletor de modo como `manual`. Omitir `profile_id` ainda retorna às programações padrão por compatibilidade; novas automações devem usar explicitamente `velair.deactivate_profile`.
 
 ```yaml
 action: velair.activate_profile

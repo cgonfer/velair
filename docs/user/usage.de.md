@@ -8,7 +8,7 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.3-beta.5 |
+| Referenzversion | 1.9.3-beta.6 |
 | Letzte Synchronisierung | 2026-11-25 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
@@ -820,7 +820,7 @@ Aktualisiert ein gespeichertes gemeinsames Preset über seinen stabilen `preset_
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Aktiviert ein gespeichertes Klimaprofil und wendet sofort das wirksame aktuelle Verhalten an. Die gesamte aktive Profilauswahl wird ersetzt; nicht abgedeckte Zonen kehren zu Standardzeitplänen zurück. Verwende die von Velair gezeigte stabile Profil-ID statt des bearbeitbaren Anzeigenamens. Direkte Aktivierung setzt den Moduswähler auf `Manual`. Weglassen von `profile_id` kehrt aus Kompatibilitätsgründen weiterhin zu Standardzeitplänen zurück; neue Automatisierungen sollten ausdrücklich `velair.deactivate_profile` verwenden.
+Aktiviert ein gespeichertes Klimaprofil und wendet sofort das wirksame aktuelle Verhalten an. Die gesamte aktive Profilauswahl wird ersetzt; nicht abgedeckte Zonen kehren zu Standardzeitplänen zurück. Verwende die von Velair gezeigte stabile Profil-ID statt des bearbeitbaren Anzeigenamens. Direkte Aktivierung setzt den Moduswähler auf `manual`. Weglassen von `profile_id` kehrt aus Kompatibilitätsgründen weiterhin zu Standardzeitplänen zurück; neue Automatisierungen sollten ausdrücklich `velair.deactivate_profile` verwenden.
 
 ```yaml
 action: velair.activate_profile

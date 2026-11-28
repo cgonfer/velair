@@ -454,7 +454,7 @@ its absence when using an older backend.
     "portable_model": 30,
     "storage": 1,
     "model": 7,
-    "integration": "1.9.3-beta.5"
+    "integration": "1.9.3-beta.6"
   }
 }
 ```
@@ -1502,7 +1502,7 @@ the previous set but not covered by the selected Profile resolve immediately to
 their Default schedules. It applies the current effective schedule, cancels
 Boost on affected zones, and preserves global or per-zone manual pauses. Direct
 activation clears `active_mode_id`, so the native selector reports
-`Manual`. New automations should use `velair.deactivate_profile` explicitly to
+`manual`. New automations should use `velair.deactivate_profile` explicitly to
 return to default schedules.
 
 Create or update one Mode with:
@@ -1519,8 +1519,8 @@ await hass.connection.sendMessagePromise({
 
 Omit `key` when creating a mode; include the stable returned key when updating
 one. Names are trimmed, limited to 255 characters, case-insensitively unique,
-cannot contain control characters, and cannot use the built-in names `Default`
-or `Manual`, translated built-in labels such as `Predeterminado`, nor the Home
+cannot contain control characters, and cannot use the built-in names `default`
+or `manual` in any letter case, reserved translated labels such as `Predeterminado`, nor the Home
 Assistant states `unknown` and `unavailable`.
 Every Mode must provide one or more unique existing IDs in `profile_ids`.
 Selected Profiles must not explicitly configure the same zone; conflicting
@@ -1536,6 +1536,16 @@ await hass.connection.sendMessagePromise({
 The schedule response contains `modes` and `active_mode_id`.
 Automations select a configured value through Home Assistant's standard
 `select.select_option` action on `select.velair_mode`.
+
+The built-in option values and entity states are `default` and `manual`.
+Home Assistant translates their display labels; service inputs and state
+comparisons always use the lowercase raw values. Custom Mode names remain their
+option values and states. This replaces the previous `Default` and `Manual`
+values and breaks existing literal references in actions, triggers, conditions,
+templates, scenes, dashboards, and external systems. See
+[the migration guide](../user/climate-profiles.md#update-existing-mode-automations).
+The entity identity and persisted Mode/Profile selection are unchanged; Velair
+does not rewrite user automations or external configuration.
 
 The Velair panel changes the active Mode through a structured WebSocket
 command so it does not depend on the user-editable Home Assistant entity ID:

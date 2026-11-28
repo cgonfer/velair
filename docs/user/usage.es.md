@@ -9,7 +9,7 @@ Traducciones: [Original en inglés](usage.md) · [Español](usage.es.md) · [Fra
 
 | Dato | Estado |
 | --- | --- |
-| Versión de referencia | 1.9.3-beta.5 |
+| Versión de referencia | 1.9.3-beta.6 |
 | Última sincronización | 2026-11-25 |
 | Revisión lingüística | Traducción asistida por IA |
 | Respecto al original | Sin cambios pendientes respecto al original inglés. |
@@ -815,7 +815,7 @@ Actualiza un preset compartido guardado utilizando su `preset_key` estable. Las 
 
 ### `velair.activate_profile`
 
-Activa un Perfil climático guardado y aplica inmediatamente el comportamiento efectivo actual. Sustituye todo el conjunto activo de Perfiles; las zonas que no cubra el Perfil seleccionado vuelven a sus horarios Predeterminados. Utiliza el ID estable del Perfil mostrado por Velair en lugar de su nombre visible editable. Una activación directa establece el selector de Modo en `Manual`. Omitir `profile_id` sigue devolviendo a los horarios predeterminados por compatibilidad; las automatizaciones nuevas deben utilizar explícitamente `velair.deactivate_profile`.
+Activa un Perfil climático guardado y aplica inmediatamente el comportamiento efectivo actual. Sustituye todo el conjunto activo de Perfiles; las zonas que no cubra el Perfil seleccionado vuelven a sus horarios Predeterminados. Utiliza el ID estable del Perfil mostrado por Velair en lugar de su nombre visible editable. Una activación directa establece el selector de Modo en `manual`. Omitir `profile_id` sigue devolviendo a los horarios predeterminados por compatibilidad; las automatizaciones nuevas deben utilizar explícitamente `velair.deactivate_profile`.
 
 ```yaml
 action: velair.activate_profile

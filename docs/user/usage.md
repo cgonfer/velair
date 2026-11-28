@@ -1665,7 +1665,7 @@ select another preset for a block.
 
 ### `velair.activate_profile`
 
-Activate one stored climate profile and immediately apply the effective current behavior. This replaces the complete active Profile set; zones not covered by the selected Profile return to their Default schedules. Use the stable profile ID shown by Velair rather than its editable display name. A direct activation sets the Mode selector to `Manual`. Omitting `profile_id` still returns to default schedules for compatibility; new automations should use `velair.deactivate_profile` explicitly.
+Activate one stored climate profile and immediately apply the effective current behavior. This replaces the complete active Profile set; zones not covered by the selected Profile return to their Default schedules. Use the stable profile ID shown by Velair rather than its editable display name. A direct activation sets the Mode selector to `manual`. Omitting `profile_id` still returns to default schedules for compatibility; new automations should use `velair.deactivate_profile` explicitly.
 
 ```yaml
 action: velair.activate_profile

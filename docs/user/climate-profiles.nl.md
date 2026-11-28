@@ -8,8 +8,8 @@ Vertalingen: [Engels origineel](climate-profiles.md) · [Español](climate-profi
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.0-beta.2 |
-| Laatst gesynchroniseerd | 2026-10-17 |
+| Referentieversie | 1.9.3-beta.6 |
+| Laatst gesynchroniseerd | 2026-11-25 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
 
@@ -27,9 +27,41 @@ Voorbeelden zijn Thuis, Afwezig, Vakantie, Zomer, Gast en Slapen. Profielen onde
 <a id="default"></a>
 ## Standaard
 
-`Default` is de ingebouwde keuze en betekent altijd de weekschema's uit het tabblad Schema's. Het is geen opgeslagen profiel en kan niet worden hernoemd of verwijderd.
+`default` is de ingebouwde keuze en betekent altijd de weekschema's uit het tabblad Schema's. Het is geen opgeslagen profiel en kan niet worden hernoemd of verwijderd.
 
 Het activeren van een ander profiel overschrijft die schema's nooit. Teruggaan naar Standaard past onmiddellijk het standaardblok toe dat op dat moment actief is.
+
+<a id="update-existing-mode-automations"></a>
+## Bestaande modusautomatiseringen bijwerken
+
+**Incompatibele wijziging:** de oorspronkelijke Modus-entiteit gebruikt nu
+kleine letters voor de ingebouwde optiewaarden. Werk bij een upgrade vanaf een
+versie met `Default` en `Manual` de verwijzingen bij:
+
+| Oude waarde | Nieuwe waarde |
+| --- | --- |
+| `Default` | `default` |
+| `Manual` | `manual` |
+
+Werk `select.select_option`-acties, statustriggers en -voorwaarden, sjablonen,
+scènes die deze opties herstellen, dashboardvergelijkingen en externe systemen
+bij. Dit geldt ook voor automatiseringen uit de Home Assistant-interface, niet
+alleen voor YAML. Gebruik bijvoorbeeld `option: default` en
+`is_state('select.velair_mode', 'default')`; gebruik `manual` voor de andere
+ingebouwde optie. De oude waarden worden niet meer geaccepteerd of als status
+doorgegeven.
+
+Home Assistant toont vertaalde labels, maar acties en statusvergelijkingen
+gebruiken altijd `default` en `manual`, ongeacht de taal. Namen van aangepaste
+modi blijven precies zoals ingevoerd. Een kaart die de ruwe status toont in
+plaats van vertaalde labels kan de waarden in kleine letters weergeven.
+
+Velair herschrijft geen gebruikersautomatiseringen, scènes of externe
+configuraties. Behoud de entiteits-ID; modi, Profielen en schema’s hoeven niet
+opnieuw te worden gemaakt. Bij het wijzigen van de ingebouwde waarde kan de
+upgrade een statuswijzigingsgebeurtenis veroorzaken; controleer automatiseringen
+die op elke statuswijziging reageren. Historische statussen blijven ongewijzigd.
+Bestaande `velair.deactivate_profile`-acties blijven werken.
 
 <a id="configure-a-profile"></a>
 ## Een profiel instellen
@@ -112,7 +144,7 @@ actions:
     target:
       entity_id: select.velair_mode
     data:
-      option: Default
+      option: default
 ```
 
 Vervang de persoonsentiteit en zichtbare modusnamen door die van jouw Home Assistant-installatie. Werk automatiseringen met de zichtbare optie bij als je een modus hernoemt.
@@ -148,7 +180,7 @@ Gebruik de expliciete deactiveringsservice voor standaardschema's:
 action: velair.deactivate_profile
 ```
 
-Het weglaten van `profile_id` bij `velair.activate_profile` blijft ondersteund voor compatibiliteit. Profiel-ID's blijven gelijk als de naam verandert. Rechtstreekse activering via paneel of service zet de oorspronkelijke moduskiezer op `Manual`, ook wanneer hetzelfde profiel al actief was.
+Het weglaten van `profile_id` bij `velair.activate_profile` blijft ondersteund voor compatibiliteit. Profiel-ID's blijven gelijk als de naam verandert. Rechtstreekse activering via paneel of service zet de oorspronkelijke moduskiezer op `manual`, ook wanneer hetzelfde profiel al actief was.
 
 <a id="modes"></a>
 ## Modi
@@ -174,7 +206,7 @@ data:
   option: Vacation
 ```
 
-Modus-ID's blijven gelijk bij naamswijzigingen, zodat de actuele keuze behouden blijft. De zichtbare optienaam is echter de Home Assistant-entiteitsstatus; automatiseringen die naar hernoemde of verwijderde opties verwijzen, moeten worden bijgewerkt.
+Modus-ID's blijven gelijk bij naamswijzigingen, zodat de actuele keuze behouden blijft. Bij aangepaste modi is de zichtbare optienaam de Home Assistant-entiteitsstatus; automatiseringen die naar hernoemde of verwijderde opties verwijzen, moeten worden bijgewerkt.
 
 Het opnieuw koppelen van de gekozen modus activeert de nieuwe profielverzameling als één ondeelbare wijziging. Verwijderen van die modus laat de profielen actief en zet de kiezer op Handmatig. Verwijderen van een profiel verwijdert ook de daaraan gekoppelde modi en alleen dat profiel uit de actieve verzameling. Als niets actief blijft, gaat Velair terug naar Standaard.
 

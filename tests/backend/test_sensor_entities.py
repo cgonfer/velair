@@ -1008,6 +1008,9 @@ class SensorTranslationTest(unittest.TestCase):
                     set(translation["entity"]["select"]),
                     {"mode"},
                 )
+                mode_states = translation["entity"]["select"]["mode"]["state"]
+                self.assertEqual(set(mode_states), {"default", "manual"})
+                self.assertTrue(all(value.strip() for value in mode_states.values()))
                 self.assertEqual(
                     set(translation["entity"]["switch"]),
                     {"automatic_scheduling"},
@@ -1017,6 +1020,16 @@ class SensorTranslationTest(unittest.TestCase):
             translations["es"]["entity"]["sensor"]["next_climate_event"]["name"],
             "Próximo evento programado",
         )
+        for language, expected in (
+            ("en", {"default": "Default", "manual": "Manual"}),
+            ("de", {"default": "Standard", "manual": "Manuell"}),
+            ("es", {"default": "Predeterminado", "manual": "Manual"}),
+        ):
+            with self.subTest(language=language, contract="mode_labels"):
+                self.assertEqual(
+                    translations[language]["entity"]["select"]["mode"]["state"],
+                    expected,
+                )
         self.assertEqual(
             translations["pt-BR"]["entity"]["switch"]["automatic_scheduling"]["name"],
             "Programação automática",

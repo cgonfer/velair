@@ -8,7 +8,7 @@ Vertalingen: [Engels origineel](usage.md) · [Español](usage.es.md) · [França
 
 | Gegeven | Status |
 | --- | --- |
-| Referentieversie | 1.9.3-beta.5 |
+| Referentieversie | 1.9.3-beta.6 |
 | Laatst gesynchroniseerd | 2026-11-25 |
 | Taalcontrole | AI-ondersteunde vertaling |
 | Vergeleken met het origineel | Gesynchroniseerd met het Engelse origineel. |
@@ -747,7 +747,7 @@ Werk een opgeslagen gedeelde preset bij met vaste `preset_key`. Gedeeltelijke up
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Activeer één opgeslagen profiel en pas onmiddellijk het huidige effectieve gedrag toe. Dit vervangt de volledige actieve combinatie; ongedekte zones vallen terug op standaard. Gebruik het vaste getoonde profiel-ID, niet de bewerkbare naam. Rechtstreekse activering zet de moduskeuze op `Manual`. Zonder `profile_id` keert de service voor compatibiliteit nog terug naar standaard; nieuwe automatiseringen moeten expliciet `velair.deactivate_profile` gebruiken.
+Activeer één opgeslagen profiel en pas onmiddellijk het huidige effectieve gedrag toe. Dit vervangt de volledige actieve combinatie; ongedekte zones vallen terug op standaard. Gebruik het vaste getoonde profiel-ID, niet de bewerkbare naam. Rechtstreekse activering zet de moduskeuze op `manual`. Zonder `profile_id` keert de service voor compatibiliteit nog terug naar standaard; nieuwe automatiseringen moeten expliciet `velair.deactivate_profile` gebruiken.
 
 ```yaml
 action: velair.activate_profile

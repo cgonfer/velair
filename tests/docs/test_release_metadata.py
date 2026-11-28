@@ -66,6 +66,7 @@ class ReleaseMetadataTest(unittest.TestCase):
         self.assertTrue(release_notes_path.is_file())
         self.assertTrue(release_notes.startswith(f"# Velair {version}\n"))
         allowed_headings = {
+            "## ⚠️ Breaking Changes",
             "## ✨ Added",
             "## 🔄 Changed",
             "## 🚀 Improved",
@@ -80,6 +81,12 @@ class ReleaseMetadataTest(unittest.TestCase):
             "Release notes must contain at least one user-facing change section",
         )
         self.assertIn("## 🧭 Notes", headings)
+        if "## ⚠️ Breaking Changes" in headings:
+            self.assertEqual(
+                headings[0],
+                "## ⚠️ Breaking Changes",
+                "Required migration guidance must precede other change sections",
+            )
         self.assertEqual(len(headings), len(set(headings)))
         self.assertTrue(set(headings).issubset(allowed_headings))
         for index, heading in enumerate(headings):

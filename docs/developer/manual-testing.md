@@ -1102,13 +1102,23 @@ external adjustment.
     inside the chooser can be clicked without closing or crashing the browser.
     Confirm the chooser closes after selection, with Escape, and when clicking
     outside it. Repeat at desktop and mobile widths.
-    Confirm `Default` and `Manual` cannot be renamed or deleted.
+    Confirm **Default** and **Manual** cannot be renamed or deleted.
 18. Select each custom value through `select.velair_mode` and confirm its
-    mapped Profiles change once. For compatibility, select Manual through the
-    native entity and confirm the current set remains active; select Default
-    and confirm it is emptied.
+    mapped Profiles change once. Send raw `manual` through the native entity
+    and confirm the current set remains active; send raw `default` and confirm
+    it is emptied. In Developer Tools, confirm both option values and states
+    remain lowercase. In the native selector, confirm the display labels are
+    translated, for example **Default**/**Manual** in English,
+    **Predeterminado**/**Manual** in Spanish, and **Standard**/**Manuell** in
+    German. Changing the user language must not change raw states, options,
+    entity identity, or custom Mode names, including names with spaces or accents.
+    Confirm `select.select_option` rejects the old `Default` and `Manual` values.
+    Localized labels must also be rejected as options unless the exact text is
+    an existing custom Mode name. Check the [upgrade instructions](../user/climate-profiles.md#update-existing-mode-automations)
+    against existing actions, state triggers, conditions, templates and scenes;
+    Velair must not rewrite these user configurations.
 19. Change Profile through **Modes** and through `velair.activate_profile`; confirm
-    the native selector reports Manual, including direct reactivation of the
+    the native selector reports `manual`, including direct reactivation of the
     already active profile without repeating climate calls or events.
     Confirm this direct selection replaces every other active Profile instead
     of extending the set.

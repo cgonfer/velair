@@ -8,8 +8,8 @@ Traduções: [Original em inglês](climate-profiles.md) · [Español](climate-pr
 
 | Informação | Status |
 | --- | --- |
-| Versão de referência | 1.9.0-beta.2 |
-| Última sincronização | 2026-10-17 |
+| Versão de referência | 1.9.3-beta.6 |
+| Última sincronização | 2026-11-25 |
 | Revisão linguística | Tradução assistida por IA |
 | Em relação ao original | Sincronizada com o original em inglês. |
 
@@ -27,9 +27,40 @@ Exemplos incluem Em casa, Ausente, Férias, Verão, Visitante e Dormir. Perfis t
 <a id="default"></a>
 ## Padrão
 
-`Default` é a seleção integrada e sempre significa as programações semanais configuradas na aba Programações. Não é um perfil armazenado, portanto não pode ser renomeado nem excluído.
+`default` é a seleção integrada e sempre significa as programações semanais configuradas na aba Programações. Não é um perfil armazenado, portanto não pode ser renomeado nem excluído.
 
 Ativar outro perfil nunca sobrescreve essas programações. Voltar a Padrão aplica imediatamente o bloco padrão ativo naquele momento.
+
+<a id="update-existing-mode-automations"></a>
+## Atualizar as automações de Modos existentes
+
+**Alteração incompatível:** a entidade nativa de Modo agora usa valores em
+minúsculas nas opções integradas. Ao atualizar de uma versão que usa `Default`
+e `Manual`, substitua as referências:
+
+| Valor anterior | Novo valor |
+| --- | --- |
+| `Default` | `default` |
+| `Manual` | `manual` |
+
+Atualize ações `select.select_option`, gatilhos e condições de estado, modelos,
+cenas que restauram essas opções, comparações nos painéis e sistemas externos.
+Isso inclui automações criadas pela interface do Home Assistant, além do YAML.
+Por exemplo, use `option: default` e
+`is_state('select.velair_mode', 'default')`; use `manual` para a outra opção
+integrada. Os valores anteriores deixam de ser aceitos e publicados como estados.
+
+O Home Assistant mostra rótulos traduzidos, mas ações e comparações de estado
+sempre usam `default` e `manual`, independentemente do idioma. Os nomes dos Modos
+personalizados permanecem exatamente como foram inseridos. Um cartão que mostra
+estados brutos em vez de rótulos traduzidos pode exibir os valores em minúsculas.
+
+O Velair não reescreve automações do usuário, cenas nem configurações externas.
+Mantenha o ID da entidade; não é necessário recriar Modos, Perfis ou programações.
+A mudança do valor integrado durante a atualização pode gerar um evento de
+mudança de estado; confira as automações que reagem a qualquer mudança de estado.
+Os estados históricos permanecem inalterados. As ações existentes
+`velair.deactivate_profile` continuam funcionando.
 
 <a id="configure-a-profile"></a>
 ## Configurar um Perfil
@@ -101,7 +132,7 @@ actions:
     target:
       entity_id: select.velair_mode
     data:
-      option: Default
+      option: default
 ```
 
 Substitua a entidade de pessoa e os nomes visíveis de Modos pelos usados em sua instalação. Se renomear um Modo, atualize automações que selecionam sua opção visível.
@@ -135,7 +166,7 @@ Use o serviço explícito de desativação para voltar às programações padrã
 action: velair.deactivate_profile
 ```
 
-Omitir `profile_id` em `velair.activate_profile` continua compatível. Identificadores de Perfil são estáveis mesmo se o nome visível mudar. Ativar diretamente pelo painel ou serviço define o seletor nativo de Modo como `Manual`, inclusive se o mesmo perfil já estiver ativo.
+Omitir `profile_id` em `velair.activate_profile` continua compatível. Identificadores de Perfil são estáveis mesmo se o nome visível mudar. Ativar diretamente pelo painel ou serviço define o seletor nativo de Modo como `manual`, inclusive se o mesmo perfil já estiver ativo.
 
 <a id="modes"></a>
 ## Modos
@@ -161,7 +192,7 @@ data:
   option: Vacation
 ```
 
-Identificadores de Modo são estáveis quando seus nomes visíveis mudam, portanto a seleção atual sobrevive à renomeação. Contudo, o nome visível da opção é o estado da entidade do Home Assistant; automações que usam uma opção renomeada ou excluída precisam ser atualizadas.
+Identificadores de Modo são estáveis quando seus nomes visíveis mudam, portanto a seleção atual sobrevive à renomeação. Para Modos personalizados, o nome visível da opção é o estado da entidade do Home Assistant; automações que usam uma opção renomeada ou excluída precisam ser atualizadas.
 
 Reassociar o Modo selecionado ativa seu novo conjunto de Perfis em uma única mudança atômica. Excluir o Modo selecionado mantém seus Perfis ativos e muda o seletor para **Manual**. Excluir um Perfil também remove os Modos associados a ele e remove apenas esse Perfil do conjunto ativo; o Velair volta a **Padrão** quando o conjunto fica vazio.
 

@@ -340,65 +340,65 @@
       "translations": {
         "es": {
           "path": "docs/user/climate-profiles.es.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/climate-profiles.fr.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/climate-profiles.de.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/climate-profiles.it.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/climate-profiles.nl.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/climate-profiles.pl.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/climate-profiles.pt-br.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/climate-profiles.pt-pt.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/climate-profiles.ru.md",
-          "sourceHash": "988a200dab3dc45564119f98bdba2920a7d7c5e9728d74dcd97dd29c09f073fc",
-          "synchronizedAt": "2026-10-17",
-          "referenceVersion": "1.9.0-beta.2",
+          "sourceHash": "75914c8fddec699a289b11873576e616e200e1aff785d768cef4bd82ac8b7648",
+          "synchronizedAt": "2026-11-25",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         }
       }
@@ -1345,65 +1345,65 @@
       "translations": {
         "es": {
           "path": "docs/user/usage.es.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "fr": {
           "path": "docs/user/usage.fr.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "de": {
           "path": "docs/user/usage.de.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "it": {
           "path": "docs/user/usage.it.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "nl": {
           "path": "docs/user/usage.nl.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "pl": {
           "path": "docs/user/usage.pl.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "pt-br": {
           "path": "docs/user/usage.pt-br.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "pt-pt": {
           "path": "docs/user/usage.pt-pt.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         },
         "ru": {
           "path": "docs/user/usage.ru.md",
-          "sourceHash": "087b28024699f1dd70f9a278d9ff77119525946127598a698bc58506538323de",
+          "sourceHash": "09c4b9a6cecee58e0c7866a64a64179f5bfe51261af8ba0091659bf94169d463",
           "synchronizedAt": "2026-11-25",
-          "referenceVersion": "1.9.3-beta.5",
+          "referenceVersion": "1.9.3-beta.6",
           "reviewStatus": "automatic"
         }
       }

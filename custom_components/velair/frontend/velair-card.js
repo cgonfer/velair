@@ -6,7 +6,7 @@ var e = Object.defineProperty, t = (t, n) => {
 		enumerable: !0
 	});
 	return n || e(r, Symbol.toStringTag, { value: "Module" }), r;
-}, n = "20261125180931", r = "1.9.3-beta.5", i = [
+}, n = "20261125222253", r = "1.9.3-beta.6", i = [
 	"monday",
 	"tuesday",
 	"wednesday",
@@ -42574,7 +42574,7 @@ var Ld = "https://github.com/cgonfer/velair", Rd = {
 		"pt-pt": "docs/user/shared-climate-supply.pt-pt.md",
 		ru: "docs/user/shared-climate-supply.ru.md"
 	}
-}, Bd = "1.9.3-beta.5";
+}, Bd = "1.9.3-beta.6";
 function Vd(e, t, n = {}) {
 	let r = z(t), [i, a] = (e === "index" ? "docs/README.md" : Rd[e]).split("#"), o = (n.availability ?? zd)[i]?.[r], s = r !== "en" && o ? o : i, c = n.releaseVersion ?? Bd;
 	return {
@@ -51355,7 +51355,7 @@ var k_ = (e) => typeof e == "number" ? [e] : e, A_ = (e) => k_(e).reduce((e, t) 
     .rail-label .inline-help { width:20px; height:20px; min-width:20px; }
     .rail-label .inline-help ha-icon { --mdc-icon-size:14px; }
     .legend { display:flex; gap:5px; align-items:center; flex-wrap:wrap; font-size:11px; line-height:18px; color:var(--ra-muted); margin-top:6px; }
-    .hatch-key { width:20px; height:8px; background:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--primary-color) 45%,transparent) 3px 4px); border-bottom:1px solid var(--primary-color); }
+    .hatch-key { width:20px; height:8px; background-color:color-mix(in srgb,var(--primary-color) 15%,transparent); background-image:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in srgb,var(--primary-color) 75%,transparent) 3px 4.25px); border-bottom:1px solid var(--primary-color); }
     .explanation { padding:8px 2px 2px; font-size:13px; line-height:1.5; }
     .detail-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; }
     .detail-toggle { display:inline-flex; align-items:center; justify-content:center; gap:7px; color:var(--ra-muted); background:transparent; border:0; border-radius:8px; padding:8px 10px; font-size:12px; line-height:20px; min-height:36px; }
@@ -51548,7 +51548,7 @@ var k_ = (e) => typeof e == "number" ? [e] : e, A_ = (e) => k_(e).reduce((e, t) 
 		}}>${this.t(e ? "raGraphDetailed" : "raGraphNormal")}</button>`)}</div></div>
         <div class="canvas" style=${`height:${N}px`} role="group" aria-label=${this.t("roomSensorTemperatureScale")}>
           <svg viewBox=${`0 0 ${T} ${N}`} aria-hidden="true">
-            <defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line x1="0" x2="0" y1="0" y2="5" stroke="var(--primary-color)" stroke-width="1" opacity=".45"/></pattern></defs>
+            <defs><pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="5" height="5" fill="color-mix(in srgb,var(--primary-color) 15%,transparent)"/><line x1="0" x2="0" y1="0" y2="5" stroke="var(--primary-color)" stroke-width="1.25" opacity=".75"/></pattern></defs>
             ${P.filter(([e, t]) => t > e).map(([e, t]) => Wr`<g data-room-assist-margin><rect x=${E(e)} y=${O - 8} width=${E(t) - E(e)} height="8" fill="url(#hatch)"/></g>`)}
             <line x1="4" x2=${T - 4} y1=${O} y2=${O} stroke="var(--ra-rule)" stroke-width="3"/>
             ${F ? Wr`<line data-physical-limit x1=${E(F.value)} x2=${E(F.value)} y1=${O - 14} y2=${ue - 3} stroke="var(--ra-muted)" stroke-width="1" opacity=".6"/>` : H}
@@ -53156,7 +53156,7 @@ function xv(e) {
         ${Sv(e._t("frontendBuild"), n)}
         ${Sv(e._t("portableFormatVersion"), `v${r}`)}
         ${Sv(e._t("internalStorageVersion"), `v${i} / v${a}`)}
-        ${Sv(e._t("integrationVersion"), "1.9.3-beta.5")}
+        ${Sv(e._t("integrationVersion"), "1.9.3-beta.6")}
       </div>
     </section>
 

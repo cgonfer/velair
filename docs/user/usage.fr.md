@@ -9,7 +9,7 @@ Traductions: [Original en anglais](usage.md) · [Español](usage.es.md) · [Fran
 
 | Information | État |
 | --- | --- |
-| Version de référence | 1.9.3-beta.5 |
+| Version de référence | 1.9.3-beta.6 |
 | Dernière synchronisation | 2026-11-25 |
 | Révision linguistique | Traduction assistée par IA |
 | Par rapport à l’original | Synchronisée avec l’original anglais. |
@@ -1686,7 +1686,7 @@ Active un profil climatique enregistré et applique immédiatement le comporteme
 effectif actuel. Cela remplace l’ensemble complet de Profils actifs ; les zones
 non couvertes par le Profil choisi reviennent à leurs programmations Par défaut.
 Utilisez l’identifiant stable montré par Velair plutôt que son nom affiché
-modifiable. Une activation directe met le sélecteur de Mode sur `Manual`.
+modifiable. Une activation directe met le sélecteur de Mode sur `manual`.
 Omettre `profile_id` revient encore aux programmations par défaut pour la
 compatibilité ; les nouvelles automatisations devraient utiliser explicitement
 `velair.deactivate_profile`.

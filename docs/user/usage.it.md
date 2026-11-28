@@ -9,7 +9,7 @@ Traduzioni: [Originale in inglese](usage.md) · [Español](usage.es.md) · [Fran
 
 | Voce | Stato |
 | --- | --- |
-| Versione di riferimento | 1.9.3-beta.5 |
+| Versione di riferimento | 1.9.3-beta.6 |
 | Ultima sincronizzazione | 2026-11-25 |
 | Revisione linguistica | Traduzione assistita dall’IA |
 | Rispetto all’originale | Sincronizzata con l’originale inglese. |
@@ -793,7 +793,7 @@ Aggiorna un preset condiviso salvato usando il suo `preset_key` stabile. Gli agg
 <a id="velairactivate_profile"></a>
 ### `velair.activate_profile`
 
-Attiva un Profilo climatico salvato e applica subito il comportamento effettivo attuale. Sostituisce l’intero insieme di Profili attivi; le zone non coperte tornano alle programmazioni predefinite. Usa l’ID stabile mostrato da Velair anziché il nome modificabile. L’attivazione diretta imposta il selettore Modalità su `Manual`. Omettere `profile_id` riporta ancora alle programmazioni predefinite per compatibilità; le nuove automazioni dovrebbero usare esplicitamente `velair.deactivate_profile`.
+Attiva un Profilo climatico salvato e applica subito il comportamento effettivo attuale. Sostituisce l’intero insieme di Profili attivi; le zone non coperte tornano alle programmazioni predefinite. Usa l’ID stabile mostrato da Velair anziché il nome modificabile. L’attivazione diretta imposta il selettore Modalità su `manual`. Omettere `profile_id` riporta ancora alle programmazioni predefinite per compatibilità; le nuove automazioni dovrebbero usare esplicitamente `velair.deactivate_profile`.
 
 ```yaml
 action: velair.activate_profile

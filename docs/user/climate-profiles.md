@@ -23,12 +23,41 @@ times, targets, and HVAC modes.
 
 ## Default
 
-`Default` is the built-in selection and always means the weekly schedules
+`default` is the built-in selection and always means the weekly schedules
 configured in the Schedules tab. It is not a stored profile, so it cannot be
 renamed or deleted.
 
 Activating another profile never overwrites those schedules. Returning to
 Default immediately applies the default block that is active at that time.
+
+## Update Existing Mode Automations
+
+**Breaking change:** the native Mode entity now uses lowercase values for its
+built-in options. Update references when upgrading from a version that uses
+`Default` and `Manual`:
+
+| Previous value | New value |
+| --- | --- |
+| `Default` | `default` |
+| `Manual` | `manual` |
+
+Update `select.select_option` actions, state triggers and conditions, templates,
+scenes that restore these options, dashboard comparisons, and external systems.
+This includes automations created through Home Assistant's UI, not only YAML.
+For example, use `option: default` and
+`is_state('select.velair_mode', 'default')`; use `manual` for the other built-in
+option. The old values are no longer accepted or reported.
+
+Home Assistant displays translated labels, but actions and state comparisons
+always use `default` and `manual`, regardless of the display language. Custom
+Mode names remain exactly as entered. A card that displays raw states instead
+of translated labels may show the lowercase values.
+
+Velair does not rewrite user automations, scenes, or external configurations.
+Keep the existing entity ID; there is no need to recreate Modes, Profiles, or
+schedules. The update can produce a state-change event when the built-in value
+changes; check automations that react to any state change. Historical states
+remain unchanged. Existing `velair.deactivate_profile` actions still work.
 
 ## Configure A Profile
 
@@ -220,7 +249,7 @@ actions:
     target:
       entity_id: select.velair_mode
     data:
-      option: Default
+      option: default
 ```
 
 Replace the person entity and visible Mode names with those used in the Home
@@ -297,7 +326,7 @@ action: velair.deactivate_profile
 Omitting `profile_id` from `velair.activate_profile` remains supported for
 compatibility. Profile identifiers are stable even if the visible profile name
 changes. A direct activation from the panel or service sets the native Mode
-selector to `Manual`, including when the same profile was already active.
+selector to `manual`, including when the same profile was already active.
 
 ## Modes
 
@@ -306,7 +335,8 @@ decision layer. Velair owns a native `select.velair_mode` entity so the
 values used by automations can be managed from the Modes tab without creating
 another Home Assistant helper.
 
-Two built-in values always exist and cannot be renamed or deleted:
+Two built-in values always exist and cannot be renamed or deleted. The labels
+below are translated; their raw values are `default` and `manual`:
 
 - **Default** deactivates profiles and restores each zone's default schedule.
 - **Manual** means that no custom Mode currently controls the active Profile
@@ -350,8 +380,8 @@ data:
 ```
 
 Mode identifiers remain stable when their visible names change, so the current
-selection survives a rename. The visible option name is the Home Assistant
-entity state, however, so automations that refer to a renamed or deleted option
+selection survives a rename. For custom Modes, the visible option name is the
+Home Assistant entity state, so automations that refer to a renamed or deleted option
 must be updated.
 
 Remapping the currently selected mode activates its new profile set as one

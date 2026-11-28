@@ -8,8 +8,8 @@
 
 | Angabe | Status |
 | --- | --- |
-| Referenzversion | 1.9.0-beta.2 |
-| Letzte Synchronisierung | 2026-10-17 |
+| Referenzversion | 1.9.3-beta.6 |
+| Letzte Synchronisierung | 2026-11-25 |
 | Sprachliche Prüfung | KI-gestützte Übersetzung |
 | Vergleich mit dem Original | Mit dem englischen Original synchronisiert. |
 
@@ -27,9 +27,42 @@ Beispiele sind Zuhause, Abwesend, Urlaub, Sommer, Gäste oder Schlafen. Profile 
 <a id="default"></a>
 ## Standard
 
-`Default` ist die integrierte Auswahl und bezeichnet immer die im Tab „Zeitpläne“ konfigurierten Wochenzeitpläne. Es ist kein gespeichertes Profil und lässt sich daher weder umbenennen noch löschen.
+`default` ist die integrierte Auswahl und bezeichnet immer die im Tab „Zeitpläne“ konfigurierten Wochenzeitpläne. Es ist kein gespeichertes Profil und lässt sich daher weder umbenennen noch löschen.
 
 Das Aktivieren eines anderen Profils überschreibt diese Zeitpläne niemals. Die Rückkehr zu Standard wendet sofort den dann aktiven Standardblock an.
+
+<a id="update-existing-mode-automations"></a>
+## Bestehende Modus-Automationen aktualisieren
+
+**Inkompatible Änderung:** Die native Modus-Entität verwendet für ihre
+integrierten Optionen jetzt kleingeschriebene Werte. Ersetze beim Aktualisieren
+von einer Version mit `Default` und `Manual` die entsprechenden Verweise:
+
+| Bisheriger Wert | Neuer Wert |
+| --- | --- |
+| `Default` | `default` |
+| `Manual` | `manual` |
+
+Aktualisiere `select.select_option`-Aktionen, Zustandsauslöser und -bedingungen,
+Templates, Szenen zum Wiederherstellen dieser Optionen, Vergleiche in Dashboards
+und externe Systeme. Das betrifft auch Automationen aus der Home-Assistant-
+Oberfläche, nicht nur YAML. Verwende zum Beispiel `option: default` und
+`is_state('select.velair_mode', 'default')`; für die andere integrierte Option
+gilt `manual`. Die bisherigen Werte werden nicht mehr akzeptiert oder als
+Zustand gemeldet.
+
+Home Assistant zeigt übersetzte Beschriftungen an. Aktionen und Zustandsvergleiche
+verwenden jedoch unabhängig von der Sprache immer `default` und `manual`.
+Benutzerdefinierte Modusnamen bleiben genau wie eingegeben. Karten, die den
+Rohzustand statt übersetzter Beschriftungen anzeigen, können die
+kleingeschriebenen Werte zeigen.
+
+Velair schreibt keine Benutzerautomationen, Szenen oder externen Konfigurationen
+um. Behalte die Entitäts-ID; Modi, Profile und Zeitpläne müssen nicht neu erstellt
+werden. Beim Wechsel des integrierten Werts kann die Aktualisierung ein
+Zustandsänderungsereignis auslösen; prüfe Automationen, die auf jede
+Zustandsänderung reagieren. Historische Zustände bleiben unverändert. Bestehende
+`velair.deactivate_profile`-Aktionen funktionieren weiterhin.
 
 <a id="configure-a-profile"></a>
 ## Ein Profil konfigurieren
@@ -110,7 +143,7 @@ actions:
     target:
       entity_id: select.velair_mode
     data:
-      option: Default
+      option: default
 ```
 
 Ersetze Personenentität und sichtbare Modusnamen durch die deiner Home-Assistant-Installation. Wird ein Modus umbenannt, aktualisiere Automationen, die seine sichtbare Option wählen.
@@ -144,7 +177,7 @@ Verwende den ausdrücklichen Deaktivierungsdienst, um zu Standardzeitplänen zur
 action: velair.deactivate_profile
 ```
 
-Weglassen von `profile_id` bei `velair.activate_profile` bleibt aus Kompatibilitätsgründen unterstützt. Profilkennungen sind stabil, auch wenn der sichtbare Name geändert wird. Direkte Aktivierung aus Panel oder Dienst setzt die native Modusauswahl auf `Manual`, auch wenn dasselbe Profil bereits aktiv war.
+Weglassen von `profile_id` bei `velair.activate_profile` bleibt aus Kompatibilitätsgründen unterstützt. Profilkennungen sind stabil, auch wenn der sichtbare Name geändert wird. Direkte Aktivierung aus Panel oder Dienst setzt die native Modusauswahl auf `manual`, auch wenn dasselbe Profil bereits aktiv war.
 
 <a id="modes"></a>
 ## Modi
@@ -170,7 +203,7 @@ data:
   option: Vacation
 ```
 
-Moduskennungen bleiben beim Umbenennen sichtbarer Namen stabil, sodass die aktuelle Auswahl erhalten bleibt. Der sichtbare Optionsname ist jedoch der Home-Assistant-Entitätszustand. Automationen mit umbenannten oder gelöschten Optionen müssen deshalb aktualisiert werden.
+Moduskennungen bleiben beim Umbenennen sichtbarer Namen stabil, sodass die aktuelle Auswahl erhalten bleibt. Bei benutzerdefinierten Modi ist der sichtbare Optionsname der Home-Assistant-Entitätszustand. Automationen mit umbenannten oder gelöschten Optionen müssen deshalb aktualisiert werden.
 
 Eine neue Zuordnung des aktuell gewählten Modus aktiviert den neuen Profilsatz atomar. Löschen des gewählten Modus behält dessen aktive Profile und setzt die Auswahl auf **Manuell**. Löschen eines Profils entfernt auch die damit verbundenen Modi und nur dieses Profil aus dem aktiven Satz. Wird der Satz leer, kehrt Velair zu **Standard** zurück.
 

@@ -329,16 +329,21 @@ physically applied during startup.
 
 Backend-owned `modes` map stable mode keys and user-editable names to
 stable profile IDs. A single native `SelectEntity` projects this state as
-`select.velair_mode`. Its canonical built-ins are `Default`, which deactivates
-profiles and restores each zone's default schedule, and `Manual`, which clears
+`select.velair_mode`. Its canonical built-in values are `default`, which deactivates
+profiles and restores each zone's default schedule, and `manual`, which clears
 the base Mode marker while retaining base Profiles and exceptions. Custom
 selection atomically activates the mapped base, clears exceptions and records its mode key.
-Direct panel or service activation clears the marker to Manual, including
+Home Assistant translates the built-ins' display labels while options, states,
+service inputs, and state comparisons use the lowercase raw values. Custom Mode
+names remain unchanged. Replacing the former `Default` and `Manual` values is a
+breaking change for literal references; the entity identity and persisted
+selection are unchanged. See [migration guidance](../user/climate-profiles.md#update-existing-mode-automations).
+Direct panel or service activation clears the marker and reports `manual`, including
 same-profile activation without repeating climate actions or emitting a
 duplicate profile change event. Direct activation also replaces the complete
 active set with one Profile, so zones no longer covered resolve to Default.
 
-While exceptions exist the native select shows Manual, but the full response
+While exceptions exist the native select reports `manual`, but the full response
 retains the base Mode identity so the panel can show its name with exceptions.
 Editing that Mode updates its base while retaining exceptions; explicitly
 selecting it clears them. Default requires an empty base and no exceptions.
@@ -352,7 +357,7 @@ or an external state listener. Storage remains canonical across startup.
 `apply_active_schedule_on_startup` remains the only startup gate for physical
 application; restoring a selected mode never causes separate climate calls.
 Deleting the selected mode retains the active profile set and resolves to
-Manual, while deleting an active profile cascades its Modes and removes only
+`manual`, while deleting an active profile cascades its Modes and removes only
 that profile from the active set.
 
 Per-zone control and delivery sensors are projections over these existing

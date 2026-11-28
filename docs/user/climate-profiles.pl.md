@@ -8,8 +8,8 @@ Tłumaczenia: [Oryginał w języku angielskim](climate-profiles.md) · [Español
 
 | Informacja | Status |
 | --- | --- |
-| Wersja odniesienia | 1.9.0-beta.2 |
-| Ostatnia synchronizacja | 2026-10-17 |
+| Wersja odniesienia | 1.9.3-beta.6 |
+| Ostatnia synchronizacja | 2026-11-25 |
 | Korekta językowa | Tłumaczenie wspomagane przez AI |
 | Zgodność z oryginałem | Zgodne z aktualnym angielskim oryginałem. |
 
@@ -30,6 +30,37 @@ Przykłady to obecność, nieobecność, wakacje, lato, goście lub sen. Ogrzewa
 `Domyślny` jest wbudowanym wyborem i zawsze oznacza tygodniowe harmonogramy skonfigurowane na karcie Harmonogramy. Nie jest zapisanym Profilem, dlatego nie można zmienić jego nazwy ani go usunąć.
 
 Aktywacja innego Profilu nigdy nie nadpisuje tych harmonogramów. Powrót do harmonogramów domyślnych od razu stosuje domyślny blok obowiązujący w danej chwili.
+
+<a id="update-existing-mode-automations"></a>
+## Aktualizacja istniejących automatyzacji Trybów
+
+**Zmiana niezgodna wstecz:** natywna encja Trybu używa teraz małych liter w
+wartościach wbudowanych opcji. Przy aktualizacji z wersji używającej `Default`
+i `Manual` zmień odwołania:
+
+| Poprzednia wartość | Nowa wartość |
+| --- | --- |
+| `Default` | `default` |
+| `Manual` | `manual` |
+
+Zaktualizuj akcje `select.select_option`, wyzwalacze i warunki stanu, szablony,
+sceny przywracające te opcje, porównania w pulpitach oraz systemy zewnętrzne.
+Dotyczy to także automatyzacji utworzonych w interfejsie Home Assistant, a nie
+tylko w YAML. Używaj na przykład `option: default` oraz
+`is_state('select.velair_mode', 'default')`; dla drugiej wbudowanej opcji używaj
+`manual`. Poprzednie wartości nie są już akceptowane ani publikowane jako stany.
+
+Home Assistant wyświetla przetłumaczone etykiety, ale akcje i porównania stanu
+zawsze używają `default` i `manual`, niezależnie od języka. Nazwy własnych Trybów
+pozostają dokładnie takie, jak je wpisano. Karta wyświetlająca surowe stany
+zamiast przetłumaczonych etykiet może pokazywać wartości małymi literami.
+
+Velair nie przepisuje automatyzacji użytkownika, scen ani konfiguracji
+zewnętrznych. Zachowaj ID encji; nie trzeba odtwarzać Trybów, Profili ani
+harmonogramów. Zmiana wbudowanej wartości podczas aktualizacji może wygenerować
+zdarzenie zmiany stanu; sprawdź automatyzacje reagujące na każdą zmianę stanu.
+Stany historyczne pozostają bez zmian. Istniejące akcje
+`velair.deactivate_profile` nadal działają.
 
 <a id="configure-a-profile"></a>
 ## Konfiguracja Profilu
@@ -103,7 +134,7 @@ actions:
     target:
       entity_id: select.velair_mode
     data:
-      option: Default
+      option: default
 ```
 
 Zastąp osobę i widoczne nazwy własnymi. Po przemianowaniu Trybu popraw odwołujące się automatyzacje.
@@ -165,7 +196,7 @@ data:
   option: Vacation
 ```
 
-ID Trybu nie zmienia się po zmianie nazwy, więc aktywny wybór zostaje zachowany. Widoczna nazwa jest jednak stanem HA: automatyzacje zmienionych/usuniętych opcji wymagają poprawy.
+ID Trybu nie zmienia się po zmianie nazwy, więc aktywny wybór zostaje zachowany. W przypadku własnych Trybów widoczna nazwa jest stanem HA: automatyzacje zmienionych/usuniętych opcji wymagają poprawy.
 
 Zmiana przypisań aktywnego Trybu zmienia cały zestaw Profili w jednej operacji. Usunięcie aktywnego Trybu zachowuje aktywne Profile i przełącza wybór na Manual. Usunięcie Profilu usuwa także przypisane do niego Tryby oraz tylko ten Profil z aktywnego zestawu. Jeśli zestaw stanie się pusty, Velair wraca do Default.
 
